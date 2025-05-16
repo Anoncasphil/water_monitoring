@@ -19,7 +19,7 @@ try {
     }
 
     // Prepare and execute SQL statement
-    $stmt = $conn->prepare("INSERT INTO water_readings (turbidity, tds) VALUES (?, ?)");
+    $stmt = $conn->prepare("INSERT INTO water_quality_readings (turbidity_ntu, tds_ppm) VALUES (?, ?)");
     $stmt->bind_param("dd", $turbidity, $tds);
     
     if ($stmt->execute()) {
@@ -27,8 +27,8 @@ try {
             "success" => true,
             "message" => "Data saved successfully",
             "data" => [
-                "turbidity" => $turbidity,
-                "tds" => $tds
+                "turbidity_ntu" => $turbidity,
+                "tds_ppm" => $tds
             ]
         ]);
     } else {

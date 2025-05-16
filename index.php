@@ -309,8 +309,8 @@ try {
             // Show loading state
             checkbox.disabled = true;
             
-            // Send command to Python server
-            fetch('http://localhost:5000/relay_control.php', {
+            // Send command to server
+            fetch('relay_control.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
@@ -321,7 +321,14 @@ try {
             .then(data => {
                 if (data.success) {
                     // Update all relay states based on server response
-                    updateRelayStates(data.states);
+                    if (data.states) {
+                        data.states.forEach(state => {
+                            const checkbox = document.querySelector(`input[data-relay="${state.relay_number}"]`);
+                            if (checkbox) {
+                                checkbox.checked = state.state === 1;
+                            }
+                        });
+                    }
                 } else {
                     console.error('Error updating relay state:', data.error);
                     checkbox.checked = !checkbox.checked; // Revert the toggle if there was an error
@@ -336,23 +343,18 @@ try {
             });
         }
 
-        // Function to update relay states in the UI
-        function updateRelayStates(states) {
-            Object.entries(states).forEach(([relay, state]) => {
-                const checkbox = document.querySelector(`input[data-relay="${relay}"]`);
-                if (checkbox) {
-                    checkbox.checked = state === 1;
-                }
-            });
-        }
-
         // Function to fetch current relay states
         function fetchRelayStates() {
-            fetch('http://localhost:5000/get_relay_states.php')
+            fetch('relay_control.php')
                 .then(response => response.json())
                 .then(data => {
                     if (data.states) {
-                        updateRelayStates(data.states);
+                        data.states.forEach(state => {
+                            const checkbox = document.querySelector(`input[data-relay="${state.relay_number}"]`);
+                            if (checkbox) {
+                                checkbox.checked = state.state === 1;
+                            }
+                        });
                     }
                 })
                 .catch(error => console.error('Error fetching relay states:', error));

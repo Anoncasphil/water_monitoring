@@ -1,82 +1,123 @@
 # Water Quality Monitoring System
 
-A real-time water quality monitoring system that displays turbidity and TDS (Total Dissolved Solids) readings from Arduino sensors.
-
-## Features
-
-- Real-time sensor data display
-- Historical data visualization
-- Responsive web interface
-- Automatic data logging to MySQL database
-- Live updates every 5 seconds
+A real-time water quality monitoring system using ESP32 microcontroller, with web-based dashboard for data visualization and relay control.
 
 ## Hardware Requirements
 
-- Arduino board
-- Turbidity sensor
-- TDS sensor
-- USB cable for Arduino connection
+- ESP32 Development Board
+- Turbidity Sensor
+- TDS (Total Dissolved Solids) Sensor
+- 4-Channel Relay Module
+- Jumper Wires
+- Power Supply (5V/3.3V)
+- USB Cable (for programming ESP32)
 
 ## Software Requirements
 
-- XAMPP (Apache + MySQL)
-- Python 3.x
-- Required Python packages:
-  - pyserial
-  - mysql-connector-python
+- Arduino IDE with ESP32 board support
+- Required Libraries:
+  - WiFi.h (ESP32)
+  - HTTPClient.h (ESP32)
+  - ArduinoJson.h (version 6.x)
+- XAMPP (for local web server)
+- PHP 8.0 or higher
+- MySQL/MariaDB
 
-## Installation
+## Pin Configuration (ESP32)
 
-1. Clone this repository:
-```bash
-git clone https://github.com/yourusername/water-quality-monitor.git
-cd water-quality-monitor
-```
+- Turbidity Sensor: GPIO33 (ADC1)
+- TDS Sensor: GPIO32 (ADC1)
+- Relay Module:
+  - IN1: GPIO25
+  - IN2: GPIO26
+  - IN3: GPIO27
+  - IN4: GPIO14
 
-2. Set up the database:
-   - Start XAMPP and ensure MySQL is running
-   - Create a new database named `water_quality_db`
-   - Import the `create_table.sql` file
+## Setup Instructions
 
-3. Install Python dependencies:
-```bash
-pip install pyserial mysql-connector-python
-```
+1. **ESP32 Setup**:
+   - Install Arduino IDE
+   - Add ESP32 board support:
+     - Open Arduino IDE
+     - Go to File > Preferences
+     - Add `https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json` to Additional Board Manager URLs
+     - Go to Tools > Board > Boards Manager
+     - Search for "esp32" and install
+   - Install required libraries:
+     - Tools > Manage Libraries
+     - Search and install:
+       - ArduinoJson
+   - Select ESP32 board:
+     - Tools > Board > ESP32 Arduino > ESP32 Dev Module
+   - Upload the code to ESP32
 
-4. Configure the Arduino:
-   - Upload the `water_quality_monitor.ino` sketch to your Arduino
-   - Note the COM port your Arduino is connected to
+2. **Web Server Setup**:
+   - Install XAMPP
+   - Copy project files to `htdocs/projtest/`
+   - Start Apache and MySQL services
+   - Import database schema from `database.sql`
 
-5. Update the Python script:
-   - Open `water_quality_monitor.py`
-   - Update the COM port if necessary (default is 'COM3')
+3. **Database Setup**:
+   - Open phpMyAdmin (http://localhost/phpmyadmin)
+   - Create new database named `water_quality`
+   - Import `database.sql`
 
-## Usage
+4. **Configuration**:
+   - Update WiFi credentials in `relay_control.ino`
+   - Update server URL in `relay_control.ino` if using ngrok or different server
+   - Configure sensor calibration values if needed
 
-1. Start the Python script to read sensor data:
-```bash
-python water_quality_monitor.py
-```
+## Features
 
-2. Access the web interface:
-   - Open your web browser
-   - Navigate to `http://localhost/water-quality-monitor`
+- Real-time water quality monitoring
+- Web-based dashboard
+- Historical data visualization
+- Relay control for water treatment
+- Mobile-responsive design
+- Dark/Light mode support
 
 ## Project Structure
 
 ```
-water-quality-monitor/
-├── README.md
-├── water_quality_monitor.ino    # Arduino code
-├── water_quality_monitor.py     # Python script for data logging
-├── create_table.sql            # Database schema
-├── index.php                   # Main web interface
-└── get_readings.php           # API endpoint for data retrieval
+projtest/
+├── relay_control/           # ESP32 code
+│   └── relay_control.ino
+├── config/                  # Configuration files
+│   └── database.php
+├── index.php               # Main dashboard
+├── upload.php              # Sensor data endpoint
+├── relay_control.php       # Relay control endpoint
+└── database.sql            # Database schema
 ```
 
-## Contributing
+## Usage
 
-Feel free to submit issues and enhancement requests!
+1. Power on the ESP32
+2. Access the dashboard at `http://localhost/projtest/`
+3. Monitor water quality parameters
+4. Control relays through the web interface
+
+## Troubleshooting
+
+- If ESP32 fails to connect:
+  - Check WiFi credentials
+  - Verify server URL
+  - Check power supply
+- If sensors show incorrect values:
+  - Check wiring
+  - Verify sensor calibration
+  - Check power supply
+- If relays don't respond:
+  - Check relay module connections
+  - Verify GPIO pin assignments
+  - Check power supply to relay module
+
+## Security Notes
+
+- Change default database credentials
+- Use HTTPS in production
+- Implement proper authentication
+- Regular security updates
 
 ## License
 
