@@ -63,8 +63,20 @@ A real-time water quality monitoring system using ESP32 microcontroller, with we
 
 3. **Database Setup**:
    - Open phpMyAdmin (http://localhost/phpmyadmin)
-   - Create new database named `water_quality`
+   - Create new database named `water_quality_db`
    - Import `setup_database.sql`
+   - Configure database connection:
+     - Copy `config/database.template.php` to `config/database.php`
+     - Update database credentials in `config/database.php`:
+       ```php
+       $config = [
+           'host' => '127.0.0.1',     // Database host
+           'username' => 'your_username', // Your MySQL username
+           'password' => 'your_password', // Your MySQL password
+           'database' => 'water_quality_db',
+           'port' => 3307             // Your MySQL port
+       ];
+       ```
 
 4. **Configuration**:
    - Update WiFi credentials in `relay_control.ino`
@@ -91,7 +103,8 @@ projtest/
 ├── relay_control/           # ESP32 code
 │   └── relay_control.ino
 ├── config/                  # Configuration files
-│   └── database.php
+│   ├── database.template.php # Database configuration template
+│   └── database.php        # Database configuration (create from template)
 ├── index.php               # Main dashboard
 ├── upload.php              # Sensor data endpoint
 ├── get_readings.php        # Data retrieval endpoint
@@ -130,6 +143,11 @@ projtest/
   - Check relay module connections
   - Verify GPIO pin assignments
   - Check power supply to relay module
+- If database connection fails:
+  - Verify database credentials in `config/database.php`
+  - Check if MySQL service is running
+  - Verify database port number
+  - Check database user permissions
 
 ## Security Notes
 
@@ -139,6 +157,8 @@ projtest/
 - Regular security updates
 - Secure API endpoints
 - Validate sensor data
+- Keep database.php out of version control
+- Use strong passwords for database access
 
 ## License
 
