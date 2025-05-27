@@ -111,7 +111,7 @@ try {
         </div>
         
         <!-- Sensor Cards Row -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <!-- Turbidity Card -->
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 card-hover">
                 <div class="flex items-center justify-between mb-4">
@@ -153,6 +153,65 @@ try {
                 </div>
                 <div class="text-xs text-gray-500 dark:text-gray-400" id="tdsTime">
                     <i class="fas fa-clock mr-1"></i>Last updated: --
+                </div>
+            </div>
+
+            <!-- pH Card -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 card-hover">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center">
+                            <i class="fas fa-vial text-purple-500 dark:text-purple-400 text-xl"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-semibold text-gray-800 dark:text-white">pH Level</h3>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">Acidity/Alkalinity</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-3xl font-bold text-gray-800 dark:text-white" id="phValue">--</div>
+                        <div class="text-sm text-gray-500 dark:text-gray-400">pH</div>
+                    </div>
+                </div>
+                <div class="text-xs text-gray-500 dark:text-gray-400" id="phTime">
+                    <i class="fas fa-clock mr-1"></i>Last updated: --
+                </div>
+            </div>
+
+            <!-- Temperature Card -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 card-hover">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center">
+                            <i class="fas fa-thermometer-half text-red-500 dark:text-red-400 text-xl"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-semibold text-gray-800 dark:text-white">Temperature</h3>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">Water Temperature</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-3xl font-bold text-gray-800 dark:text-white" id="temperatureValue">--</div>
+                        <div class="text-sm text-gray-500 dark:text-gray-400">°C</div>
+                    </div>
+                </div>
+                <div class="text-xs text-gray-500 dark:text-gray-400" id="temperatureTime">
+                    <i class="fas fa-clock mr-1"></i>Last updated: --
+                </div>
+            </div>
+        </div>
+
+        <!-- Water Quality Alerts -->
+        <div class="mb-8">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h5 class="text-lg font-semibold text-gray-800 dark:text-white">
+                        <i class="fas fa-exclamation-triangle mr-2 text-yellow-500"></i>
+                        Water Quality Status
+                    </h5>
+                </div>
+                <div id="waterQualityAlerts" class="space-y-4">
+                    <!-- Alerts will be dynamically inserted here -->
                 </div>
             </div>
         </div>
@@ -203,6 +262,12 @@ try {
                                 </th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                     <i class="fas fa-flask mr-1"></i>TDS
+                                </th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                    <i class="fas fa-vial mr-1"></i>pH
+                                </th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                    <i class="fas fa-thermometer-half mr-1"></i>Temp
                                 </th>
                             </tr>
                         </thead>
@@ -378,8 +443,12 @@ try {
                     if (latest) {
                         document.getElementById('turbidityValue').textContent = parseFloat(latest.turbidity_ntu).toFixed(1);
                         document.getElementById('tdsValue').textContent = parseFloat(latest.tds_ppm).toFixed(1);
+                        document.getElementById('phValue').textContent = parseFloat(latest.ph).toFixed(2);
+                        document.getElementById('temperatureValue').textContent = parseFloat(latest.temperature).toFixed(2);
                         document.getElementById('turbidityTime').textContent = `Last updated: ${formatDate(latest.reading_time)}`;
                         document.getElementById('tdsTime').textContent = `Last updated: ${formatDate(latest.reading_time)}`;
+                        document.getElementById('phTime').textContent = `Last updated: ${formatDate(latest.reading_time)}`;
+                        document.getElementById('temperatureTime').textContent = `Last updated: ${formatDate(latest.reading_time)}`;
                     }
 
                     // Update table
@@ -389,6 +458,8 @@ try {
                                 <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${formatDate(reading.reading_time)}</td>
                                 <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${parseFloat(reading.turbidity_ntu).toFixed(1)}</td>
                                 <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${parseFloat(reading.tds_ppm).toFixed(1)}</td>
+                                <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${parseFloat(reading.ph).toFixed(2)}</td>
+                                <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${parseFloat(reading.temperature).toFixed(2)}</td>
                             </tr>
                         `).join('');
                         document.getElementById('readingsTable').innerHTML = tableHtml;
@@ -398,6 +469,14 @@ try {
                     if (data.historical && data.historical.length > 0) {
                         updateChart(data.historical);
                     }
+
+                    // Update water quality alerts
+                    updateWaterQualityAlerts(
+                        parseFloat(document.getElementById('turbidityValue').textContent),
+                        parseFloat(document.getElementById('tdsValue').textContent),
+                        parseFloat(document.getElementById('phValue').textContent),
+                        parseFloat(document.getElementById('temperatureValue').textContent)
+                    );
                 })
                 .catch(error => {
                     console.error('Error fetching data:', error);
@@ -424,6 +503,14 @@ try {
             const tdsGradient = ctx.createLinearGradient(0, 0, 0, 400);
             tdsGradient.addColorStop(0, 'rgba(16, 185, 129, 0.2)');
             tdsGradient.addColorStop(1, 'rgba(16, 185, 129, 0)');
+
+            const phGradient = ctx.createLinearGradient(0, 0, 0, 400);
+            phGradient.addColorStop(0, 'rgba(168, 85, 247, 0.2)');
+            phGradient.addColorStop(1, 'rgba(168, 85, 247, 0)');
+
+            const tempGradient = ctx.createLinearGradient(0, 0, 0, 400);
+            tempGradient.addColorStop(0, 'rgba(239, 68, 68, 0.2)');
+            tempGradient.addColorStop(1, 'rgba(239, 68, 68, 0)');
 
             readingsChart = new Chart(ctx, {
                 type: 'line',
@@ -461,6 +548,40 @@ try {
                         pointBorderWidth: 2,
                         pointHoverBackgroundColor: document.documentElement.classList.contains('dark') ? '#1F2937' : '#fff',
                         pointHoverBorderColor: 'rgb(16, 185, 129)',
+                        pointHoverBorderWidth: 2,
+                        pointStyle: 'circle'
+                    }, {
+                        label: 'pH',
+                        data: data.map(d => parseFloat(d.ph)),
+                        borderColor: 'rgb(168, 85, 247)',
+                        backgroundColor: phGradient,
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 3,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: 'rgb(168, 85, 247)',
+                        pointBorderColor: document.documentElement.classList.contains('dark') ? '#1F2937' : '#fff',
+                        pointBorderWidth: 2,
+                        pointHoverBackgroundColor: document.documentElement.classList.contains('dark') ? '#1F2937' : '#fff',
+                        pointHoverBorderColor: 'rgb(168, 85, 247)',
+                        pointHoverBorderWidth: 2,
+                        pointStyle: 'circle'
+                    }, {
+                        label: 'Temperature (°C)',
+                        data: data.map(d => parseFloat(d.temperature)),
+                        borderColor: 'rgb(239, 68, 68)',
+                        backgroundColor: tempGradient,
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 3,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: 'rgb(239, 68, 68)',
+                        pointBorderColor: document.documentElement.classList.contains('dark') ? '#1F2937' : '#fff',
+                        pointBorderWidth: 2,
+                        pointHoverBackgroundColor: document.documentElement.classList.contains('dark') ? '#1F2937' : '#fff',
+                        pointHoverBorderColor: 'rgb(239, 68, 68)',
                         pointHoverBorderWidth: 2,
                         pointStyle: 'circle'
                     }]
@@ -616,6 +737,128 @@ try {
                 tooltipText: isDark ? '#F3F4F6' : '#1F2937',
                 tooltipBorder: isDark ? '#374151' : '#E5E7EB'
             };
+        }
+
+        // Water quality thresholds
+        const thresholds = {
+            turbidity: {
+                good: 5,      // NTU
+                warning: 10,  // NTU
+                danger: 20    // NTU
+            },
+            tds: {
+                good: 300,    // ppm
+                warning: 500, // ppm
+                danger: 1000  // ppm
+            },
+            ph: {
+                good: { min: 6.5, max: 8.5 },
+                warning: { min: 6.0, max: 9.0 },
+                danger: { min: 5.0, max: 10.0 }
+            },
+            temperature: {
+                good: { min: 15, max: 30 },    // °C
+                warning: { min: 10, max: 35 }, // °C
+                danger: { min: 5, max: 40 }    // °C
+            }
+        };
+
+        function evaluateWaterQuality(turbidity, tds, ph, temperature) {
+            const alerts = [];
+            
+            // Evaluate Turbidity
+            if (turbidity >= thresholds.turbidity.danger) {
+                alerts.push({
+                    type: 'danger',
+                    message: `High turbidity (${turbidity.toFixed(1)} NTU) - Water is very cloudy and may contain harmful particles`
+                });
+            } else if (turbidity >= thresholds.turbidity.warning) {
+                alerts.push({
+                    type: 'warning',
+                    message: `Elevated turbidity (${turbidity.toFixed(1)} NTU) - Water clarity is reduced`
+                });
+            } else if (turbidity <= thresholds.turbidity.good) {
+                alerts.push({
+                    type: 'success',
+                    message: `Good turbidity (${turbidity.toFixed(1)} NTU) - Water is clear`
+                });
+            }
+
+            // Evaluate TDS
+            if (tds >= thresholds.tds.danger) {
+                alerts.push({
+                    type: 'danger',
+                    message: `High TDS (${tds.toFixed(0)} ppm) - Water contains excessive dissolved solids`
+                });
+            } else if (tds >= thresholds.tds.warning) {
+                alerts.push({
+                    type: 'warning',
+                    message: `Elevated TDS (${tds.toFixed(0)} ppm) - Water may need treatment`
+                });
+            } else if (tds <= thresholds.tds.good) {
+                alerts.push({
+                    type: 'success',
+                    message: `Good TDS (${tds.toFixed(0)} ppm) - Water is within acceptable range`
+                });
+            }
+
+            // Evaluate pH
+            if (ph < thresholds.ph.danger.min || ph > thresholds.ph.danger.max) {
+                alerts.push({
+                    type: 'danger',
+                    message: `Extreme pH (${ph.toFixed(1)}) - Water is too acidic or alkaline`
+                });
+            } else if (ph < thresholds.ph.warning.min || ph > thresholds.ph.warning.max) {
+                alerts.push({
+                    type: 'warning',
+                    message: `Unbalanced pH (${ph.toFixed(1)}) - Water may need pH adjustment`
+                });
+            } else if (ph >= thresholds.ph.good.min && ph <= thresholds.ph.good.max) {
+                alerts.push({
+                    type: 'success',
+                    message: `Good pH (${ph.toFixed(1)}) - Water is within ideal range`
+                });
+            }
+
+            // Evaluate Temperature
+            if (temperature < thresholds.temperature.danger.min || temperature > thresholds.temperature.danger.max) {
+                alerts.push({
+                    type: 'danger',
+                    message: `Extreme temperature (${temperature.toFixed(1)}°C) - Water is too hot or cold`
+                });
+            } else if (temperature < thresholds.temperature.warning.min || temperature > thresholds.temperature.warning.max) {
+                alerts.push({
+                    type: 'warning',
+                    message: `Unusual temperature (${temperature.toFixed(1)}°C) - Monitor water temperature`
+                });
+            } else if (temperature >= thresholds.temperature.good.min && temperature <= thresholds.temperature.good.max) {
+                alerts.push({
+                    type: 'success',
+                    message: `Good temperature (${temperature.toFixed(1)}°C) - Water is at ideal temperature`
+                });
+            }
+
+            return alerts;
+        }
+
+        function updateWaterQualityAlerts(turbidity, tds, ph, temperature) {
+            const alertsContainer = document.getElementById('waterQualityAlerts');
+            const alerts = evaluateWaterQuality(turbidity, tds, ph, temperature);
+            
+            alertsContainer.innerHTML = alerts.map(alert => `
+                <div class="flex items-center p-4 rounded-lg ${
+                    alert.type === 'danger' ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300' :
+                    alert.type === 'warning' ? 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300' :
+                    'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300'
+                }">
+                    <i class="fas ${
+                        alert.type === 'danger' ? 'fa-exclamation-circle' :
+                        alert.type === 'warning' ? 'fa-exclamation-triangle' :
+                        'fa-check-circle'
+                    } mr-3"></i>
+                    <span>${alert.message}</span>
+                </div>
+            `).join('');
         }
     </script>
 </body>

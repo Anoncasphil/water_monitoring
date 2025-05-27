@@ -1,73 +1,56 @@
 <?php
 header('Content-Type: application/json');
+require_once 'config/database.php';
 
-$db_config = [
-    'host' => 'localhost',
-    'user' => 'root',
-    'password' => '',
-    'database' => 'water_quality_db'
-];
+function map_reading($row) {
+    return [
+        'turbidity_ntu' => $row['turbidity'],
+        'tds_ppm' => $row['tds'],
+        'ph' => $row['ph'],
+        'temperature' => $row['temperature'],
+        'reading_time' => $row['reading_time']
+    ];
+}
 
 try {
-    $conn = new mysqli($db_config['host'], $db_config['user'], $db_config['password'], $db_config['database']);
-    
-    if ($conn->connect_error) {
-        throw new Exception("Connection failed: " . $conn->connect_error);
-    }
+    // Get database connection
+    $db = Database::getInstance();
+    $conn = $db->getConnection();
 
     // Get latest reading
-    $latest = $conn->query("
-        SELECT 
-            turbidity_ntu,
-            tds_ppm,
-            DATE_FORMAT(reading_time, '%Y-%m-%d %H:%i:%s') as reading_time
-        FROM water_quality_readings 
-        ORDER BY reading_time DESC 
-        LIMIT 1
-    ")->fetch_assoc();
-    
+    $latestQuery = "SELECT * FROM water_readings ORDER BY reading_time DESC LIMIT 1";
+    $latestResult = $conn->query($latestQuery);
+    $latest = $latestResult->fetch_assoc();
+    $latest = $latest ? map_reading($latest) : null;
+
     // Get recent readings (last 10)
-    $recent = $conn->query("
-        SELECT 
-            turbidity_ntu,
-            tds_ppm,
-            DATE_FORMAT(reading_time, '%Y-%m-%d %H:%i:%s') as reading_time
-        FROM water_quality_readings 
-        ORDER BY reading_time DESC 
-        LIMIT 10
-    ")->fetch_all(MYSQLI_ASSOC);
-    
-    // Get historical data (last 24 hours)
-    $historical = $conn->query("
-        SELECT 
-            turbidity_ntu,
-            tds_ppm,
-            DATE_FORMAT(reading_time, '%Y-%m-%d %H:%i:%s') as reading_time
-        FROM water_quality_readings 
-        WHERE reading_time >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
-        ORDER BY reading_time ASC
-    ")->fetch_all(MYSQLI_ASSOC);
-
-    // Debug information
-    error_log("Latest reading: " . json_encode($latest));
-    error_log("Recent readings count: " . count($recent));
-    error_log("Historical readings count: " . count($historical));
-
-    if (!$latest) {
-        throw new Exception("No readings found in the database");
+    $recentQuery = "SELECT * FROM water_readings ORDER BY reading_time DESC LIMIT 10";
+    $recentResult = $conn->query($recentQuery);
+    $recent = [];
+    while ($row = $recentResult->fetch_assoc()) {
+        $recent[] = map_reading($row);
     }
 
-    echo json_encode([
+    // Get historical data (last 24 readings)
+    $historicalQuery = "SELECT * FROM water_readings ORDER BY reading_time DESC LIMIT 24";
+    $historicalResult = $conn->query($historicalQuery);
+    $historical = [];
+    while ($row = $historicalResult->fetch_assoc()) {
+        $historical[] = map_reading($row);
+    }
+
+    // Prepare response
+    $response = [
         'latest' => $latest,
         'recent' => $recent,
-        'historical' => $historical
-    ]);
+        'historical' => array_reverse($historical) // Reverse to show oldest to newest
+    ];
+
+    echo json_encode($response);
 
 } catch (Exception $e) {
     http_response_code(500);
-    echo json_encode(['error' => $e->getMessage()]);
-} finally {
-    if (isset($conn)) {
-        $conn->close();
-    }
+    echo json_encode([
+        'error' => $e->getMessage()
+    ]);
 } 
