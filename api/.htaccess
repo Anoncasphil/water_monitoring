@@ -1,0 +1,35 @@
+# Prevent direct access to API files
+<Files "*.php">
+    # Only allow POST and GET requests
+    <LimitExcept POST GET>
+        Order deny,allow
+        Deny from all
+    </LimitExcept>
+    
+    # Require proper HTTP headers
+    RewriteEngine On
+    RewriteCond %{HTTP_USER_AGENT} ^$ [OR]
+    RewriteCond %{HTTP_USER_AGENT} ^(curl|wget|python|java|perl|ruby|php|bot|crawler|spider|scraper) [NC]
+    RewriteRule .* - [F,L]
+    
+    # Block access from browsers (optional - uncomment if you want to completely block browser access)
+    # RewriteCond %{HTTP_ACCEPT} text/html [NC]
+    # RewriteRule .* - [F,L]
+</Files>
+
+# Additional security headers
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options nosniff
+    Header always set X-Frame-Options DENY
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Disable directory browsing
+Options -Indexes
+
+# Prevent access to sensitive files
+<FilesMatch "\.(htaccess|htpasswd|ini|log|sh|inc|bak)$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch> 

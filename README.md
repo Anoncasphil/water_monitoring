@@ -65,20 +65,25 @@ A real-time water quality monitoring system using ESP32 microcontroller, with we
    - Open phpMyAdmin (http://localhost/phpmyadmin)
    - Create new database named `water_quality_db`
    - Import `setup_database.sql`
-   - Configure database connection:
-     - Copy `config/database.template.php` to `config/database.php`
-     - Update database credentials in `config/database.php`:
-       ```php
-       $config = [
-           'host' => '127.0.0.1',     // Database host
-           'username' => 'your_username', // Your MySQL username
-           'password' => 'your_password', // Your MySQL password
-           'database' => 'water_quality_db',
-           'port' => 3307             // Your MySQL port
-       ];
-       ```
 
-4. **Configuration**:
+4. **Environment Configuration**:
+   - Copy the environment template: `cp config/env.example config/.env`
+   - Edit `config/.env` with your database credentials:
+     ```env
+     # Database Configuration
+     DB_HOST=127.0.0.1
+     DB_PORT=3307
+     DB_NAME=water_quality_db
+     DB_USERNAME=root
+     DB_PASSWORD=
+     
+     # Environment
+     APP_ENV=development
+     APP_DEBUG=true
+     ```
+   - The application will automatically load these settings
+
+5. **Configuration**:
    - Update WiFi credentials in `relay_control.ino`
    - Update server URL in `relay_control.ino` if using ngrok or different server
    - Configure sensor calibration values if needed
@@ -88,42 +93,61 @@ A real-time water quality monitoring system using ESP32 microcontroller, with we
 
 - Real-time water quality monitoring
 - pH measurement with DFRobot sensor
-- Web-based dashboard
-- Historical data visualization
+- Web-based dashboard with modern UI
+- Historical data visualization with charts
 - Relay control for water treatment
 - Mobile-responsive design
 - Dark/Light mode support
 - Automatic data logging
 - Sensor calibration support
+- Environment-based configuration
+- Secure API endpoints
+- Admin area protection
+- Water quality alerts and notifications
 
 ## Project Structure
 
 ```
 projtest/
-├── relay_control/           # ESP32 code
+├── admin/                  # Admin dashboard
+│   ├── dashboard/         # Dashboard files
+│   │   ├── index.php     # Dashboard entry point
+│   │   └── dashboard.php # Main dashboard interface
+│   └── .htaccess         # Admin area security
+├── api/                   # API endpoints
+│   ├── get_readings.php  # Data retrieval endpoint
+│   ├── upload.php        # Sensor data endpoint
+│   ├── relay_control.php # Relay control endpoint
+│   └── .htaccess         # API security
+├── config/                # Configuration files
+│   ├── database.php      # Database connection class
+│   ├── EnvLoader.php     # Environment variable loader
+│   ├── env.example       # Environment configuration template
+│   ├── .env              # Environment configuration (create from template)
+│   └── README.md         # Configuration documentation
+├── relay_control/         # ESP32 code
 │   └── relay_control.ino
-├── config/                  # Configuration files
-│   ├── database.template.php # Database configuration template
-│   └── database.php        # Database configuration (create from template)
-├── index.php               # Main dashboard
-├── upload.php              # Sensor data endpoint
-├── get_readings.php        # Data retrieval endpoint
-├── relay_control.php       # Relay control endpoint
-├── create_relay_table.php  # Database setup for relays
-├── serial_handler.php      # Serial communication handler
-└── setup_database.sql      # Database schema
+├── index.php              # Main application entry point
+├── get_readings.php       # Legacy data endpoint
+├── upload.php             # Legacy sensor endpoint
+├── relay_control.php      # Legacy relay endpoint
+├── check_data.php         # Database verification utility
+└── setup_database.sql     # Database schema
 ```
 
 ## Usage
 
 1. Power on the ESP32
-2. Access the dashboard at `http://localhost/projtest/`
-3. Monitor water quality parameters:
+2. Access the main application at `http://localhost/projtest/`
+3. Access the admin dashboard at `http://localhost/projtest/admin/dashboard/`
+4. Monitor water quality parameters:
    - pH levels
    - Turbidity
    - TDS
-4. Control relays through the web interface
-5. View historical data and trends
+   - Temperature
+5. Control relays through the web interface
+6. View historical data and trends
+7. Monitor water quality alerts and notifications
 
 ## Troubleshooting
 
@@ -149,16 +173,26 @@ projtest/
   - Verify database port number
   - Check database user permissions
 
+## Security Features
+
+- **Environment-based configuration**: No hardcoded credentials
+- **Secure API endpoints**: Protected with .htaccess rules
+- **Admin area protection**: IP-restricted access
+- **Database security**: Connection encryption and prepared statements
+- **Input validation**: All sensor data is validated
+- **Error handling**: Secure error messages in production
+- **File protection**: Sensitive files are protected from direct access
+
 ## Security Notes
 
-- Change default database credentials
-- Use HTTPS in production
-- Implement proper authentication
-- Regular security updates
-- Secure API endpoints
-- Validate sensor data
-- Keep database.php out of version control
-- Use strong passwords for database access
+- **Never commit `.env` files** to version control
+- **Use HTTPS in production** for all communications
+- **Implement proper authentication** for admin access
+- **Regular security updates** for all components
+- **Validate all sensor data** before processing
+- **Use strong passwords** for database access
+- **Monitor access logs** for suspicious activity
+- **Keep encryption keys secure** and rotate regularly
 
 ## License
 

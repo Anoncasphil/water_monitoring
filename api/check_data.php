@@ -1,10 +1,5 @@
 <?php
-$db_config = [
-    'host' => 'localhost',
-    'user' => 'root',
-    'password' => '',
-    'database' => 'water_quality_db'
-];
+require_once '../config/database.php';
 
 try {
     $conn = new mysqli($db_config['host'], $db_config['user'], $db_config['password'], $db_config['database']);
