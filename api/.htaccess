@@ -15,20 +15,31 @@ Options -Indexes
     Header always set Access-Control-Allow-Headers "Content-Type, Authorization"
 </IfModule>
 
-# Allow access to API files
+# Allow access to ALL PHP files (including cron jobs)
 <FilesMatch "\.(php)$">
     Order Allow,Deny
     Allow from all
+    Satisfy Any
 </FilesMatch>
 
-# Prevent access to sensitive files
+# Prevent access to sensitive files (but allow cron execution files)
 <FilesMatch "\.(htaccess|htpasswd|ini|log|sh|inc|bak|sql|db)$">
     Order Allow,Deny
     Deny from all
 </FilesMatch>
 
-# Optional: Rate limiting (uncomment if needed)
-# <IfModule mod_ratelimit.c>
-#     SetOutputFilter RATE_LIMIT
-#     SetEnv rate-limit 400
-# </IfModule> 
+# Explicitly allow cron execution files
+<Files "execute_schedules.php">
+    Order Allow,Deny
+    Allow from all
+</Files>
+
+<Files "execute_schedules_fixed.php">
+    Order Allow,Deny
+    Allow from all
+</Files>
+
+<Files "test_file_structure.php">
+    Order Allow,Deny
+    Allow from all
+</Files> 
