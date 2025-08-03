@@ -246,7 +246,7 @@ SESSION_HTTP_ONLY=true
    - Configure WiFi credentials in `relay_control/relay_control.ino`
 
 4. **Upload Code**:
-   ```bash
+```bash
    # Upload to ESP32
    Tools → Board → ESP32 Dev Module
    Tools → Port → Select ESP32 port
