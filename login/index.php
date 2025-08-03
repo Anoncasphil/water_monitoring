@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         try {
             $db = Database::getInstance();
-            $conn = $db->getConnection();
+            $conn = $db->getConnection();   
             
             // Check if user exists and is active
             $stmt = $conn->prepare("SELECT id, username, first_name, last_name, password, role, status FROM users WHERE username = ? AND status = 'active'");
@@ -67,6 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Water Quality Monitor</title>
+    <link rel="icon" type="image/png" href="../assets/images/icons/icon.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script>
