@@ -1,10 +1,11 @@
 # Water Quality Monitoring System
 
-[![Version](https://img.shields.io/badge/version-3.1.0-blue.svg)](https://github.com/Anoncasphil/water_monitoring)
+[![Version](https://img.shields.io/badge/version-3.2.0-blue.svg)](https://github.com/Anoncasphil/water_monitoring)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![PHP](https://img.shields.io/badge/PHP-8.0+-777BB4.svg)](https://php.net)
 [![MySQL](https://img.shields.io/badge/MySQL-5.7+-4479A1.svg)](https://mysql.com)
 [![ESP32](https://img.shields.io/badge/ESP32-Arduino-00979D.svg)](https://www.espressif.com/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.0+-38B2AC.svg)](https://tailwindcss.com/)
 
 A comprehensive, real-time water quality monitoring system built with modern web technologies and IoT hardware. This system provides continuous monitoring of water quality parameters, automated control systems, and advanced analytics for water treatment facilities.
 
@@ -53,11 +54,12 @@ The Water Quality Monitoring System is designed for real-time monitoring and con
 - **Data Export**: CSV and chart export capabilities
 
 ### 🎛️ System Control
-- **Relay Management**: 4-channel relay control system
-- **Automated Scheduling**: Time-based and recurring schedules
-- **Manual Override**: Direct control with safety measures
-- **Status Monitoring**: Real-time system status tracking
-- **Execution Logging**: Complete control action history
+- **Relay Management**: 4-channel relay control system with real-time status
+- **Automated Scheduling**: Advanced time-based and recurring schedules with execution logs
+- **Manual Override**: Direct control with safety measures and validation
+- **Status Monitoring**: Real-time system status tracking with visual indicators
+- **Execution Logging**: Complete control action history with detailed error reporting
+- **Schedule Management**: Intuitive interface for creating and managing automated operations
 
 ### 📈 Analytics & Reporting
 - **Interactive Charts**: Multiple chart types with Chart.js
@@ -67,11 +69,13 @@ The Water Quality Monitoring System is designed for real-time monitoring and con
 - **Performance Metrics**: Key performance indicators
 
 ### 🎨 User Interface
-- **Modern Design**: Clean, responsive interface with Tailwind CSS
-- **Dark/Light Theme**: User preference toggle
-- **Mobile Responsive**: Optimized for all device sizes
-- **Real-time Updates**: Live data refresh without page reload
-- **Accessibility**: WCAG compliant interface
+- **Modern Design**: Clean, responsive interface with Tailwind CSS 3.0+
+- **Dark/Light Theme**: User preference toggle with persistent settings
+- **Mobile Responsive**: Optimized for all device sizes and orientations
+- **Real-time Updates**: Live data refresh without page reload using AJAX
+- **Accessibility**: WCAG compliant interface with keyboard navigation
+- **Consistent Layout**: Unified design system across all admin sections
+- **Interactive Elements**: Hover effects, transitions, and visual feedback
 
 ## 🏗️ Architecture
 
@@ -346,9 +350,11 @@ ANALYZE TABLE water_readings;
 
 #### Schedule Management
 1. Go to **Schedule** section
-2. Create new schedules
-3. Set recurring patterns
-4. Monitor execution logs
+2. Create new schedules with date, time, and frequency settings
+3. Set recurring patterns (once, daily, weekly, monthly)
+4. Monitor execution logs with detailed success/failure tracking
+5. Manage active/inactive schedules with bulk operations
+6. View real-time schedule statistics and next execution times
 
 #### Data Analytics
 1. Visit **Analytics** section
@@ -444,13 +450,47 @@ POST /api/schedule_control.php
 Content-Type: application/json
 
 {
-  "name": "Morning Filter",
   "relay_number": 1,
-  "action": "on",
-  "schedule_type": "recurring",
-  "time": "08:00:00",
-  "days": "1,2,3,4,5"
+  "action": 1,
+  "schedule_date": "2024-12-20",
+  "schedule_time": "08:00:00",
+  "frequency": "daily",
+  "is_active": 1,
+  "description": "Morning filter activation"
 }
+```
+
+#### Update Schedule
+```http
+POST /api/schedule_control.php
+Content-Type: application/json
+
+{
+  "id": 1,
+  "relay_number": 1,
+  "action": 1,
+  "schedule_date": "2024-12-20",
+  "schedule_time": "08:00:00",
+  "frequency": "daily",
+  "is_active": 1,
+  "description": "Updated schedule description"
+}
+```
+
+#### Delete Schedule
+```http
+POST /api/schedule_control.php
+Content-Type: application/json
+
+{
+  "_method": "DELETE",
+  "id": 1
+}
+```
+
+#### Clear Schedule Logs
+```http
+POST /api/clear_schedule_logs.php
 ```
 
 ## 🛠️ Development
@@ -781,7 +821,29 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Version**: 3.1.0  
+**Version**: 3.2.0  
 **Last Updated**: December 2024  
 **Maintainer**: Water Quality Monitoring System Team  
-**Repository**: [https://github.com/Anoncasphil/water_monitoring](https://github.com/Anoncasphil/water_monitoring) 
+**Repository**: [https://github.com/Anoncasphil/water_monitoring](https://github.com/Anoncasphil/water_monitoring)
+
+## 📝 Recent Updates (v3.2.0)
+
+### ✨ New Features
+- **Enhanced Schedule Management**: Improved layout consistency and streamlined interface
+- **Real-time Statistics**: Live schedule statistics with next execution tracking
+- **Bulk Operations**: Support for bulk schedule deletion and management
+- **Execution Logs**: Detailed logging with success/failure tracking and error messages
+- **Improved UI/UX**: Better visual consistency across admin sections
+
+### 🔧 Improvements
+- **Layout Consistency**: Fixed execution logs section positioning to match scheduled operations
+- **UI Streamlining**: Removed redundant statistics cards for cleaner interface
+- **Code Organization**: Better structured schedule management code
+- **Error Handling**: Enhanced error reporting and user feedback
+- **Performance**: Optimized schedule loading and status updates
+
+### 🐛 Bug Fixes
+- **Schedule Display**: Fixed schedule table rendering and status indicators
+- **Modal Functionality**: Improved schedule creation and editing modals
+- **Real-time Updates**: Enhanced live status updates and statistics
+- **Mobile Responsiveness**: Better mobile layout for schedule management 
