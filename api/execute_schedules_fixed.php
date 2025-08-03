@@ -10,7 +10,8 @@
 // Set timezone
 date_default_timezone_set('Asia/Manila');
 
-echo "=== Schedule Execution Started: " . date('Y-m-d H:i:s') . " ===\n";
+echo "=== Schedule Execution Started: " . date('Y-m-d H:i:s') . " (Asia/Manila) ===\n";
+echo "Current time: " . date('Y-m-d H:i:s T') . "\n";
 
 // Load database configuration
 require_once '../config/database.php';
@@ -124,7 +125,7 @@ try {
     echo "\n=== Execution Summary ===\n";
     echo "Total schedules executed: $executed\n";
     echo "Total errors: $errors\n";
-    echo "Execution completed at: " . date('Y-m-d H:i:s') . "\n";
+    echo "Execution completed at: " . date('Y-m-d H:i:s T') . " (Asia/Manila)\n";
     
 } catch (Exception $e) {
     echo "Error: " . $e->getMessage() . "\n";
@@ -138,8 +139,8 @@ function executeRelayControl($relay_number, $action) {
     $api_url = "https://waterquality.triple7autosupply.com/api/relay_control.php";
     
     $post_data = [
-        'relay_number' => $relay_number,
-        'action' => $action
+        'relay' => $relay_number,
+        'state' => $action
     ];
     
     $ch = curl_init();
