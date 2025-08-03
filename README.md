@@ -1,146 +1,180 @@
 # Water Quality Monitoring System
 
-A comprehensive real-time water quality monitoring system with ESP32 microcontroller, featuring a modern web-based admin dashboard, advanced analytics, real-time monitoring, automated controls, user management, and comprehensive activity logging.
+[![Version](https://img.shields.io/badge/version-3.1.0-blue.svg)](https://github.com/Anoncasphil/water_monitoring)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![PHP](https://img.shields.io/badge/PHP-8.0+-777BB4.svg)](https://php.net)
+[![MySQL](https://img.shields.io/badge/MySQL-5.7+-4479A1.svg)](https://mysql.com)
+[![ESP32](https://img.shields.io/badge/ESP32-Arduino-00979D.svg)](https://www.espressif.com/)
 
-## 🚀 Features
+A comprehensive, real-time water quality monitoring system built with modern web technologies and IoT hardware. This system provides continuous monitoring of water quality parameters, automated control systems, and advanced analytics for water treatment facilities.
 
-### 🔐 Authentication & User Management
-- **Secure Login System** - Session-based authentication with password validation
-- **User Management** - Complete CRUD operations for user administration
-- **Role-Based Access** - Admin and staff role management
-- **Password Security** - Bcrypt hashing with strong password requirements
-- **User Status Management** - Archive/activate users instead of deletion
+## 📋 Table of Contents
 
-### 📊 Real-Time Monitoring & Analytics
-- **Live Sensor Dashboard** - Real-time water quality parameter monitoring
-- **Advanced Analytics** - Comprehensive data analysis with trend visualization
-- **Interactive Charts** - Multiple chart types (line, bar, area) with Chart.js
-- **Historical Data Analysis** - 24h, 7d, 30d, and 90d data views
-- **Quality Insights** - Automated water quality assessment and recommendations
-- **Statistical Analysis** - Min/max/average calculations with trend indicators
-- **Data Export** - CSV data export with comprehensive sensor readings
-- **Chart Export** - Individual chart export as PNG images for reporting
-- **Streamlined Interface** - Optimized information flow and reduced redundancy
+- [Overview](#overview)
+- [Features](#features)
+- [Architecture](#architecture)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Usage](#usage)
+- [API Documentation](#api-documentation)
+- [Development](#development)
+- [Deployment](#deployment)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+- [License](#license)
 
-### 🎛️ System Control & Automation
-- **Relay Control Panel** - Web-based automation system with 4-channel control
-- **Schedule Management** - Automated relay scheduling with timezone support
-- **Real-time Status Monitoring** - Live system status and uptime tracking
-- **Automation Rules** - Smart control based on water quality parameters
-- **System Logs** - Comprehensive control action logging
-- **Bulk Operations** - All On/Off controls for system management
+## 🎯 Overview
 
-### 📈 Water Quality Monitoring
-- **Multi-Sensor Support** - pH, Turbidity, TDS, and Temperature monitoring
-- **Real-time Data** - Live sensor readings with automatic updates every 5 seconds
-- **Quality Assessment** - Automated water quality status evaluation
-- **Alert System** - Real-time notifications for water quality issues
-- **Parameter Ranges** - Visual representation of acceptable ranges
+The Water Quality Monitoring System is designed for real-time monitoring and control of water treatment processes. It combines IoT sensors, automated relay control, and a modern web-based dashboard to provide comprehensive water quality management.
 
-### 📋 Activity Logging & Audit Trail
-- **Comprehensive Activity Tracking** - Log all user actions and system events
-- **Activity Logs Dashboard** - Filter, search, and paginate through activities
-- **Detailed Audit Trail** - Track who performed what actions and when
-- **Security Monitoring** - Monitor user creation, updates, and system access
+### Key Capabilities
 
-### 🎨 Modern Admin Dashboard
-- **Responsive Design** - Mobile-friendly interface with Tailwind CSS
-- **Dark/Light Theme** - User preference toggle with persistent settings
-- **Professional UI** - Modern card-based layout with smooth animations
-- **Real-time Updates** - Live data refresh without page reload
-- **Interactive Elements** - Hover effects, transitions, and loading states
+- **Real-time Monitoring**: Continuous tracking of pH, turbidity, TDS, and temperature
+- **Automated Control**: Intelligent relay management with scheduling capabilities
+- **Advanced Analytics**: Historical data analysis and trend visualization
+- **User Management**: Role-based access control with audit trails
+- **Mobile Responsive**: Modern web interface accessible from any device
 
-### 🛡️ Security Features
-- **Session Management** - Secure user sessions with proper cleanup
-- **SQL Injection Prevention** - Prepared statements throughout
-- **XSS Protection** - Input sanitization and output escaping
-- **Protected Routes** - Authentication middleware for admin areas
-- **Environment Configuration** - Secure credential management
+## ✨ Features
 
-## 🏗️ System Architecture
+### 🔐 Authentication & Security
+- **Secure Authentication**: Session-based login with bcrypt password hashing
+- **Role-Based Access Control**: Admin and staff role management
+- **Audit Trail**: Complete logging of all user activities
+- **Session Management**: Secure session handling with automatic cleanup
+- **Input Validation**: Comprehensive sanitization and validation
 
-### **Frontend**
-- **Modern UI Framework** - Tailwind CSS with responsive design
-- **Interactive Components** - Real-time forms, modals, and notifications
-- **Chart Visualization** - Chart.js for advanced data visualization
-- **Progressive Enhancement** - Works without JavaScript
-- **Accessibility** - WCAG compliant interface
+### 📊 Real-Time Monitoring
+- **Live Dashboard**: Real-time sensor data visualization
+- **Quality Assessment**: Automated water quality status evaluation
+- **Alert System**: Real-time notifications for parameter violations
+- **Historical Analysis**: Trend analysis and statistical reporting
+- **Data Export**: CSV and chart export capabilities
 
-### **Backend**
-- **PHP 8.0+** - Modern PHP with type safety
-- **MySQL/MariaDB** - Reliable data storage with optimized queries
-- **RESTful APIs** - Clean API endpoints for AJAX operations
-- **MVC Pattern** - Organized code structure
-- **Database Abstraction** - Singleton pattern for database connections
+### 🎛️ System Control
+- **Relay Management**: 4-channel relay control system
+- **Automated Scheduling**: Time-based and recurring schedules
+- **Manual Override**: Direct control with safety measures
+- **Status Monitoring**: Real-time system status tracking
+- **Execution Logging**: Complete control action history
 
-### **Hardware Integration**
-- **ESP32 Microcontroller** - WiFi-enabled sensor hub
-- **Multiple Sensors** - pH, Turbidity, TDS, Temperature
-- **Relay Control** - 4-channel automation system
-- **Real-time Communication** - HTTP-based data transmission
-- **Power Management** - Efficient power consumption monitoring
+### 📈 Analytics & Reporting
+- **Interactive Charts**: Multiple chart types with Chart.js
+- **Statistical Analysis**: Min/max/average calculations
+- **Trend Visualization**: Historical data analysis
+- **Quality Insights**: Automated recommendations
+- **Performance Metrics**: Key performance indicators
 
-## 📋 Requirements
+### 🎨 User Interface
+- **Modern Design**: Clean, responsive interface with Tailwind CSS
+- **Dark/Light Theme**: User preference toggle
+- **Mobile Responsive**: Optimized for all device sizes
+- **Real-time Updates**: Live data refresh without page reload
+- **Accessibility**: WCAG compliant interface
 
-### Hardware Requirements
-- **ESP32 Development Board** (ESP32-WROOM-32 or similar)
-- **DFRobot pH Sensor** with calibration kit
-- **Turbidity Sensor** (TSW-30 or similar)
-- **TDS (Total Dissolved Solids) Sensor** (Gravity Analog TDS Sensor)
-- **Temperature Sensor** (DS18B20 or similar)
-- **4-Channel Relay Module** (5V/3.3V compatible)
-- **Jumper Wires** and breadboard
-- **Power Supply** (5V/3.3V, 2A minimum)
-- **USB Cable** (for programming ESP32)
+## 🏗️ Architecture
 
-### Software Requirements
-- **Arduino IDE** with ESP32 board support (v2.0+)
-- **XAMPP** (Apache + MySQL + PHP) or similar stack
-- **PHP 8.0** or higher
-- **MySQL/MariaDB** 5.7+
-- **Required Libraries**:
-  - WiFi.h (ESP32 core)
-  - HTTPClient.h (ESP32 core)
-  - ArduinoJson.h (version 6.x)
-  - DFRobot_PH.h
-  - OneWire.h (for temperature sensor)
-  - DallasTemperature.h
+### System Components
 
-## 🔧 Installation & Setup
-
-### 1. ESP32 Setup
-```bash
-# Install Arduino IDE
-# Add ESP32 board support:
-# 1. File > Preferences
-# 2. Add: https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
-# 3. Tools > Board > Boards Manager > Search "esp32" > Install
-# 4. Install required libraries:
-#    - ArduinoJson by Benoit Blanchon
-#    - DFRobot_PH by DFRobot
-#    - OneWire by Paul Stoffregen
-#    - DallasTemperature by Miles Burton
-# 5. Select board: Tools > Board > ESP32 Arduino > ESP32 Dev Module
-# 6. Configure WiFi settings in relay_control.ino
-# 7. Upload relay_control.ino to ESP32
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   ESP32 Device  │    │   Web Server    │    │   Database      │
+│                 │    │                 │    │                 │
+│ • pH Sensor     │◄──►│ • PHP Backend   │◄──►│ • MySQL/MariaDB │
+│ • Turbidity     │    │ • RESTful APIs  │    │ • InnoDB Engine │
+│ • TDS Sensor    │    │ • Session Mgmt  │    │ • Optimized     │
+│ • Temperature   │    │ • File Upload   │    │ • Indexed       │
+│ • Relay Control │    │ • Authentication│    │ • Partitioned   │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
-### 2. Web Server Setup
+### Technology Stack
+
+#### Frontend
+- **HTML5**: Semantic markup and modern web standards
+- **Tailwind CSS**: Utility-first CSS framework
+- **JavaScript (ES6+)**: Modern JavaScript with async/await
+- **Chart.js**: Interactive data visualization
+- **Font Awesome**: Icon library
+
+#### Backend
+- **PHP 8.0+**: Modern PHP with type safety
+- **MySQL/MariaDB**: Reliable relational database
+- **RESTful APIs**: Clean API design principles
+- **MVC Pattern**: Organized code architecture
+- **Composer**: Dependency management (future)
+
+#### Hardware
+- **ESP32**: WiFi-enabled microcontroller
+- **Sensors**: pH, Turbidity, TDS, Temperature
+- **Relay Module**: 4-channel automation system
+- **Power Management**: Efficient power consumption
+
+## 📋 Prerequisites
+
+### System Requirements
+
+#### Server Environment
+- **Web Server**: Apache 2.4+ or Nginx 1.18+
+- **PHP**: 8.0 or higher
+- **Database**: MySQL 5.7+ or MariaDB 10.4+
+- **Memory**: Minimum 512MB RAM
+- **Storage**: 1GB available space
+- **Network**: Stable internet connection
+
+#### Development Environment
+- **Arduino IDE**: 2.0+ with ESP32 board support
+- **Code Editor**: VS Code, Sublime Text, or similar
+- **Version Control**: Git 2.0+
+- **Local Server**: XAMPP, WAMP, or similar
+
+#### Hardware Requirements
+- **ESP32 Development Board**: ESP32-WROOM-32 or equivalent
+- **Sensors**:
+  - DFRobot pH Sensor with calibration kit
+  - Turbidity Sensor (TSW-30 or similar)
+  - Gravity Analog TDS Sensor
+  - DS18B20 Temperature Sensor
+- **Relay Module**: 4-channel 5V/3.3V compatible
+- **Power Supply**: 5V/3.3V, 2A minimum
+- **Connectors**: Jumper wires and breadboard
+
+## 🚀 Installation
+
+### 1. Repository Setup
+
 ```bash
-# Install XAMPP or similar
-# Copy project files to htdocs/projtest/
-# Start Apache and MySQL services
-# Ensure mod_rewrite is enabled
+# Clone the repository
+git clone https://github.com/Anoncasphil/water_monitoring.git
+cd water_monitoring
+
+# Checkout the latest release
+git checkout main
+```
+
+### 2. Web Server Configuration
+
+```bash
+# Copy project to web server directory
+cp -r . /var/www/html/water_monitoring/
+
+# Set proper permissions
+chmod -R 755 /var/www/html/water_monitoring/
+chmod -R 644 /var/www/html/water_monitoring/*.php
 ```
 
 ### 3. Database Setup
-```sql
--- Option 1: Quick Setup (Complete Database)
--- Import the complete database file:
--- database/water_quality_db_complete.sql
 
--- Option 2: Modular Setup (Recommended)
--- Run the SQL files in order:
+#### Option A: Quick Installation
+```sql
+-- Import complete database
+SOURCE database/water_quality_db_complete.sql;
+```
+
+#### Option B: Modular Installation (Recommended)
+```sql
+-- Create database and tables
 SOURCE database/00_database_setup.sql;
 SOURCE database/01_users.sql;
 SOURCE database/02_water_readings.sql;
@@ -150,325 +184,604 @@ SOURCE database/05_schedules.sql;
 SOURCE database/06_schedule_logs.sql;
 SOURCE database/07_activity_logs.sql;
 SOURCE database/08_indexes_and_constraints.sql;
-SOURCE database/09_sample_data.sql;  -- Optional
+
+-- Optional: Add sample data
+SOURCE database/09_sample_data.sql;
 ```
 
--- Database Structure Overview:
--- - users: User management and authentication
--- - water_readings: Sensor data storage
--- - relay_states: Current relay states
--- - relay_schedules: Legacy scheduling system
--- - schedules: Main scheduling system
--- - schedule_logs: Schedule execution tracking
--- - activity_logs: User activity audit trail
-
 ### 4. Environment Configuration
+
 ```bash
 # Copy environment template
 cp config/env.example config/.env
 
-# Edit config/.env with your settings:
+# Edit configuration file
+nano config/.env
+```
+
+#### Environment Variables
+```env
+# Database Configuration
 DB_HOST=127.0.0.1
 DB_PORT=3306
 DB_NAME=water_quality_db
-DB_USERNAME=root
-DB_PASSWORD=your_password
-APP_ENV=development
-APP_DEBUG=true
-APP_URL=http://localhost/projtest
+DB_USERNAME=your_username
+DB_PASSWORD=your_secure_password
+
+# Application Configuration
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://your-domain.com/water_monitoring
+APP_TIMEZONE=UTC
+
+# Security Configuration
+SESSION_SECURE=true
+SESSION_HTTP_ONLY=true
 ```
 
-### 5. Initial Setup
-```bash
-# Create first admin user
-# Access: http://localhost/projtest/login/
-# Default credentials will be set up during first run
-# Ensure proper file permissions (755 for directories, 644 for files)
+### 5. ESP32 Setup
+
+#### Arduino IDE Configuration
+1. **Add ESP32 Board Support**:
+   - File → Preferences
+   - Add: `https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json`
+   - Tools → Board → Boards Manager → Install "esp32"
+
+2. **Install Required Libraries**:
+   ```bash
+   # Core libraries
+   - WiFi.h (ESP32 core)
+   - HTTPClient.h (ESP32 core)
+   - ArduinoJson.h (version 6.x)
+   
+   # Sensor libraries
+   - DFRobot_PH.h
+   - OneWire.h
+   - DallasTemperature.h
+   ```
+
+3. **Configure Hardware**:
+   - Select board: Tools → Board → ESP32 Arduino → ESP32 Dev Module
+   - Set upload speed: 115200
+   - Configure WiFi credentials in `relay_control/relay_control.ino`
+
+4. **Upload Code**:
+   ```bash
+   # Upload to ESP32
+   Tools → Board → ESP32 Dev Module
+   Tools → Port → Select ESP32 port
+   Sketch → Upload
+   ```
+
+## ⚙️ Configuration
+
+### Database Configuration
+
+#### Connection Settings
+```php
+// config/database.php
+class Database {
+    private static $host = '127.0.0.1';
+    private static $port = 3306;
+    private static $database = 'water_quality_db';
+    private static $username = 'your_username';
+    private static $password = 'your_password';
+}
 ```
 
-### 6. Schedule System Setup (Optional)
-```bash
-# For automatic schedule execution, set up Windows Task Scheduler:
-# 1. Open Task Scheduler (Win + R → taskschd.msc)
-# 2. Create Basic Task: "Schedule Execution"
-# 3. Trigger: Daily, repeat every 1 minute
-# 4. Action: Start program
-# 5. Program: C:\xampp\php\php.exe
-# 6. Arguments: C:\xampp\htdocs\projtest\api\execute_schedules.php
-# 7. Start in: C:\xampp\htdocs\projtest\api
+#### Performance Optimization
+```sql
+-- Enable query cache
+SET GLOBAL query_cache_size = 67108864;
+SET GLOBAL query_cache_type = 1;
+
+-- Optimize table performance
+OPTIMIZE TABLE water_readings;
+ANALYZE TABLE water_readings;
 ```
 
-## 📁 Project Structure
+### Hardware Configuration
 
-```
-projtest/
-├── admin/                     # Admin dashboard
-│   ├── actlogs/              # Activity logging system
-│   │   ├── actlogs.php       # Activity logs interface
-│   │   ├── index.php         # Entry point
-│   │   └── *.sql             # Database schema files
-│   ├── dashboard/            # Main dashboard
-│   │   ├── dashboard.php     # Dashboard interface
-│   │   └── index.php         # Entry point
-│   ├── monitor/              # Real-time monitoring
-│   │   ├── monitor.php       # Sensor monitoring interface
-│   │   └── index.php         # Entry point
-│   ├── analytics/            # Data analytics
-│   │   ├── analytics.php     # Analytics dashboard
-│   │   └── index.php         # Entry point
-│   ├── controls/             # System controls
-│   │   ├── controls.php      # Control panel interface
-│   │   └── index.php         # Entry point
-│   ├── user/                 # User management
-│   │   ├── user.php          # User management interface
-│   │   └── index.php         # Entry point
-│   ├── sidebar/              # Navigation component
-│   │   └── sidebar.php       # Sidebar navigation
-│   ├── schedule/             # Schedule management system
-│   │   ├── schedule.php      # Schedule management interface
-│   │   ├── index.php         # Entry point
-│   │   └── README.md         # Schedule system documentation
-│   ├── alerts/               # Alert management
-│   ├── reports/              # Reporting system
-│   └── .htaccess             # Security rules
-├── api/                      # API endpoints
-│   ├── create_user.php       # User creation API
-│   ├── update_user.php       # User update API
-│   ├── update_user_status.php # User status management
-│   ├── get_readings.php      # Sensor data retrieval
-│   ├── upload.php            # Sensor data upload
-│   ├── relay_control.php     # Relay control API
-│   ├── schedule_control.php  # Schedule management API
-│   ├── execute_schedules.php # Automated schedule execution
-│   ├── check_data.php        # Data verification
-│   ├── check_email.php       # Email validation
-│   └── .htaccess             # API security
-├── config/                   # Configuration
-│   ├── database.php          # Database connection class
-│   ├── EnvLoader.php         # Environment loader
-│   ├── env.example           # Environment template
-│   └── README.md             # Configuration docs
-├── database/                 # Database schema and structure
-│   ├── README.md             # Database documentation
-│   ├── 00_database_setup.sql # Database creation and configuration
-│   ├── 01_users.sql          # User management table
-│   ├── 02_water_readings.sql # Sensor data storage
-│   ├── 03_relay_states.sql   # Current relay states
-│   ├── 04_relay_schedules.sql # Legacy scheduling system
-│   ├── 05_schedules.sql      # Main scheduling system
-│   ├── 06_schedule_logs.sql  # Schedule execution logs
-│   ├── 07_activity_logs.sql  # User activity tracking
-│   ├── 08_indexes_and_constraints.sql # Database optimization
-│   ├── 09_sample_data.sql    # Sample data for testing
-│   └── water_quality_db_complete.sql # Complete database dump
-├── login/                    # Authentication
-│   ├── index.php             # Login interface
-│   └── logout.php            # Logout handler
-├── relay_control/            # ESP32 code
-│   └── relay_control.ino     # Main Arduino sketch
-├── index.php                 # Main application entry
-├── LICENSE                   # MIT License
-└── README.md                 # This file
-```
-
-## 🔌 Pin Configuration (ESP32)
-
+#### Pin Assignment
 | Component | GPIO Pin | Description | Voltage |
 |-----------|----------|-------------|---------|
 | pH Sensor | GPIO34 | ADC1 input | 3.3V |
 | Turbidity Sensor | GPIO33 | ADC1 input | 3.3V |
 | TDS Sensor | GPIO32 | ADC1 input | 3.3V |
 | Temperature Sensor | GPIO4 | OneWire bus | 3.3V |
-| Relay IN1 | GPIO25 | Pool to Filter | 3.3V |
-| Relay IN2 | GPIO26 | Filter to Pool | 3.3V |
-| Relay IN3 | GPIO27 | Dispenser | 3.3V |
-| Relay IN4 | GPIO14 | Spare | 3.3V |
+| Relay IN1 | GPIO25 | Filter Control | 3.3V |
+| Relay IN2 | GPIO26 | Dispense Water | 3.3V |
+| Relay IN3 | GPIO27 | Reserved | 3.3V |
+| Relay IN4 | GPIO14 | Reserved | 3.3V |
 
-## 🚀 Usage
+#### Sensor Calibration
+```cpp
+// pH Sensor Calibration
+#define PH_OFFSET 0.00
+#define PH_SLOPE 1.00
+
+// TDS Sensor Calibration
+#define TDS_OFFSET 0.00
+#define TDS_SLOPE 1.00
+```
+
+## 📖 Usage
 
 ### Access Points
-- **Main Application**: `http://localhost/projtest/`
-- **Admin Dashboard**: `http://localhost/projtest/admin/dashboard/`
-- **Real-time Monitor**: `http://localhost/projtest/admin/monitor/`
-- **Analytics**: `http://localhost/projtest/admin/analytics/`
-- **Control Panel**: `http://localhost/projtest/admin/controls/`
-- **Schedule Management**: `http://localhost/projtest/admin/schedule/`
-- **User Management**: `http://localhost/projtest/admin/user/`
-- **Activity Logs**: `http://localhost/projtest/admin/actlogs/`
-- **Login**: `http://localhost/projtest/login/`
 
-### Key Features
+| Service | URL | Description |
+|---------|-----|-------------|
+| Main Application | `http://your-domain.com/water_monitoring/` | Landing page |
+| Admin Dashboard | `http://your-domain.com/water_monitoring/admin/dashboard/` | Main dashboard |
+| Real-time Monitor | `http://your-domain.com/water_monitoring/admin/monitor/` | Live monitoring |
+| Analytics | `http://your-domain.com/water_monitoring/admin/analytics/` | Data analysis |
+| Control Panel | `http://your-domain.com/water_monitoring/admin/controls/` | System control |
+| Schedule Management | `http://your-domain.com/water_monitoring/admin/schedule/` | Automation |
+| User Management | `http://your-domain.com/water_monitoring/admin/user/` | User administration |
+| Activity Logs | `http://your-domain.com/water_monitoring/admin/actlogs/` | Audit trail |
+| Login | `http://your-domain.com/water_monitoring/login/` | Authentication |
 
-#### 📊 Real-time Monitoring
-- **Live Sensor Data** - Real-time updates every 5 seconds
-- **Quality Status** - Automated water quality assessment
-- **Parameter Tracking** - All sensors with visual indicators
-- **Alert System** - Immediate notifications for issues
+### Default Credentials
 
-#### 📈 Advanced Analytics
-- **Trend Analysis** - Historical data visualization
-- **Statistical Insights** - Min/max/average calculations
-- **Quality Insights** - Automated recommendations
-- **Data Export** - CSV export with comprehensive sensor readings
-- **Chart Export** - Individual chart export as PNG images
-- **Performance Metrics** - Key performance indicators with trend analysis
-- **Streamlined Interface** - Optimized layout with better information hierarchy
+| Username | Password | Role | Access |
+|----------|----------|------|--------|
+| admin | password123 | Admin | Full access |
+| staff1 | password123 | Staff | Limited access |
 
-#### 🎛️ System Control
-- **Relay Management** - Individual and bulk control
-- **Schedule Management** - Automated relay scheduling with timezone support
-- **Automation Rules** - Smart system automation
-- **Status Monitoring** - Real-time system status
-- **Control Logs** - Complete action tracking
+**⚠️ Security Note**: Change default passwords immediately after installation.
 
-#### 👥 User Management
-- **User Administration** - Create, edit, archive users
-- **Role Management** - Admin and staff roles
-- **Activity Tracking** - Complete audit trail
-- **Security Features** - Password policies and session management
+### Key Operations
 
-## 🔒 Security
+#### Real-time Monitoring
+1. Navigate to **Monitor** section
+2. View live sensor readings
+3. Monitor water quality status
+4. Check system alerts
+
+#### System Control
+1. Access **Controls** section
+2. Toggle relay states manually
+3. Monitor system status
+4. View control history
+
+#### Schedule Management
+1. Go to **Schedule** section
+2. Create new schedules
+3. Set recurring patterns
+4. Monitor execution logs
+
+#### Data Analytics
+1. Visit **Analytics** section
+2. View historical trends
+3. Export data and charts
+4. Analyze performance metrics
+
+## 🔌 API Documentation
 
 ### Authentication
-- **Session-based authentication** with secure session handling
-- **Password hashing** with bcrypt (cost factor 12)
-- **Role-based access control** with permission validation
-- **Secure logout** with session cleanup and regeneration
-
-### Data Protection
-- **SQL injection prevention** using prepared statements
-- **XSS protection** with input sanitization and output escaping
-- **CSRF protection** with token validation
-- **Input validation** with comprehensive sanitization
-
-### Access Control
-- **Protected admin routes** with authentication middleware
-- **User permission management** with role-based access
-- **Activity logging** for complete audit trails
-- **Secure API endpoints** with proper validation
-
-## 🐛 Troubleshooting
-
-### ESP32 Issues
-- **Connection Problems**: 
-  - Check WiFi credentials in relay_control.ino
-  - Verify server URL and port
-  - Ensure ESP32 has stable power supply
-- **Sensor Readings**: 
-  - Verify wiring connections
-  - Check sensor calibration
-  - Ensure proper voltage levels (3.3V)
-- **Relay Control**: 
-  - Check GPIO connections
-  - Verify relay module power supply
-  - Test individual relay channels
-
-### Web Application Issues
-- **Database Connection**: 
-  - Verify credentials in `.env` file
-  - Check MySQL service status
-  - Ensure database exists and is accessible
-- **Session Problems**: 
-  - Check PHP session configuration
-  - Verify session storage permissions
-  - Clear browser cookies if needed
-- **Permission Errors**: 
-  - Ensure proper file permissions (755 for dirs, 644 for files)
-  - Check web server user permissions
-  - Verify .htaccess file configuration
-
-### Sensor Calibration
-- **pH Sensor**: 
-  - Use standard buffer solutions (4.0, 7.0, 10.0)
-  - Calibrate at room temperature
-  - Rinse sensor between measurements
-- **Turbidity**: 
-  - Calibrate with known turbidity standards
-  - Clean sensor regularly
-  - Avoid air bubbles in measurements
-- **TDS**: 
-  - Use calibration solutions for accurate readings
-  - Check temperature compensation
-  - Clean electrodes regularly
-
-### Performance Optimization
-- **Database Queries**: 
-  - Optimize slow queries with proper indexing
-  - Use connection pooling for high traffic
-  - Implement query caching where appropriate
-- **Real-time Updates**: 
-  - Adjust update frequency based on needs
-  - Implement data compression for large datasets
-  - Use WebSocket for better real-time performance
-
-## 📊 API Documentation
+All API endpoints require valid session authentication.
 
 ### Sensor Data Endpoints
-- `GET /api/get_readings.php` - Retrieve sensor data
-- `POST /api/upload.php` - Upload sensor readings
-- `GET /api/check_data.php` - Verify data integrity
 
-### User Management Endpoints
-- `POST /api/create_user.php` - Create new user
-- `POST /api/update_user.php` - Update user information
-- `POST /api/update_user_status.php` - Change user status
-- `GET /api/check_email.php` - Validate email uniqueness
+#### Get Latest Readings
+```http
+GET /api/get_readings.php
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "latest": {
+    "turbidity": 1.7,
+    "tds": 150,
+    "ph": 7.2,
+    "temperature": 25.5,
+    "reading_time": "2024-12-15 10:30:00"
+  },
+  "historical": [...]
+}
+```
+
+#### Upload Sensor Data
+```http
+POST /api/upload.php
+Content-Type: application/json
+
+{
+  "turbidity": 1.7,
+  "tds": 150,
+  "ph": 7.2,
+  "temperature": 25.5
+}
+```
 
 ### Control Endpoints
-- `GET /api/relay_control.php` - Get relay status
-- `POST /api/relay_control.php` - Control relay states
+
+#### Get Relay Status
+```http
+GET /api/relay_control.php
+```
+
+#### Control Relay
+```http
+POST /api/relay_control.php
+Content-Type: application/json
+
+{
+  "relay": 1,
+  "action": "on"
+}
+```
+
+### User Management Endpoints
+
+#### Create User
+```http
+POST /api/create_user.php
+Content-Type: application/json
+
+{
+  "username": "newuser",
+  "first_name": "John",
+  "last_name": "Doe",
+  "email": "john@example.com",
+  "password": "securepassword",
+  "role": "staff"
+}
+```
 
 ### Schedule Management Endpoints
-- `GET /api/schedule_control.php` - Get all schedules
-- `POST /api/schedule_control.php` - Create/update schedule
-- `DELETE /api/schedule_control.php` - Delete schedule(s)
-- `GET /api/execute_schedules.php` - Manual schedule execution
 
-## 🔄 Updates & Maintenance
+#### Get Schedules
+```http
+GET /api/schedule_control.php
+```
 
-### Regular Maintenance
-- **Database Optimization** - Regular table optimization and cleanup
-- **Log Rotation** - Manage activity log file sizes
-- **Security Updates** - Keep dependencies updated
-- **Backup Procedures** - Regular database and file backups
+#### Create Schedule
+```http
+POST /api/schedule_control.php
+Content-Type: application/json
 
-### Monitoring
-- **System Health** - Monitor server resources and performance
-- **Error Logging** - Track and resolve application errors
-- **User Activity** - Monitor for suspicious activity
-- **Sensor Health** - Track sensor accuracy and calibration
+{
+  "name": "Morning Filter",
+  "relay_number": 1,
+  "action": "on",
+  "schedule_type": "recurring",
+  "time": "08:00:00",
+  "days": "1,2,3,4,5"
+}
+```
 
-## 📝 License
+## 🛠️ Development
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+### Project Structure
+```
+water_monitoring/
+├── admin/                     # Admin dashboard
+│   ├── dashboard/            # Main dashboard
+│   ├── monitor/              # Real-time monitoring
+│   ├── analytics/            # Data analytics
+│   ├── controls/             # System controls
+│   ├── schedule/             # Schedule management
+│   ├── user/                 # User management
+│   ├── actlogs/              # Activity logging
+│   └── sidebar/              # Navigation component
+├── api/                      # RESTful API endpoints
+├── config/                   # Configuration files
+├── database/                 # Database schema and structure
+├── login/                    # Authentication system
+├── relay_control/            # ESP32 Arduino code
+├── logs/                     # Application logs
+└── docs/                     # Documentation
+```
 
-## 🤝 Contributing
+### Development Setup
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes with proper documentation
-4. Test thoroughly on different environments
-5. Ensure code follows project standards
-6. Submit a pull request with detailed description
+#### Local Development
+```bash
+# Clone repository
+git clone https://github.com/Anoncasphil/water_monitoring.git
+cd water_monitoring
+
+# Setup local environment
+cp config/env.example config/.env
+# Edit config/.env with local settings
+
+# Import database
+mysql -u root -p < database/water_quality_db_complete.sql
+
+# Start development server
+php -S localhost:8000
+```
+
+#### Code Standards
+- **PHP**: PSR-12 coding standards
+- **JavaScript**: ESLint configuration
+- **CSS**: Tailwind CSS utility classes
+- **SQL**: Consistent naming conventions
+
+#### Testing
+```bash
+# Run database tests
+php tests/database_test.php
+
+# Run API tests
+php tests/api_test.php
+
+# Run integration tests
+php tests/integration_test.php
+```
+
+### Contributing
+
+1. **Fork the repository**
+2. **Create feature branch**: `git checkout -b feature/amazing-feature`
+3. **Make changes** with proper documentation
+4. **Test thoroughly** on different environments
+5. **Follow coding standards** and project guidelines
+6. **Submit pull request** with detailed description
+
+## 🚀 Deployment
+
+### Production Deployment
+
+#### Server Requirements
+- **Operating System**: Ubuntu 20.04+ or CentOS 8+
+- **Web Server**: Apache 2.4+ or Nginx 1.18+
+- **PHP**: 8.0+ with required extensions
+- **Database**: MySQL 5.7+ or MariaDB 10.4+
+- **SSL Certificate**: Valid SSL certificate for HTTPS
+
+#### Deployment Steps
+
+1. **Server Preparation**
+```bash
+# Update system
+sudo apt update && sudo apt upgrade -y
+
+# Install required packages
+sudo apt install apache2 php mysql-server php-mysql php-curl php-json
+```
+
+2. **Application Deployment**
+```bash
+# Clone application
+sudo git clone https://github.com/Anoncasphil/water_monitoring.git /var/www/water_monitoring
+
+# Set permissions
+sudo chown -R www-data:www-data /var/www/water_monitoring
+sudo chmod -R 755 /var/www/water_monitoring
+```
+
+3. **Database Setup**
+```bash
+# Create database
+sudo mysql -u root -p
+CREATE DATABASE water_quality_db;
+CREATE USER 'water_user'@'localhost' IDENTIFIED BY 'secure_password';
+GRANT ALL PRIVILEGES ON water_quality_db.* TO 'water_user'@'localhost';
+FLUSH PRIVILEGES;
+
+# Import schema
+mysql -u water_user -p water_quality_db < database/water_quality_db_complete.sql
+```
+
+4. **Configuration**
+```bash
+# Copy and configure environment
+cp config/env.example config/.env
+nano config/.env
+
+# Configure web server
+sudo nano /etc/apache2/sites-available/water_monitoring.conf
+```
+
+5. **Security Hardening**
+```bash
+# Enable HTTPS
+sudo a2enmod ssl
+sudo a2enmod rewrite
+
+# Configure firewall
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw allow 22/tcp
+```
+
+#### Performance Optimization
+
+1. **Database Optimization**
+```sql
+-- Enable query cache
+SET GLOBAL query_cache_size = 134217728;
+SET GLOBAL query_cache_type = 1;
+
+-- Optimize tables
+OPTIMIZE TABLE water_readings;
+ANALYZE TABLE water_readings;
+```
+
+2. **PHP Optimization**
+```ini
+; php.ini optimizations
+memory_limit = 256M
+max_execution_time = 300
+opcache.enable = 1
+opcache.memory_consumption = 128
+```
+
+3. **Web Server Optimization**
+```apache
+# Apache optimizations
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+</IfModule>
+```
+
+### Monitoring & Maintenance
+
+#### Health Checks
+```bash
+# Database connectivity
+mysql -u water_user -p -e "SELECT 1;"
+
+# Application status
+curl -I http://your-domain.com/water_monitoring/
+
+# Log monitoring
+tail -f /var/log/apache2/error.log
+```
+
+#### Backup Procedures
+```bash
+# Database backup
+mysqldump -u water_user -p water_quality_db > backup_$(date +%Y%m%d).sql
+
+# Application backup
+tar -czf water_monitoring_$(date +%Y%m%d).tar.gz /var/www/water_monitoring/
+
+# Automated backup script
+#!/bin/bash
+DATE=$(date +%Y%m%d_%H%M%S)
+mysqldump -u water_user -p water_quality_db > /backups/db_$DATE.sql
+tar -czf /backups/app_$DATE.tar.gz /var/www/water_monitoring/
+find /backups -name "*.sql" -mtime +7 -delete
+find /backups -name "*.tar.gz" -mtime +7 -delete
+```
+
+## 🔧 Troubleshooting
+
+### Common Issues
+
+#### Database Connection Issues
+```bash
+# Check database service
+sudo systemctl status mysql
+
+# Verify connection settings
+mysql -u water_user -p -h localhost
+
+# Check error logs
+sudo tail -f /var/log/mysql/error.log
+```
+
+#### ESP32 Connection Problems
+```cpp
+// Debug WiFi connection
+void debugWiFi() {
+    Serial.print("WiFi Status: ");
+    Serial.println(WiFi.status());
+    Serial.print("IP Address: ");
+    Serial.println(WiFi.localIP());
+}
+```
+
+#### Sensor Reading Issues
+```cpp
+// Verify sensor connections
+void testSensors() {
+    Serial.print("pH: ");
+    Serial.println(analogRead(PH_PIN));
+    Serial.print("Turbidity: ");
+    Serial.println(analogRead(TURBIDITY_PIN));
+    Serial.print("TDS: ");
+    Serial.println(analogRead(TDS_PIN));
+}
+```
+
+#### Web Interface Issues
+```bash
+# Check PHP errors
+sudo tail -f /var/log/apache2/error.log
+
+# Verify file permissions
+ls -la /var/www/water_monitoring/
+
+# Test PHP configuration
+php -v
+php -m | grep mysql
+```
+
+### Performance Issues
+
+#### Slow Database Queries
+```sql
+-- Enable slow query log
+SET GLOBAL slow_query_log = 'ON';
+SET GLOBAL long_query_time = 2;
+
+-- Analyze slow queries
+SELECT * FROM mysql.slow_log ORDER BY start_time DESC LIMIT 10;
+```
+
+#### Memory Issues
+```bash
+# Check memory usage
+free -h
+ps aux --sort=-%mem | head -10
+
+# Optimize PHP memory
+php -i | grep memory_limit
+```
+
+### Security Issues
+
+#### Session Security
+```php
+// Secure session configuration
+ini_set('session.cookie_httponly', 1);
+ini_set('session.cookie_secure', 1);
+ini_set('session.use_strict_mode', 1);
+```
+
+#### SQL Injection Prevention
+```php
+// Use prepared statements
+$stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
+$stmt->execute([$user_id]);
+```
 
 ## 📞 Support
 
-For support and questions:
-- **Documentation**: Check this README and inline code comments
-- **Troubleshooting**: Review the troubleshooting section above
-- **Configuration**: Verify all requirements and setup steps
-- **Issues**: Check existing issues before creating new ones
+### Getting Help
 
-### Common Issues
-- **ESP32 not connecting**: Check WiFi credentials and server URL
-- **Database errors**: Verify connection settings and permissions
-- **Sensor readings inaccurate**: Check calibration and wiring
-- **Relay not responding**: Verify GPIO connections and power supply
+- **Documentation**: Check this README and inline code comments
+- **Issues**: [GitHub Issues](https://github.com/Anoncasphil/water_monitoring/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/Anoncasphil/water_monitoring/discussions)
+- **Wiki**: [Project Wiki](https://github.com/Anoncasphil/water_monitoring/wiki)
+
+### Community
+
+- **Contributors**: See [Contributors](https://github.com/Anoncasphil/water_monitoring/graphs/contributors)
+- **Code of Conduct**: [Contributor Covenant](CODE_OF_CONDUCT.md)
+- **Changelog**: [CHANGELOG.md](CHANGELOG.md)
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+### License Summary
+
+- **Commercial Use**: ✅ Allowed
+- **Modification**: ✅ Allowed
+- **Distribution**: ✅ Allowed
+- **Private Use**: ✅ Allowed
+- **Liability**: ❌ No liability
+- **Warranty**: ❌ No warranty
+
+## 🙏 Acknowledgments
+
+- **ESP32 Community**: For hardware support and examples
+- **Arduino Community**: For sensor libraries and examples
+- **PHP Community**: For web development best practices
+- **Open Source Contributors**: For various libraries and tools
 
 ---
 
 **Version**: 3.1.0  
 **Last Updated**: December 2024  
-**Compatibility**: PHP 8.0+, MySQL 5.7+, ESP32 Arduino Core 2.0+  
-**License**: MIT License  
-**Author**: Water Quality Monitoring System Team 
+**Maintainer**: Water Quality Monitoring System Team  
+**Repository**: [https://github.com/Anoncasphil/water_monitoring](https://github.com/Anoncasphil/water_monitoring) 
