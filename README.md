@@ -135,25 +135,32 @@ A comprehensive real-time water quality monitoring system with ESP32 microcontro
 
 ### 3. Database Setup
 ```sql
--- Create database
-CREATE DATABASE water_quality_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+-- Option 1: Quick Setup (Complete Database)
+-- Import the complete database file:
+-- database/water_quality_db_complete.sql
 
--- Import schema
+-- Option 2: Modular Setup (Recommended)
 -- Run the SQL files in order:
--- 1. config/database.php (creates users table)
--- 2. admin/actlogs/create_activity_logs_table.sql
--- 3. Any additional setup scripts
-
--- Create water_readings table
-CREATE TABLE water_readings (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    turbidity_ntu DECIMAL(5,2) NOT NULL,
-    tds_ppm DECIMAL(6,2) NOT NULL,
-    ph DECIMAL(3,2) NOT NULL,
-    temperature DECIMAL(4,2) NOT NULL,
-    reading_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+SOURCE database/00_database_setup.sql;
+SOURCE database/01_users.sql;
+SOURCE database/02_water_readings.sql;
+SOURCE database/03_relay_states.sql;
+SOURCE database/04_relay_schedules.sql;
+SOURCE database/05_schedules.sql;
+SOURCE database/06_schedule_logs.sql;
+SOURCE database/07_activity_logs.sql;
+SOURCE database/08_indexes_and_constraints.sql;
+SOURCE database/09_sample_data.sql;  -- Optional
 ```
+
+-- Database Structure Overview:
+-- - users: User management and authentication
+-- - water_readings: Sensor data storage
+-- - relay_states: Current relay states
+-- - relay_schedules: Legacy scheduling system
+-- - schedules: Main scheduling system
+-- - schedule_logs: Schedule execution tracking
+-- - activity_logs: User activity audit trail
 
 ### 4. Environment Configuration
 ```bash
@@ -241,6 +248,19 @@ projtest/
 │   ├── EnvLoader.php         # Environment loader
 │   ├── env.example           # Environment template
 │   └── README.md             # Configuration docs
+├── database/                 # Database schema and structure
+│   ├── README.md             # Database documentation
+│   ├── 00_database_setup.sql # Database creation and configuration
+│   ├── 01_users.sql          # User management table
+│   ├── 02_water_readings.sql # Sensor data storage
+│   ├── 03_relay_states.sql   # Current relay states
+│   ├── 04_relay_schedules.sql # Legacy scheduling system
+│   ├── 05_schedules.sql      # Main scheduling system
+│   ├── 06_schedule_logs.sql  # Schedule execution logs
+│   ├── 07_activity_logs.sql  # User activity tracking
+│   ├── 08_indexes_and_constraints.sql # Database optimization
+│   ├── 09_sample_data.sql    # Sample data for testing
+│   └── water_quality_db_complete.sql # Complete database dump
 ├── login/                    # Authentication
 │   ├── index.php             # Login interface
 │   └── logout.php            # Logout handler
