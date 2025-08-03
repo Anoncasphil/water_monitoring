@@ -15,7 +15,7 @@ if (!isset($_SESSION['user_id'])) {
 // Set JSON header for API responses
 header('Content-Type: application/json');
 
-require_once '../config/database.php';
+require_once __DIR__ . '/../config/database.php';
 
 try {
     $db = Database::getInstance();

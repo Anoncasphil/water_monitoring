@@ -20,7 +20,8 @@ ob_start();
 
 echo "=== Schedule Execution Started: " . date('Y-m-d H:i:s') . " ===\n";
 
-require_once '../config/database.php';
+// Use absolute path for cron job compatibility
+require_once __DIR__ . '/../config/database.php';
 
 try {
     $db = Database::getInstance();
