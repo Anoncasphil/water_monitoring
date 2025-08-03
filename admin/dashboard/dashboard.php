@@ -307,13 +307,13 @@ try {
                     </span>
                 </div>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <!-- Pool to Filter Pump -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Filter -->
                 <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
                     <div class="flex items-center justify-between mb-3">
                         <div class="flex items-center">
-                            <i class="fas fa-pump text-blue-500 dark:text-blue-400 mr-2"></i>
-                            <h6 class="text-sm font-medium text-gray-700 dark:text-gray-300">Pool to Filter</h6>
+                            <i class="fas fa-filter text-blue-500 dark:text-blue-400 mr-2"></i>
+                            <h6 class="text-sm font-medium text-gray-700 dark:text-gray-300">Filter</h6>
                         </div>
                         <span class="text-xs text-gray-500 dark:text-gray-400">IN1</span>
                     </div>
@@ -323,47 +323,17 @@ try {
                     </label>
                 </div>
 
-                <!-- Filter to Pool Pump -->
+                <!-- Dispense Water -->
                 <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
                     <div class="flex items-center justify-between mb-3">
                         <div class="flex items-center">
-                            <i class="fas fa-water text-blue-500 dark:text-blue-400 mr-2"></i>
-                            <h6 class="text-sm font-medium text-gray-700 dark:text-gray-300">Filter to Pool</h6>
+                            <i class="fas fa-tint text-blue-500 dark:text-blue-400 mr-2"></i>
+                            <h6 class="text-sm font-medium text-gray-700 dark:text-gray-300">Dispense Water</h6>
                         </div>
                         <span class="text-xs text-gray-500 dark:text-gray-400">IN2</span>
                     </div>
                     <label class="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" class="sr-only peer" data-relay="2" onchange="toggleRelay(this)">
-                        <div class="w-11 h-6 bg-gray-200 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                    </label>
-                </div>
-
-                <!-- Dispenser -->
-                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="flex items-center">
-                            <i class="fas fa-tint text-blue-500 dark:text-blue-400 mr-2"></i>
-                            <h6 class="text-sm font-medium text-gray-700 dark:text-gray-300">Dispenser</h6>
-                        </div>
-                        <span class="text-xs text-gray-500 dark:text-gray-400">IN3</span>
-                    </div>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" class="sr-only peer" data-relay="3" onchange="toggleRelay(this)">
-                        <div class="w-11 h-6 bg-gray-200 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                    </label>
-                </div>
-
-                <!-- Spare Relay -->
-                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="flex items-center">
-                            <i class="fas fa-plug text-blue-500 dark:text-blue-400 mr-2"></i>
-                            <h6 class="text-sm font-medium text-gray-700 dark:text-gray-300">Spare</h6>
-                        </div>
-                        <span class="text-xs text-gray-500 dark:text-gray-400">IN4</span>
-                    </div>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" class="sr-only peer" data-relay="4" onchange="toggleRelay(this)">
                         <div class="w-11 h-6 bg-gray-200 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                     </label>
                 </div>

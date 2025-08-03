@@ -46,7 +46,7 @@ try {
     </script>
     <style>
         .control-card {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0, 0.2, 1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             overflow: hidden;
         }
@@ -130,11 +130,57 @@ try {
             background-color: #6B7280;
             cursor: not-allowed;
         }
-        .automation-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        .relay-card {
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
         }
-        .dark .automation-card {
-            background: linear-gradient(135deg, #4C1D95 0%, #7C3AED 100%);
+        .relay-card.active {
+            border-color: #10B981;
+            background: linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%);
+        }
+        .dark .relay-card.active {
+            background: linear-gradient(135deg, #064E3B 0%, #065F46 100%);
+            border-color: #10B981;
+        }
+        .relay-card.inactive {
+            border-color: #E5E7EB;
+            background: linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%);
+        }
+        .dark .relay-card.inactive {
+            background: linear-gradient(135deg, #374151 0%, #4B5563 100%);
+            border-color: #6B7280;
+        }
+        .power-button {
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .power-button::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.3s ease, height 0.3s ease;
+        }
+        .power-button:active::before {
+            width: 200px;
+            height: 200px;
+        }
+        .status-badge {
+            transition: all 0.3s ease;
+        }
+        .status-badge.online {
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+            color: white;
+        }
+        .status-badge.offline {
+            background: linear-gradient(135deg, #6B7280 0%, #4B5563 100%);
+            color: white;
         }
     </style>
 </head>
@@ -170,7 +216,7 @@ try {
             </div>
 
             <!-- System Status Overview -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
                 <div class="control-card bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
                     <div class="flex items-center justify-between">
                         <div>
@@ -206,22 +252,10 @@ try {
                         </div>
                     </div>
                 </div>
-
-                <div class="control-card bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Auto Mode</h3>
-                            <p class="text-sm font-medium text-gray-600 dark:text-gray-400" id="autoMode">Disabled</p>
-                        </div>
-                        <div class="w-12 h-12 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
-                            <i class="fas fa-robot text-orange-500 dark:text-orange-400 text-xl"></i>
-                        </div>
-                    </div>
-                </div>
             </div>
 
             <!-- Relay Control Panel -->
-            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 mb-8">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8">
                 <div class="flex items-center justify-between mb-8">
                     <div>
                         <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
@@ -231,234 +265,75 @@ try {
                         <p class="text-gray-600 dark:text-gray-400">Direct control over water quality system components</p>
                     </div>
                     <div class="flex space-x-3">
-                        <button id="allOn" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors">
+                        <button id="allOn" class="power-button px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl">
                             <i class="fas fa-power-off mr-2"></i>All On
                         </button>
-                        <button id="allOff" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors">
+                        <button id="allOff" class="power-button px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl">
                             <i class="fas fa-stop mr-2"></i>All Off
                         </button>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <!-- Pool to Filter Pump -->
-                    <div class="control-card bg-gray-50 dark:bg-gray-700 rounded-xl p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Filter -->
+                    <div class="relay-card control-card rounded-2xl p-6 inactive" id="relay1Card">
                         <div class="flex items-center justify-between mb-4">
                             <div class="flex items-center">
-                                <div class="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mr-3">
-                                    <i class="fas fa-pump text-blue-500 dark:text-blue-400"></i>
+                                <div class="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mr-4">
+                                    <i class="fas fa-filter text-blue-500 dark:text-blue-400 text-xl"></i>
                                 </div>
                                 <div>
-                                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Pool to Filter</h3>
-                                    <p class="text-sm text-gray-500 dark:text-gray-400">IN1 - Main Pump</p>
+                                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">Filter</h3>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400">Water Filtration</p>
                                 </div>
                             </div>
                         </div>
-                        <div class="flex items-center justify-between mb-4">
-                            <span class="text-sm text-gray-600 dark:text-gray-400">Status:</span>
-                            <span class="text-sm font-medium" id="relay1Status">Offline</span>
+                        
+                        <div class="flex items-center justify-between mb-6">
+                            <span class="text-sm text-gray-600 dark:text-gray-400 font-medium">Status:</span>
+                            <span class="status-badge px-3 py-1 rounded-full text-xs font-semibold offline" id="relay1Status">Offline</span>
                         </div>
-                        <div class="flex items-center justify-between">
+                        
+                        <div class="flex items-center justify-center">
                             <label class="switch">
                                 <input type="checkbox" data-relay="1" onchange="toggleRelay(this)">
                                 <span class="slider"></span>
                             </label>
-                            <div class="text-right">
-                                <div class="text-xs text-gray-500 dark:text-gray-400">Power</div>
-                                <div class="text-sm font-semibold text-gray-900 dark:text-white" id="relay1Power">0W</div>
-                            </div>
+                        </div>
+                        
+                        <div class="mt-4 text-center">
+                            <div class="text-xs text-gray-500 dark:text-gray-400">IN1 - Relay 1</div>
                         </div>
                     </div>
 
-                    <!-- Filter to Pool Pump -->
-                    <div class="control-card bg-gray-50 dark:bg-gray-700 rounded-xl p-6">
+                    <!-- Dispense Water -->
+                    <div class="relay-card control-card rounded-2xl p-6 inactive" id="relay2Card">
                         <div class="flex items-center justify-between mb-4">
                             <div class="flex items-center">
-                                <div class="w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mr-3">
-                                    <i class="fas fa-water text-emerald-500 dark:text-emerald-400"></i>
+                                <div class="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mr-4">
+                                    <i class="fas fa-tint text-emerald-500 dark:text-emerald-400 text-xl"></i>
                                 </div>
                                 <div>
-                                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Filter to Pool</h3>
-                                    <p class="text-sm text-gray-500 dark:text-gray-400">IN2 - Return Pump</p>
+                                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">Dispense Water</h3>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400">Water Dispensing</p>
                                 </div>
                             </div>
                         </div>
-                        <div class="flex items-center justify-between mb-4">
-                            <span class="text-sm text-gray-600 dark:text-gray-400">Status:</span>
-                            <span class="text-sm font-medium" id="relay2Status">Offline</span>
+                        
+                        <div class="flex items-center justify-between mb-6">
+                            <span class="text-sm text-gray-600 dark:text-gray-400 font-medium">Status:</span>
+                            <span class="status-badge px-3 py-1 rounded-full text-xs font-semibold offline" id="relay2Status">Offline</span>
                         </div>
-                        <div class="flex items-center justify-between">
+                        
+                        <div class="flex items-center justify-center">
                             <label class="switch">
                                 <input type="checkbox" data-relay="2" onchange="toggleRelay(this)">
                                 <span class="slider"></span>
                             </label>
-                            <div class="text-right">
-                                <div class="text-xs text-gray-500 dark:text-gray-400">Power</div>
-                                <div class="text-sm font-semibold text-gray-900 dark:text-white" id="relay2Power">0W</div>
-                            </div>
                         </div>
-                    </div>
-
-                    <!-- Dispenser -->
-                    <div class="control-card bg-gray-50 dark:bg-gray-700 rounded-xl p-6">
-                        <div class="flex items-center justify-between mb-4">
-                            <div class="flex items-center">
-                                <div class="w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center mr-3">
-                                    <i class="fas fa-tint text-purple-500 dark:text-purple-400"></i>
-                                </div>
-                                <div>
-                                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Dispenser</h3>
-                                    <p class="text-sm text-gray-500 dark:text-gray-400">IN3 - Chemical Dispenser</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="flex items-center justify-between mb-4">
-                            <span class="text-sm text-gray-600 dark:text-gray-400">Status:</span>
-                            <span class="text-sm font-medium" id="relay3Status">Offline</span>
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <label class="switch">
-                                <input type="checkbox" data-relay="3" onchange="toggleRelay(this)">
-                                <span class="slider"></span>
-                            </label>
-                            <div class="text-right">
-                                <div class="text-xs text-gray-500 dark:text-gray-400">Power</div>
-                                <div class="text-sm font-semibold text-gray-900 dark:text-white" id="relay3Power">0W</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Spare Relay -->
-                    <div class="control-card bg-gray-50 dark:bg-gray-700 rounded-xl p-6">
-                        <div class="flex items-center justify-between mb-4">
-                            <div class="flex items-center">
-                                <div class="w-10 h-10 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center mr-3">
-                                    <i class="fas fa-plug text-orange-500 dark:text-orange-400"></i>
-                                </div>
-                                <div>
-                                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Spare</h3>
-                                    <p class="text-sm text-gray-500 dark:text-gray-400">IN4 - Backup Relay</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="flex items-center justify-between mb-4">
-                            <span class="text-sm text-gray-600 dark:text-gray-400">Status:</span>
-                            <span class="text-sm font-medium" id="relay4Status">Offline</span>
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <label class="switch">
-                                <input type="checkbox" data-relay="4" onchange="toggleRelay(this)">
-                                <span class="slider"></span>
-                            </label>
-                            <div class="text-right">
-                                <div class="text-xs text-gray-500 dark:text-gray-400">Power</div>
-                                <div class="text-sm font-semibold text-gray-900 dark:text-white" id="relay4Power">0W</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Automation & Scheduling -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <!-- Automation Rules -->
-                <div class="control-card bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8">
-                    <div class="flex items-center justify-between mb-6">
-                        <div>
-                            <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                                <i class="fas fa-robot text-purple-500 mr-3"></i>
-                                Automation Rules
-                            </h2>
-                            <p class="text-gray-600 dark:text-gray-400">Smart control based on water quality parameters</p>
-                        </div>
-                        <label class="switch">
-                            <input type="checkbox" id="autoModeToggle" onchange="toggleAutoMode(this)">
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-
-                    <div class="space-y-4">
-                        <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                            <div>
-                                <h4 class="font-semibold text-gray-900 dark:text-white">pH Correction</h4>
-                                <p class="text-sm text-gray-600 dark:text-gray-400">Auto-adjust pH when out of range</p>
-                            </div>
-                            <div class="text-right">
-                                <div class="text-sm font-medium text-green-600 dark:text-green-400">Active</div>
-                                <div class="text-xs text-gray-500">pH < 6.5 or > 8.5</div>
-                            </div>
-                        </div>
-
-                        <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                            <div>
-                                <h4 class="font-semibold text-gray-900 dark:text-white">Filtration Cycle</h4>
-                                <p class="text-sm text-gray-600 dark:text-gray-400">Automatic filter operation</p>
-                            </div>
-                            <div class="text-right">
-                                <div class="text-sm font-medium text-green-600 dark:text-green-400">Active</div>
-                                <div class="text-xs text-gray-500">Every 6 hours</div>
-                            </div>
-                        </div>
-
-                        <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                            <div>
-                                <h4 class="font-semibold text-gray-900 dark:text-white">Emergency Shutdown</h4>
-                                <p class="text-sm text-gray-600 dark:text-gray-400">Stop all systems if critical</p>
-                            </div>
-                            <div class="text-right">
-                                <div class="text-sm font-medium text-red-600 dark:text-red-400">Standby</div>
-                                <div class="text-xs text-gray-500">pH < 5.0 or > 10.0</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- System Logs -->
-                <div class="control-card bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8">
-                    <div class="flex items-center justify-between mb-6">
-                        <div>
-                            <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                                <i class="fas fa-list-alt text-blue-500 mr-3"></i>
-                                System Logs
-                            </h2>
-                            <p class="text-gray-600 dark:text-gray-400">Recent control actions and system events</p>
-                        </div>
-                        <button class="px-3 py-1 text-sm bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-800">
-                            <i class="fas fa-sync-alt mr-1"></i>Refresh
-                        </button>
-                    </div>
-
-                    <div class="space-y-3 max-h-64 overflow-y-auto">
-                        <div class="flex items-start space-x-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                            <i class="fas fa-check-circle text-green-500 mt-1"></i>
-                            <div class="flex-1">
-                                <div class="text-sm font-medium text-gray-900 dark:text-white">Relay 1 activated</div>
-                                <div class="text-xs text-gray-500">2 minutes ago</div>
-                            </div>
-                        </div>
-
-                        <div class="flex items-start space-x-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                            <i class="fas fa-exclamation-triangle text-yellow-500 mt-1"></i>
-                            <div class="flex-1">
-                                <div class="text-sm font-medium text-gray-900 dark:text-white">pH level high - dispenser activated</div>
-                                <div class="text-xs text-gray-500">15 minutes ago</div>
-                            </div>
-                        </div>
-
-                        <div class="flex items-start space-x-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                            <i class="fas fa-info-circle text-blue-500 mt-1"></i>
-                            <div class="flex-1">
-                                <div class="text-sm font-medium text-gray-900 dark:text-white">Automation mode enabled</div>
-                                <div class="text-xs text-gray-500">1 hour ago</div>
-                            </div>
-                        </div>
-
-                        <div class="flex items-start space-x-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                            <i class="fas fa-clock text-gray-500 mt-1"></i>
-                            <div class="flex-1">
-                                <div class="text-sm font-medium text-gray-900 dark:text-white">Scheduled maintenance completed</div>
-                                <div class="text-xs text-gray-500">2 hours ago</div>
-                            </div>
+                        
+                        <div class="mt-4 text-center">
+                            <div class="text-xs text-gray-500 dark:text-gray-400">IN2 - Relay 2</div>
                         </div>
                     </div>
                 </div>
@@ -467,8 +342,19 @@ try {
     </div>
 
     <script>
-        let startTime = Date.now();
         let activeRelays = 0;
+        
+        // Initialize uptime from localStorage or start new session
+        function initializeUptime() {
+            let startTime = localStorage.getItem('systemStartTime');
+            if (!startTime) {
+                startTime = Date.now();
+                localStorage.setItem('systemStartTime', startTime);
+            }
+            return parseInt(startTime);
+        }
+        
+        let startTime = initializeUptime();
 
         function formatUptime() {
             const now = Date.now();
@@ -522,7 +408,7 @@ try {
             states.forEach(state => {
                 const checkbox = document.querySelector(`input[data-relay="${state.relay_number}"]`);
                 const statusElement = document.getElementById(`relay${state.relay_number}Status`);
-                const powerElement = document.getElementById(`relay${state.relay_number}Power`);
+                const cardElement = document.getElementById(`relay${state.relay_number}Card`);
                 
                 if (checkbox) {
                     checkbox.checked = state.state === 1;
@@ -530,12 +416,11 @@ try {
                 
                 if (statusElement) {
                     statusElement.textContent = state.state === 1 ? 'Online' : 'Offline';
-                    statusElement.className = `text-sm font-medium ${state.state === 1 ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'}`;
+                    statusElement.className = `status-badge px-3 py-1 rounded-full text-xs font-semibold ${state.state === 1 ? 'online' : 'offline'}`;
                 }
                 
-                if (powerElement) {
-                    const power = state.state === 1 ? Math.floor(Math.random() * 500) + 100 : 0;
-                    powerElement.textContent = `${power}W`;
+                if (cardElement) {
+                    cardElement.className = `relay-card control-card rounded-2xl p-6 ${state.state === 1 ? 'active' : 'inactive'}`;
                 }
                 
                 if (state.state === 1) activeRelays++;
@@ -553,31 +438,6 @@ try {
                     }
                 })
                 .catch(error => console.error('Error fetching relay states:', error));
-        }
-
-        function toggleAutoMode(checkbox) {
-            const isEnabled = checkbox.checked;
-            document.getElementById('autoMode').textContent = isEnabled ? 'Enabled' : 'Disabled';
-            document.getElementById('autoMode').className = `text-sm font-medium ${isEnabled ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'}`;
-            
-            // Add to logs
-            const logEntry = document.createElement('div');
-            logEntry.className = `flex items-start space-x-3 p-3 ${isEnabled ? 'bg-green-50 dark:bg-green-900/20' : 'bg-gray-50 dark:bg-gray-700'} rounded-lg`;
-            logEntry.innerHTML = `
-                <i class="fas ${isEnabled ? 'fa-check-circle text-green-500' : 'fa-times-circle text-gray-500'} mt-1"></i>
-                <div class="flex-1">
-                    <div class="text-sm font-medium text-gray-900 dark:text-white">Automation mode ${isEnabled ? 'enabled' : 'disabled'}</div>
-                    <div class="text-xs text-gray-500">Just now</div>
-                </div>
-            `;
-            
-            const logsContainer = document.querySelector('.space-y-3');
-            logsContainer.insertBefore(logEntry, logsContainer.firstChild);
-            
-            // Remove oldest log if more than 4 entries
-            if (logsContainer.children.length > 4) {
-                logsContainer.removeChild(logsContainer.lastChild);
-            }
         }
 
         // All On/Off buttons

@@ -18,6 +18,9 @@ A comprehensive real-time water quality monitoring system with ESP32 microcontro
 - **Historical Data Analysis** - 24h, 7d, 30d, and 90d data views
 - **Quality Insights** - Automated water quality assessment and recommendations
 - **Statistical Analysis** - Min/max/average calculations with trend indicators
+- **Data Export** - CSV data export with comprehensive sensor readings
+- **Chart Export** - Individual chart export as PNG images for reporting
+- **Streamlined Interface** - Optimized information flow and reduced redundancy
 
 ### 🎛️ System Control & Automation
 - **Relay Control Panel** - Web-based automation system with 4-channel control
@@ -286,7 +289,10 @@ projtest/
 - **Trend Analysis** - Historical data visualization
 - **Statistical Insights** - Min/max/average calculations
 - **Quality Insights** - Automated recommendations
-- **Data Export** - Export capabilities for reporting
+- **Data Export** - CSV export with comprehensive sensor readings
+- **Chart Export** - Individual chart export as PNG images
+- **Performance Metrics** - Key performance indicators with trend analysis
+- **Streamlined Interface** - Optimized layout with better information hierarchy
 
 #### 🎛️ System Control
 - **Relay Management** - Individual and bulk control
@@ -441,7 +447,7 @@ For support and questions:
 
 ---
 
-**Version**: 3.0.0  
+**Version**: 3.1.0  
 **Last Updated**: December 2024  
 **Compatibility**: PHP 8.0+, MySQL 5.7+, ESP32 Arduino Core 2.0+  
 **License**: MIT License  

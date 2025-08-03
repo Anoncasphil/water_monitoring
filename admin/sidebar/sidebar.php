@@ -4,12 +4,18 @@
 // Get current page for active state
 $current_page = basename($_SERVER['PHP_SELF'], '.php');
 
-// Check if we're in the user directory
+// Check current path for better active state detection
 $current_path = $_SERVER['REQUEST_URI'];
-$is_user_page = strpos($current_path, '/user/') !== false;
 
-// Check if we're in the dashboard directory
+// Check if we're in specific directories
 $is_dashboard_page = strpos($current_path, '/dashboard/') !== false;
+$is_monitor_page = strpos($current_path, '/monitor/') !== false;
+$is_analytics_page = strpos($current_path, '/analytics/') !== false;
+$is_controls_page = strpos($current_path, '/controls/') !== false;
+$is_schedule_page = strpos($current_path, '/schedule/') !== false;
+$is_alerts_page = strpos($current_path, '/alerts/') !== false;
+$is_user_page = strpos($current_path, '/user/') !== false;
+$is_actlogs_page = strpos($current_path, '/actlogs/') !== false;
 
 // Get current user information
 $current_user_name = 'Admin User';
@@ -57,41 +63,33 @@ if (isset($_SESSION['user_id'])) {
             </a>
 
             <!-- Monitor -->
-            <a href="../monitor" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200 <?php echo $current_page === 'monitor' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'; ?>">
+            <a href="../monitor" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200 <?php echo $is_monitor_page ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'; ?>">
                 <i class="fas fa-desktop w-5 h-5 mr-3"></i>
                 <span>Monitor</span>
             </a>
 
             <!-- Analytics -->
-            <a href="../analytics" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200 <?php echo $current_page === 'analytics' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'; ?>">
+            <a href="../analytics" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200 <?php echo $is_analytics_page ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'; ?>">
                 <i class="fas fa-chart-line w-5 h-5 mr-3"></i>
                 <span>Analytics</span>
             </a>
 
             <!-- Controls -->
-            <a href="../controls" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200 <?php echo $current_page === 'controls' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'; ?>">
+            <a href="../controls" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200 <?php echo $is_controls_page ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'; ?>">
                 <i class="fas fa-sliders-h w-5 h-5 mr-3"></i>
                 <span>Controls</span>
             </a>
 
             <!-- Schedule -->
-            <a href="../schedule" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200 <?php echo $current_page === 'schedule' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'; ?>">
+            <a href="../schedule" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200 <?php echo $is_schedule_page ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'; ?>">
                 <i class="fas fa-calendar-alt w-5 h-5 mr-3"></i>
                 <span>Schedule</span>
             </a>
 
             <!-- Alerts -->
-            <a href="../alerts" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200 <?php echo $current_page === 'alerts' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'; ?>">
+            <a href="../alerts" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200 <?php echo $is_alerts_page ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'; ?>">
                 <i class="fas fa-bell w-5 h-5 mr-3"></i>
                 <span>Alerts</span>
-                <!-- Alert Badge -->
-                <span class="ml-auto bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400 text-xs font-medium px-2 py-1 rounded-full">3</span>
-            </a>
-
-            <!-- Reports -->
-            <a href="../reports" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200 <?php echo $current_page === 'reports' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'; ?>">
-                <i class="fas fa-chart-bar w-5 h-5 mr-3"></i>
-                <span>Reports</span>
             </a>
 
             <!-- User -->
@@ -101,7 +99,7 @@ if (isset($_SESSION['user_id'])) {
             </a>
 
             <!-- Activity Logs -->
-            <a href="../actlogs" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200 <?php echo strpos($current_path, '/actlogs/') !== false ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'; ?>">
+            <a href="../actlogs" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200 <?php echo $is_actlogs_page ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'; ?>">
                 <i class="fas fa-history w-5 h-5 mr-3"></i>
                 <span>Activity Logs</span>
             </a>

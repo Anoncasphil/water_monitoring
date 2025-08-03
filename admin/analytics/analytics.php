@@ -157,13 +157,13 @@ try {
     <div class="lg:ml-64">
         <div class="container mx-auto px-6 py-8">
             <!-- Header -->
-            <div class="flex items-center justify-between mb-10">
+            <div class="flex items-center justify-between mb-8">
                 <div>
                     <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
                         <i class="fas fa-chart-line text-blue-500 mr-3"></i>
                         Analytics Dashboard
                     </h1>
-                    <p class="text-gray-600 dark:text-gray-400 text-lg">Comprehensive water quality data analysis and insights</p>
+                    <p class="text-gray-600 dark:text-gray-400 text-lg">Water quality data analysis and insights</p>
                 </div>
                 <div class="flex items-center space-x-4">
                     <select id="timeRange" class="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
@@ -172,6 +172,9 @@ try {
                         <option value="30d">Last 30 Days</option>
                         <option value="90d">Last 90 Days</option>
                     </select>
+                    <button id="exportData" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors">
+                        <i class="fas fa-download mr-2"></i>Export Data
+                    </button>
                     <button id="themeToggle" class="p-3 rounded-xl bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition-all duration-200">
                         <i class="fas fa-sun text-yellow-500 dark:hidden text-lg"></i>
                         <i class="fas fa-moon text-blue-300 hidden dark:block text-lg"></i>
@@ -179,13 +182,15 @@ try {
                 </div>
             </div>
 
-            <!-- Key Metrics Overview -->
+
+
+            <!-- Key Performance Metrics -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <div class="analytics-card bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
                     <div class="flex items-center justify-between mb-4">
                         <div>
                             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Total Readings</h3>
-                            <p class="text-2xl font-bold text-blue-600 dark:text-blue-400" id="totalReadings"><?php echo $stats['total_readings'] ?? '0'; ?></p>
+                            <p class="text-2xl font-bold text-blue-600 dark:text-blue-400"><?php echo $stats['total_readings'] ?? '0'; ?></p>
                         </div>
                         <div class="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
                             <i class="fas fa-database text-blue-500 dark:text-blue-400 text-xl"></i>
@@ -203,7 +208,7 @@ try {
                     <div class="flex items-center justify-between mb-4">
                         <div>
                             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Avg Turbidity</h3>
-                            <p class="text-2xl font-bold text-emerald-600 dark:text-emerald-400" id="avgTurbidity"><?php echo number_format($stats['avg_turbidity'] ?? 0, 1); ?> NTU</p>
+                            <p class="text-2xl font-bold text-emerald-600 dark:text-emerald-400"><?php echo number_format($stats['avg_turbidity'] ?? 0, 1); ?> NTU</p>
                         </div>
                         <div class="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
                             <i class="fas fa-filter text-emerald-500 dark:text-emerald-400 text-xl"></i>
@@ -221,7 +226,7 @@ try {
                     <div class="flex items-center justify-between mb-4">
                         <div>
                             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Avg TDS</h3>
-                            <p class="text-2xl font-bold text-purple-600 dark:text-purple-400" id="avgTDS"><?php echo number_format($stats['avg_tds'] ?? 0, 0); ?> ppm</p>
+                            <p class="text-2xl font-bold text-purple-600 dark:text-purple-400"><?php echo number_format($stats['avg_tds'] ?? 0, 0); ?> ppm</p>
                         </div>
                         <div class="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
                             <i class="fas fa-flask text-purple-500 dark:text-purple-400 text-xl"></i>
@@ -239,7 +244,7 @@ try {
                     <div class="flex items-center justify-between mb-4">
                         <div>
                             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Avg pH</h3>
-                            <p class="text-2xl font-bold text-red-600 dark:text-red-400" id="avgPH"><?php echo number_format($stats['avg_ph'] ?? 0, 2); ?></p>
+                            <p class="text-2xl font-bold text-red-600 dark:text-red-400"><?php echo number_format($stats['avg_ph'] ?? 0, 2); ?></p>
                         </div>
                         <div class="w-12 h-12 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
                             <i class="fas fa-vial text-red-500 dark:text-red-400 text-xl"></i>
@@ -254,7 +259,7 @@ try {
                 </div>
             </div>
 
-            <!-- Main Charts Section -->
+            <!-- Charts Section -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
                 <!-- Real-time Trends Chart -->
                 <div class="analytics-card bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8">
@@ -269,6 +274,9 @@ try {
                         <div class="flex space-x-2">
                             <button class="px-3 py-1 text-sm bg-blue-50 dark:bg-blue-900 text-blue-600 dark:text-blue-300 rounded-full hover:bg-blue-100 dark:hover:bg-blue-800">
                                 <i class="fas fa-clock mr-1"></i>Live
+                            </button>
+                            <button onclick="exportChart('trendsChart', 'real-time-trends')" class="px-3 py-1 text-sm bg-green-50 dark:bg-green-900 text-green-600 dark:text-green-300 rounded-full hover:bg-green-100 dark:hover:bg-green-800">
+                                <i class="fas fa-download mr-1"></i>Export
                             </button>
                         </div>
                     </div>
@@ -291,6 +299,9 @@ try {
                             <button class="px-3 py-1 text-sm bg-purple-50 dark:bg-purple-900 text-purple-600 dark:text-purple-300 rounded-full hover:bg-purple-100 dark:hover:bg-purple-800">
                                 <i class="fas fa-calendar mr-1"></i>7d
                             </button>
+                            <button onclick="exportChart('dailyChart', 'daily-averages')" class="px-3 py-1 text-sm bg-green-50 dark:bg-green-900 text-green-600 dark:text-green-300 rounded-full hover:bg-green-100 dark:hover:bg-green-800">
+                                <i class="fas fa-download mr-1"></i>Export
+                            </button>
                         </div>
                     </div>
                     <div class="h-[400px]">
@@ -299,63 +310,8 @@ try {
                 </div>
             </div>
 
-            <!-- Statistical Analysis -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-                <!-- Parameter Ranges -->
-                <div class="analytics-card bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8">
-                    <div class="flex items-center justify-between mb-6">
-                        <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
-                            <i class="fas fa-ruler text-green-500 mr-3"></i>
-                            Parameter Ranges
-                        </h2>
-                    </div>
-                    <div class="space-y-6">
-                        <!-- Turbidity Range -->
-                        <div>
-                            <div class="flex justify-between items-center mb-2">
-                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Turbidity (NTU)</span>
-                                <span class="text-sm text-gray-500"><?php echo number_format($stats['min_turbidity'] ?? 0, 1); ?> - <?php echo number_format($stats['max_turbidity'] ?? 0, 1); ?></span>
-                            </div>
-                            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                                <div class="bg-blue-500 h-2 rounded-full" style="width: <?php echo min(100, (($stats['avg_turbidity'] ?? 0) / 20) * 100); ?>%"></div>
-                            </div>
-                        </div>
-
-                        <!-- TDS Range -->
-                        <div>
-                            <div class="flex justify-between items-center mb-2">
-                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">TDS (ppm)</span>
-                                <span class="text-sm text-gray-500"><?php echo number_format($stats['min_tds'] ?? 0, 0); ?> - <?php echo number_format($stats['max_tds'] ?? 0, 0); ?></span>
-                            </div>
-                            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                                <div class="bg-emerald-500 h-2 rounded-full" style="width: <?php echo min(100, (($stats['avg_tds'] ?? 0) / 1000) * 100); ?>%"></div>
-                            </div>
-                        </div>
-
-                        <!-- pH Range -->
-                        <div>
-                            <div class="flex justify-between items-center mb-2">
-                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">pH Level</span>
-                                <span class="text-sm text-gray-500"><?php echo number_format($stats['min_ph'] ?? 0, 1); ?> - <?php echo number_format($stats['max_ph'] ?? 0, 1); ?></span>
-                            </div>
-                            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                                <div class="bg-purple-500 h-2 rounded-full" style="width: <?php echo min(100, (($stats['avg_ph'] ?? 7) / 14) * 100); ?>%"></div>
-                            </div>
-                        </div>
-
-                        <!-- Temperature Range -->
-                        <div>
-                            <div class="flex justify-between items-center mb-2">
-                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Temperature (°C)</span>
-                                <span class="text-sm text-gray-500"><?php echo number_format($stats['min_temp'] ?? 0, 1); ?> - <?php echo number_format($stats['max_temp'] ?? 0, 1); ?></span>
-                            </div>
-                            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                                <div class="bg-red-500 h-2 rounded-full" style="width: <?php echo min(100, (($stats['avg_temperature'] ?? 20) / 50) * 100); ?>%"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
+            <!-- Insights & Summary -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <!-- Quality Insights -->
                 <div class="analytics-card bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8">
                     <div class="flex items-center justify-between mb-6">
@@ -425,8 +381,10 @@ try {
                             <span class="text-sm font-semibold text-green-600 dark:text-green-400">98.5%</span>
                         </div>
                         <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Last Update</span>
-                            <span class="text-sm font-semibold text-gray-900 dark:text-white" id="lastUpdate">--:--:--</span>
+                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Parameter Ranges</span>
+                            <span class="text-sm font-semibold text-gray-900 dark:text-white">
+                                T: <?php echo number_format($stats['min_turbidity'] ?? 0, 1); ?>-<?php echo number_format($stats['max_turbidity'] ?? 0, 1); ?> NTU
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -703,11 +661,6 @@ try {
                 .then(data => {
                     if (data.error) throw new Error(data.error);
 
-                    // Update last update time
-                    if (data.latest) {
-                        document.getElementById('lastUpdate').textContent = formatDate(data.latest.reading_time);
-                    }
-
                     // Update charts
                     if (data.historical && data.historical.length > 0) {
                         createTrendsChart(data.historical);
@@ -718,6 +671,39 @@ try {
                 });
         }
 
+        function exportData() {
+            // Create CSV data
+            const csvContent = "data:text/csv;charset=utf-8," 
+                + "Date,Turbidity (NTU),TDS (ppm),pH,Temperature (°C)\n"
+                + <?php echo json_encode(array_map(function($row) {
+                    return $row['reading_time'] . ',' . $row['turbidity'] . ',' . $row['tds'] . ',' . $row['ph'] . ',' . $row['temperature'];
+                }, $hourlyData)); ?>.join('\n');
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `water-quality-data-${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function exportChart(chartId, filename) {
+            const canvas = document.getElementById(chartId);
+            if (!canvas) {
+                console.error('Canvas element not found:', chartId);
+                return;
+            }
+            
+            // Create a temporary link to download the chart
+            const link = document.createElement('a');
+            link.download = `${filename}-${new Date().toISOString().split('T')[0]}.png`;
+            link.href = canvas.toDataURL('image/png');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
         // Initialize charts with PHP data
         <?php if (!empty($hourlyData)): ?>
         createTrendsChart(<?php echo json_encode($hourlyData); ?>);
@@ -726,6 +712,9 @@ try {
         <?php if (!empty($dailyData)): ?>
         createDailyChart(<?php echo json_encode($dailyData); ?>);
         <?php endif; ?>
+
+        // Event listeners
+        document.getElementById('exportData').addEventListener('click', exportData);
 
         // Update data every 30 seconds
         updateData();

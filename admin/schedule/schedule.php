@@ -47,10 +47,8 @@ try {
 
 // Get relay names for display
 $relayNames = [
-    1 => 'Pool to Filter Pump',
-    2 => 'Filter to Pool Pump', 
-    3 => 'Dispenser',
-    4 => 'Spare Relay'
+    1 => 'Filter',
+    2 => 'Dispense Water'
 ];
 ?>
 <!DOCTYPE html>
@@ -454,10 +452,8 @@ $relayNames = [
                         <label for="relayNumber" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Relay</label>
                         <select id="relayNumber" name="relay_number" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white">
                             <option value="">Select Relay</option>
-                            <option value="1">Pool to Filter Pump (Relay 1)</option>
-                            <option value="2">Filter to Pool Pump (Relay 2)</option>
-                            <option value="3">Dispenser (Relay 3)</option>
-                            <option value="4">Spare Relay (Relay 4)</option>
+                            <option value="1">Filter (Relay 1)</option>
+                            <option value="2">Dispense Water (Relay 2)</option>
                         </select>
                     </div>
 
