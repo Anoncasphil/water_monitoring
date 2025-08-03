@@ -21,6 +21,7 @@ A comprehensive real-time water quality monitoring system with ESP32 microcontro
 
 ### 🎛️ System Control & Automation
 - **Relay Control Panel** - Web-based automation system with 4-channel control
+- **Schedule Management** - Automated relay scheduling with timezone support
 - **Real-time Status Monitoring** - Live system status and uptime tracking
 - **Automation Rules** - Smart control based on water quality parameters
 - **System Logs** - Comprehensive control action logging
@@ -175,6 +176,18 @@ APP_URL=http://localhost/projtest
 # Ensure proper file permissions (755 for directories, 644 for files)
 ```
 
+### 6. Schedule System Setup (Optional)
+```bash
+# For automatic schedule execution, set up Windows Task Scheduler:
+# 1. Open Task Scheduler (Win + R → taskschd.msc)
+# 2. Create Basic Task: "Schedule Execution"
+# 3. Trigger: Daily, repeat every 1 minute
+# 4. Action: Start program
+# 5. Program: C:\xampp\php\php.exe
+# 6. Arguments: C:\xampp\htdocs\projtest\api\execute_schedules.php
+# 7. Start in: C:\xampp\htdocs\projtest\api
+```
+
 ## 📁 Project Structure
 
 ```
@@ -201,7 +214,10 @@ projtest/
 │   │   └── index.php         # Entry point
 │   ├── sidebar/              # Navigation component
 │   │   └── sidebar.php       # Sidebar navigation
-│   ├── schedule/             # Scheduling system
+│   ├── schedule/             # Schedule management system
+│   │   ├── schedule.php      # Schedule management interface
+│   │   ├── index.php         # Entry point
+│   │   └── README.md         # Schedule system documentation
 │   ├── alerts/               # Alert management
 │   ├── reports/              # Reporting system
 │   └── .htaccess             # Security rules
@@ -212,6 +228,8 @@ projtest/
 │   ├── get_readings.php      # Sensor data retrieval
 │   ├── upload.php            # Sensor data upload
 │   ├── relay_control.php     # Relay control API
+│   ├── schedule_control.php  # Schedule management API
+│   ├── execute_schedules.php # Automated schedule execution
 │   ├── check_data.php        # Data verification
 │   ├── check_email.php       # Email validation
 │   └── .htaccess             # API security
@@ -251,6 +269,7 @@ projtest/
 - **Real-time Monitor**: `http://localhost/projtest/admin/monitor/`
 - **Analytics**: `http://localhost/projtest/admin/analytics/`
 - **Control Panel**: `http://localhost/projtest/admin/controls/`
+- **Schedule Management**: `http://localhost/projtest/admin/schedule/`
 - **User Management**: `http://localhost/projtest/admin/user/`
 - **Activity Logs**: `http://localhost/projtest/admin/actlogs/`
 - **Login**: `http://localhost/projtest/login/`
@@ -271,6 +290,7 @@ projtest/
 
 #### 🎛️ System Control
 - **Relay Management** - Individual and bulk control
+- **Schedule Management** - Automated relay scheduling with timezone support
 - **Automation Rules** - Smart system automation
 - **Status Monitoring** - Real-time system status
 - **Control Logs** - Complete action tracking
@@ -371,6 +391,12 @@ projtest/
 ### Control Endpoints
 - `GET /api/relay_control.php` - Get relay status
 - `POST /api/relay_control.php` - Control relay states
+
+### Schedule Management Endpoints
+- `GET /api/schedule_control.php` - Get all schedules
+- `POST /api/schedule_control.php` - Create/update schedule
+- `DELETE /api/schedule_control.php` - Delete schedule(s)
+- `GET /api/execute_schedules.php` - Manual schedule execution
 
 ## 🔄 Updates & Maintenance
 

@@ -1,0 +1,158 @@
+=== Schedule Execution Started: 2025-08-03 15:32:26 ===
+Checking for schedules to execute...
+
+=== Execution Summary ===
+Total schedules executed: 0
+Total errors: 0
+Execution completed at: 2025-08-03 15:32:26
+
+=== Schedule Execution Started: 2025-08-03 15:33:02 ===
+Checking for schedules to execute...
+
+=== Execution Summary ===
+Total schedules executed: 0
+Total errors: 0
+Execution completed at: 2025-08-03 15:33:02
+
+=== Schedule Execution Started: 2025-08-03 21:38:13 ===
+Checking for schedules to execute...
+Executing schedule ID 10: Relay 1 -> ON (Scheduled: 2025-08-03 15:34:44)
+  Calling relay control URL: http://localhost/projtest/api/relay_control.php
+  HTTP Error: 403
+  ✗ Failed to execute
+Executing schedule ID 9: Relay 1 -> ON (Scheduled: 2025-08-03 21:34:00)
+  Calling relay control URL: http://localhost/projtest/api/relay_control.php
+  HTTP Error: 403
+  ✗ Failed to execute
+
+=== Execution Summary ===
+Total schedules executed: 0
+Total errors: 2
+Execution completed at: 2025-08-03 21:38:13
+
+=== Schedule Execution Started: 2025-08-03 21:44:44 ===
+Checking for schedules to execute...
+Executing schedule ID 9: Relay 1 -> ON (Scheduled: 2025-08-03 21:43:00)
+  Calling relay control URL: http://localhost/projtest/api/relay_control.php
+  HTTP Error: 403
+  ✗ Failed to execute
+Executing schedule ID 11: Relay 1 -> ON (Scheduled: 2025-08-03 21:44:00)
+  Calling relay control URL: http://localhost/projtest/api/relay_control.php
+  HTTP Error: 403
+  ✗ Failed to execute
+
+=== Execution Summary ===
+Total schedules executed: 0
+Total errors: 2
+Execution completed at: 2025-08-03 21:44:44
+
+=== Schedule Execution Started: 2025-08-03 21:45:06 ===
+Checking for schedules to execute...
+Executing schedule ID 9: Relay 1 -> ON (Scheduled: 2025-08-03 21:43:00)
+  Calling relay control URL: http://localhost/projtest/api/relay_control.php
+  HTTP Error: 403
+  ✗ Failed to execute
+Executing schedule ID 11: Relay 1 -> ON (Scheduled: 2025-08-03 21:44:00)
+  Calling relay control URL: http://localhost/projtest/api/relay_control.php
+  HTTP Error: 403
+  ✗ Failed to execute
+
+=== Execution Summary ===
+Total schedules executed: 0
+Total errors: 2
+Execution completed at: 2025-08-03 21:45:06
+
+=== Schedule Execution Started: 2025-08-03 21:46:43 ===
+Checking for schedules to execute...
+Executing schedule ID 9: Relay 1 -> ON (Scheduled: 2025-08-03 21:43:00)
+  Calling relay control URL: http://localhost/projtest/api/relay_control.php
+  ✓ Successfully executed
+Executing schedule ID 11: Relay 1 -> ON (Scheduled: 2025-08-03 21:44:00)
+  Calling relay control URL: http://localhost/projtest/api/relay_control.php
+  ✓ Successfully executed
+
+=== Execution Summary ===
+Total schedules executed: 2
+Total errors: 0
+Execution completed at: 2025-08-03 21:46:43
+
+=== Schedule Execution Started: 2025-08-03 21:52:09 ===
+Checking for schedules to execute...
+Executing schedule ID 9: Relay 1 -> OFF (Scheduled: 2025-08-03 21:49:00)
+  Calling relay control URL: http://localhost/projtest/api/relay_control.php
+  ✓ Successfully executed
+
+=== Execution Summary ===
+Total schedules executed: 1
+Total errors: 0
+Execution completed at: 2025-08-03 21:52:09
+
+=== Schedule Execution Started: 2025-08-03 21:56:35 ===
+Checking for schedules to execute...
+Executing schedule ID 11: Relay 1 -> ON (Scheduled: 2025-08-03 21:54:00)
+  Calling relay control URL: http://localhost/projtest/api/relay_control.php
+  ✓ Successfully executed
+Executing schedule ID 9: Relay 1 -> OFF (Scheduled: 2025-08-03 21:55:00)
+  Calling relay control URL: http://localhost/projtest/api/relay_control.php
+  ✓ Successfully executed
+
+=== Execution Summary ===
+Total schedules executed: 2
+Total errors: 0
+Execution completed at: 2025-08-03 21:56:35
+
+=== Schedule Execution Started: 2025-08-03 22:05:37 ===
+Checking for schedules to execute...
+Executing schedule ID 11: Relay 1 -> ON (Scheduled: 2025-08-03 22:02:00)
+  Calling relay control URL: http://localhost/projtest/api/relay_control.php
+  ✓ Successfully executed
+Executing schedule ID 9: Relay 1 -> OFF (Scheduled: 2025-08-03 22:03:00)
+  Calling relay control URL: http://localhost/projtest/api/relay_control.php
+  ✓ Successfully executed
+Executing schedule ID 12: Relay 1 -> ON (Scheduled: 2025-08-03 22:05:30)
+  Calling relay control URL: http://localhost/projtest/api/relay_control.php
+  ✓ Successfully executed
+
+=== Execution Summary ===
+Total schedules executed: 3
+Total errors: 0
+Execution completed at: 2025-08-03 22:05:37
+
+=== Schedule Execution Started: 2025-08-03 22:14:15 ===
+Checking for schedules to execute...
+Executing schedule ID 13: Relay 1 -> ON (Scheduled: 2025-08-03 22:08:52)
+  Calling relay control URL: http://localhost/projtest/api/relay_control.php
+  ✓ Successfully executed
+Executing schedule ID 14: Relay 1 -> ON (Scheduled: 2025-08-03 22:10:52)
+  Calling relay control URL: http://localhost/projtest/api/relay_control.php
+  ✓ Successfully executed
+
+=== Execution Summary ===
+Total schedules executed: 2
+Total errors: 0
+Execution completed at: 2025-08-03 22:14:15
+
+=== Schedule Execution Started: 2025-08-03 22:14:15 ===
+Checking for schedules to execute...
+
+=== Execution Summary ===
+Total schedules executed: 0
+Total errors: 0
+Execution completed at: 2025-08-03 22:14:15
+
+=== Schedule Execution Started: 2025-08-03 22:14:16 ===
+Checking for schedules to execute...
+
+=== Execution Summary ===
+Total schedules executed: 0
+Total errors: 0
+Execution completed at: 2025-08-03 22:14:16
+
+=== Schedule Execution Started: 2025-08-03 22:14:19 ===
+Checking for schedules to execute...
+
+=== Execution Summary ===
+Total schedules executed: 0
+Total errors: 0
+Execution completed at: 2025-08-03 22:14:19
+
