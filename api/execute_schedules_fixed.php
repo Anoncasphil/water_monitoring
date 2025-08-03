@@ -99,7 +99,7 @@ try {
             // Execute the relay control
             $relay_control_result = executeRelayControl($schedule['relay_number'], $schedule['action']);
             
-            if ($relay_control_result) {
+            if ($relay_control_result['success']) {
                 // Update last_executed timestamp
                 $update_stmt = $conn->prepare("UPDATE relay_schedules SET last_executed = ? WHERE id = ?");
                 $update_stmt->bind_param("si", $now, $schedule['id']);
@@ -111,12 +111,22 @@ try {
                 
                 // Log the execution
                 logScheduleExecution($conn, $schedule, true);
+                
+                // If it's a one-time schedule, remove it after successful execution
+                if ($schedule['frequency'] === 'once') {
+                    $delete_stmt = $conn->prepare("DELETE FROM relay_schedules WHERE id = ?");
+                    $delete_stmt->bind_param("i", $schedule['id']);
+                    $delete_stmt->execute();
+                    $delete_stmt->close();
+                    echo "  🗑️ One-time schedule removed (ID: {$schedule['id']})\n";
+                }
             } else {
                 $errors++;
                 echo "  ✗ Failed to execute\n";
                 
-                // Log the failure
-                logScheduleExecution($conn, $schedule, false);
+                // Log the failure with detailed error message
+                $error_message = $relay_control_result['error'] ?? "Unknown error occurred";
+                logScheduleExecution($conn, $schedule, false, $error_message);
             }
         }
     }
@@ -153,40 +163,45 @@ function executeRelayControl($relay_number, $action) {
     
     $response = curl_exec($ch);
     $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curl_error = curl_error($ch);
     curl_close($ch);
     
     if ($http_code !== 200) {
         echo "  HTTP Error: $http_code\n";
-        return false;
+        if ($curl_error) {
+            echo "  cURL Error: $curl_error\n";
+        }
+        return ['success' => false, 'error' => "HTTP Error: $http_code" . ($curl_error ? " - $curl_error" : "")];
     }
     
     $result = json_decode($response, true);
-    return isset($result['success']) && $result['success'];
+    if (isset($result['success']) && $result['success']) {
+        return ['success' => true];
+    } else {
+        $error_msg = isset($result['error']) ? $result['error'] : 'Unknown API error';
+        echo "  API Error: $error_msg\n";
+        return ['success' => false, 'error' => $error_msg];
+    }
 }
 
 /**
  * Log schedule execution
  */
-function logScheduleExecution($conn, $schedule, $success) {
+function logScheduleExecution($conn, $schedule, $success, $error_message = null) {
     $log_sql = "
-    INSERT INTO schedule_logs (schedule_id, relay_number, action, scheduled_time, executed_time, success, details)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO schedule_logs (schedule_id, relay_number, action, success, error_message)
+    VALUES (?, ?, ?, ?, ?)
     ";
     
-    $scheduled_time = $schedule['schedule_date'] . ' ' . $schedule['schedule_time'];
-    $executed_time = date('Y-m-d H:i:s');
-    $details = $success ? 'Successfully executed' : 'Failed to execute';
     $success_int = $success ? 1 : 0;
     
     $stmt = $conn->prepare($log_sql);
-    $stmt->bind_param("iiissis", 
+    $stmt->bind_param("iiiss", 
         $schedule['id'], 
         $schedule['relay_number'], 
         $schedule['action'], 
-        $scheduled_time, 
-        $executed_time, 
         $success_int, 
-        $details
+        $error_message
     );
     $stmt->execute();
     $stmt->close();

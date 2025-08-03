@@ -45,6 +45,41 @@ try {
     $schedules = [];
 }
 
+// Get schedule logs with pagination
+$logs_per_page = 20;
+$current_page = isset($_GET['logs_page']) ? max(1, intval($_GET['logs_page'])) : 1;
+$offset = ($current_page - 1) * $logs_per_page;
+
+try {
+    // Get total count for pagination
+    $count_result = $conn->query("SELECT COUNT(*) as total FROM schedule_logs");
+    $total_logs = $count_result ? $count_result->fetch_assoc()['total'] : 0;
+    $total_pages = ceil($total_logs / $logs_per_page);
+    
+    // Get logs with pagination
+    $logs_sql = "
+        SELECT sl.*, 
+               COALESCE(rs.schedule_date, 'N/A') as schedule_date, 
+               COALESCE(rs.schedule_time, 'N/A') as schedule_time, 
+               COALESCE(rs.description, 'Schedule deleted') as description 
+        FROM schedule_logs sl 
+        LEFT JOIN relay_schedules rs ON sl.schedule_id = rs.id 
+        ORDER BY sl.execution_time DESC 
+        LIMIT ? OFFSET ?
+    ";
+    $logs_stmt = $conn->prepare($logs_sql);
+    $logs_stmt->bind_param("ii", $logs_per_page, $offset);
+    $logs_stmt->execute();
+    $logs_result = $logs_stmt->get_result();
+    $schedule_logs = $logs_result ? $logs_result->fetch_all(MYSQLI_ASSOC) : [];
+    $logs_stmt->close();
+} catch (Exception $e) {
+    error_log("Schedule logs error: " . $e->getMessage());
+    $schedule_logs = [];
+    $total_logs = 0;
+    $total_pages = 0;
+}
+
 // Get relay names for display
 $relayNames = [
     1 => 'Filter',
@@ -434,6 +469,146 @@ $relayNames = [
                     </table>
                 </div>
             </div>
+        </div>
+
+        <!-- Schedule Logs Section -->
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 mt-8">
+            <div class="flex items-center justify-between mb-8">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                        <i class="fas fa-history text-blue-500 mr-3"></i>
+                        Execution Logs
+                    </h2>
+                    <p class="text-gray-600 dark:text-gray-400">Track schedule execution history and performance</p>
+                </div>
+                <div class="flex space-x-3">
+                    <button id="refreshLogs" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors">
+                        <i class="fas fa-sync-alt mr-2"></i>Refresh Logs
+                    </button>
+                    <button id="clearLogs" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors">
+                        <i class="fas fa-trash mr-2"></i>Clear All Logs
+                    </button>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead class="bg-gray-50 dark:bg-gray-700">
+                        <tr>
+                            <th class="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">Schedule ID</th>
+                            <th class="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">Relay</th>
+                            <th class="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">Action</th>
+                            <th class="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">Scheduled Time</th>
+                            <th class="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">Execution Time</th>
+                            <th class="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">Status</th>
+                            <th class="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">Error Message</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logsTableBody">
+                        <?php if (empty($schedule_logs)): ?>
+                        <tr>
+                            <td colspan="7" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                                <div class="flex flex-col items-center space-y-4">
+                                    <i class="fas fa-history text-4xl"></i>
+                                    <div>
+                                        <p class="text-lg font-medium">No execution logs found</p>
+                                        <p class="text-sm">Logs will appear here when schedules are executed</p>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        <?php else: ?>
+                            <?php foreach ($schedule_logs as $log): ?>
+                            <tr class="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                                <td class="px-6 py-4">
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white">
+                                        #<?php echo $log['schedule_id']; ?>
+                                        <?php if ($log['description'] === 'Schedule deleted'): ?>
+                                        <span class="ml-2 px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs rounded">Deleted</span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <?php if ($log['description'] && $log['description'] !== 'Schedule deleted'): ?>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                                        <?php echo htmlspecialchars($log['description']); ?>
+                                    </div>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                                            <i class="fas fa-plug text-blue-500 dark:text-blue-400 text-sm"></i>
+                                        </div>
+                                        <div>
+                                            <div class="font-medium text-gray-900 dark:text-white"><?php echo $relayNames[$log['relay_number']] ?? 'Unknown'; ?></div>
+                                            <div class="text-sm text-gray-500 dark:text-gray-400">Relay <?php echo $log['relay_number']; ?></div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="px-3 py-1 rounded-full text-sm font-medium <?php echo $log['action'] == 1 ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'; ?>">
+                                        <?php echo $log['action'] == 1 ? 'Turn ON' : 'Turn OFF'; ?>
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white">
+                                        <?php echo $log['schedule_date'] ? date('M j, Y', strtotime($log['schedule_date'])) : 'N/A'; ?>
+                                    </div>
+                                    <div class="text-sm text-gray-500 dark:text-gray-400">
+                                        <?php echo $log['schedule_time'] ? date('g:i A', strtotime($log['schedule_time'])) : 'N/A'; ?>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white">
+                                        <?php echo date('M j, Y', strtotime($log['execution_time'])); ?>
+                                    </div>
+                                    <div class="text-sm text-gray-500 dark:text-gray-400">
+                                        <?php echo date('g:i A', strtotime($log['execution_time'])); ?>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="status-badge <?php echo $log['success'] == 1 ? 'status-completed' : 'status-overdue'; ?>">
+                                        <?php echo $log['success'] == 1 ? 'Success' : 'Failed'; ?>
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="text-sm text-gray-900 dark:text-white max-w-xs truncate">
+                                        <?php echo $log['error_message'] ? htmlspecialchars($log['error_message']) : '-'; ?>
+                                    </div>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <?php if ($total_pages > 1): ?>
+            <div class="flex items-center justify-between mt-8">
+                <div class="text-sm text-gray-700 dark:text-gray-300">
+                    Showing <?php echo ($offset + 1); ?> to <?php echo min($offset + $logs_per_page, $total_logs); ?> of <?php echo $total_logs; ?> logs
+                </div>
+                <div class="flex space-x-2">
+                    <?php if ($current_page > 1): ?>
+                    <a href="?logs_page=<?php echo $current_page - 1; ?>" class="px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors">
+                        <i class="fas fa-chevron-left mr-1"></i>Previous
+                    </a>
+                    <?php endif; ?>
+                    
+                    <?php for ($i = max(1, $current_page - 2); $i <= min($total_pages, $current_page + 2); $i++): ?>
+                    <a href="?logs_page=<?php echo $i; ?>" class="px-3 py-2 <?php echo $i == $current_page ? 'bg-blue-500 text-white' : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'; ?> rounded-lg transition-colors">
+                        <?php echo $i; ?>
+                    </a>
+                    <?php endfor; ?>
+                    
+                    <?php if ($current_page < $total_pages): ?>
+                    <a href="?logs_page=<?php echo $current_page + 1; ?>" class="px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors">
+                        Next<i class="fas fa-chevron-right ml-1"></i>
+                    </a>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -884,6 +1059,116 @@ $relayNames = [
             document.getElementById('todayTasks').textContent = '0';
             document.getElementById('nextExecution').textContent = 'No data';
         }
+
+        // Real-time status updates
+        function updateScheduleStatus() {
+            fetch('../../api/schedule_control.php')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.schedules) {
+                        updateScheduleTable(data.schedules);
+                        updateStatsWithData(data.schedules);
+                    }
+                })
+                .catch(error => {
+                    console.error('Failed to update schedule status:', error);
+                });
+        }
+
+        function updateScheduleTable(schedules) {
+            const tbody = document.getElementById('scheduleTableBody');
+            if (!tbody) return;
+
+            // Update each row with new status
+            schedules.forEach(schedule => {
+                const row = tbody.querySelector(`tr[data-schedule-id="${schedule.id}"]`);
+                if (row) {
+                    // Update status badge
+                    const statusCell = row.querySelector('.status-badge');
+                    if (statusCell) {
+                        let status = 'pending';
+                        let statusClass = 'status-pending';
+                        
+                        if (schedule.is_active == 0) {
+                            status = 'inactive';
+                            statusClass = 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+                        } elseif (schedule.last_executed !== null) {
+                            status = 'completed';
+                            statusClass = 'status-completed';
+                        } elseif (new Date(schedule.schedule_date + ' ' + schedule.schedule_time) < new Date()) {
+                            status = 'overdue';
+                            statusClass = 'status-overdue';
+                        } else {
+                            status = 'active';
+                            statusClass = 'status-active';
+                        }
+                        
+                        statusCell.className = `status-badge ${statusClass}`;
+                        statusCell.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+                    }
+
+                    // Update last executed time
+                    const lastExecutedCell = row.querySelector('td:nth-child(7) div');
+                    if (lastExecutedCell) {
+                        lastExecutedCell.textContent = schedule.last_executed ? 
+                            new Date(schedule.last_executed).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric'
+                            }) + ' ' + new Date(schedule.last_executed).toLocaleTimeString([], {
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            }) : 'Never';
+                    }
+                }
+            });
+        }
+
+        // Add data-schedule-id attributes to table rows for easier updates
+        document.addEventListener('DOMContentLoaded', function() {
+            const rows = document.querySelectorAll('#scheduleTableBody tr');
+            rows.forEach(row => {
+                const checkbox = row.querySelector('.schedule-checkbox');
+                if (checkbox) {
+                    row.setAttribute('data-schedule-id', checkbox.value);
+                }
+            });
+        });
+
+        // Auto-refresh schedule status every 30 seconds
+        setInterval(updateScheduleStatus, 30000);
+
+        // Also update when the page becomes visible (user switches back to tab)
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) {
+                updateScheduleStatus();
+            }
+        });
+
+        // Refresh logs button
+        document.getElementById('refreshLogs').addEventListener('click', function() {
+            location.reload();
+        });
+
+        // Clear logs button
+        document.getElementById('clearLogs').addEventListener('click', function() {
+            if (confirm('Are you sure you want to clear all execution logs? This action cannot be undone.')) {
+                fetch('../../api/clear_schedule_logs.php', {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while clearing logs.');
+                });
+            }
+        });
     </script>
 </body>
 </html>
