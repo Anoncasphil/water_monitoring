@@ -243,7 +243,13 @@ $relayNames = [
     
     <!-- Schedules data for JavaScript -->
     <script>
-        window.schedulesData = <?php echo json_encode($schedules ?? [], JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_UNESCAPED_SLASHES); ?>;
+        window.schedulesData = <?php 
+            try {
+                echo json_encode($schedules ?? [], JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_UNESCAPED_SLASHES);
+            } catch (Exception $e) {
+                echo '[]';
+            }
+        ?>;
     </script>
     
     <!-- Main Content -->
@@ -1010,7 +1016,7 @@ $relayNames = [
                 if (futureSchedules.length > 0) {
                     const nextSchedule = futureSchedules[0];
                     const nextTime = new Date(nextSchedule.schedule_date + ' ' + nextSchedule.schedule_time);
-                    document.getElementById('nextExecution').textContent = nextTime.toLocaleDateString() + ' ' + nextTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    document.getElementById('nextExecution').textContent = nextTime.toLocaleDateString() + ' ' + nextTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
                 } else {
                     document.getElementById('nextExecution').textContent = 'No pending tasks';
                 }
@@ -1117,10 +1123,10 @@ $relayNames = [
                         if (schedule.is_active == 0) {
                             status = 'inactive';
                             statusClass = 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
-                        } elseif (schedule.last_executed !== null) {
+                        } else if (schedule.last_executed !== null) {
                             status = 'completed';
                             statusClass = 'status-completed';
-                        } elseif (new Date(schedule.schedule_date + ' ' + schedule.schedule_time) < new Date()) {
+                        } else if (new Date(schedule.schedule_date + ' ' + schedule.schedule_time) < new Date()) {
                             status = 'overdue';
                             statusClass = 'status-overdue';
                         } else {
