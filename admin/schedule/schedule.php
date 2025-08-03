@@ -46,7 +46,7 @@ try {
 }
 
 // Get schedule logs with pagination
-$logs_per_page = 20;
+$logs_per_page = isset($_GET['logs_per_page']) ? max(10, min(100, intval($_GET['logs_per_page']))) : 20;
 $current_page = isset($_GET['logs_page']) ? max(1, intval($_GET['logs_page'])) : 1;
 $offset = ($current_page - 1) * $logs_per_page;
 
@@ -570,10 +570,23 @@ $relayNames = [
                                     </div>
                                 </td>
                                 <td class="px-6 py-4">
-                                    <span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold <?php echo $log['success'] == 1 ? 'bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 dark:from-green-900/30 dark:to-emerald-900/30 dark:text-green-300' : 'bg-gradient-to-r from-red-100 to-pink-100 text-red-800 dark:from-red-900/30 dark:to-pink-900/30 dark:text-red-300'; ?>">
-                                        <i class="fas <?php echo $log['success'] == 1 ? 'fa-check-circle' : 'fa-exclamation-circle'; ?> mr-1.5"></i>
-                                        <?php echo $log['success'] == 1 ? 'Success' : 'Failed'; ?>
-                                    </span>
+                                    <?php if ($log['success'] == 1): ?>
+                                    <div class="flex items-center space-x-2">
+                                        <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                                        <span class="inline-flex items-center px-4 py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 dark:from-green-900/20 dark:to-emerald-900/20 dark:text-green-300 border border-green-200 dark:border-green-800 shadow-sm">
+                                            <i class="fas fa-check-circle mr-2 text-green-600 dark:text-green-400"></i>
+                                            Successfully Executed
+                                        </span>
+                                    </div>
+                                    <?php else: ?>
+                                    <div class="flex items-center space-x-2">
+                                        <div class="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                                        <span class="inline-flex items-center px-4 py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-red-50 to-pink-50 text-red-700 dark:from-red-900/20 dark:to-pink-900/20 dark:text-red-300 border border-red-200 dark:border-red-800 shadow-sm">
+                                            <i class="fas fa-times-circle mr-2 text-red-600 dark:text-red-400"></i>
+                                            Failed to Execute
+                                        </span>
+                                    </div>
+                                    <?php endif; ?>
                                 </td>
                                 <td class="px-6 py-4">
                                     <div class="text-sm text-gray-900 dark:text-white max-w-xs">
@@ -596,33 +609,86 @@ $relayNames = [
                 </table>
             </div>
 
-            <!-- Pagination -->
-            <?php if ($total_pages > 1): ?>
-            <div class="flex items-center justify-between mt-8">
-                <div class="text-sm text-gray-700 dark:text-gray-300">
-                    Showing <?php echo ($offset + 1); ?> to <?php echo min($offset + $logs_per_page, $total_logs); ?> of <?php echo $total_logs; ?> logs
+            <!-- Enhanced Pagination -->
+            <div class="mt-8">
+                <!-- Pagination Info -->
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center space-x-4">
+                        <div class="text-sm text-gray-700 dark:text-gray-300">
+                            <span class="font-semibold"><?php echo $total_logs; ?></span> total logs
+                        </div>
+                        <div class="text-sm text-gray-600 dark:text-gray-400">
+                            Showing <span class="font-semibold"><?php echo ($offset + 1); ?></span> to <span class="font-semibold"><?php echo min($offset + $logs_per_page, $total_logs); ?></span>
+                        </div>
+                    </div>
+                    
+                    <!-- Page Size Selector -->
+                    <div class="flex items-center space-x-2">
+                        <span class="text-sm text-gray-600 dark:text-gray-400">Show:</span>
+                        <select id="pageSize" class="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                            <option value="10" <?php echo $logs_per_page == 10 ? 'selected' : ''; ?>>10</option>
+                            <option value="20" <?php echo $logs_per_page == 20 ? 'selected' : ''; ?>>20</option>
+                            <option value="50" <?php echo $logs_per_page == 50 ? 'selected' : ''; ?>>50</option>
+                            <option value="100" <?php echo $logs_per_page == 100 ? 'selected' : ''; ?>>100</option>
+                        </select>
+                        <span class="text-sm text-gray-600 dark:text-gray-400">per page</span>
+                    </div>
                 </div>
-                <div class="flex space-x-2">
+
+                <!-- Pagination Controls -->
+                <?php if ($total_pages > 1): ?>
+                <div class="flex items-center justify-center space-x-2">
+                    <!-- First Page -->
                     <?php if ($current_page > 1): ?>
-                    <a href="?logs_page=<?php echo $current_page - 1; ?>" class="px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors">
-                        <i class="fas fa-chevron-left mr-1"></i>Previous
+                    <a href="?logs_page=1&logs_per_page=<?php echo $logs_per_page; ?>" class="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg transition-colors shadow-sm">
+                        <i class="fas fa-angle-double-left"></i>
                     </a>
                     <?php endif; ?>
                     
-                    <?php for ($i = max(1, $current_page - 2); $i <= min($total_pages, $current_page + 2); $i++): ?>
-                    <a href="?logs_page=<?php echo $i; ?>" class="px-3 py-2 <?php echo $i == $current_page ? 'bg-blue-500 text-white' : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'; ?> rounded-lg transition-colors">
-                        <?php echo $i; ?>
+                    <!-- Previous Page -->
+                    <?php if ($current_page > 1): ?>
+                    <a href="?logs_page=<?php echo $current_page - 1; ?>&logs_per_page=<?php echo $logs_per_page; ?>" class="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg transition-colors shadow-sm">
+                        <i class="fas fa-angle-left"></i>
                     </a>
-                    <?php endfor; ?>
+                    <?php endif; ?>
                     
+                    <!-- Page Numbers -->
+                    <div class="flex space-x-1">
+                        <?php 
+                        $start_page = max(1, $current_page - 2);
+                        $end_page = min($total_pages, $current_page + 2);
+                        
+                        if ($start_page > 1): ?>
+                        <span class="px-3 py-2 text-gray-500 dark:text-gray-400">...</span>
+                        <?php endif; ?>
+                        
+                        <?php for ($i = $start_page; $i <= $end_page; $i++): ?>
+                        <a href="?logs_page=<?php echo $i; ?>&logs_per_page=<?php echo $logs_per_page; ?>" class="px-3 py-2 <?php echo $i == $current_page ? 'bg-blue-500 text-white border border-blue-500' : 'bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'; ?> rounded-lg transition-colors shadow-sm font-medium">
+                            <?php echo $i; ?>
+                        </a>
+                        <?php endfor; ?>
+                        
+                        <?php if ($end_page < $total_pages): ?>
+                        <span class="px-3 py-2 text-gray-500 dark:text-gray-400">...</span>
+                        <?php endif; ?>
+                    </div>
+                    
+                    <!-- Next Page -->
                     <?php if ($current_page < $total_pages): ?>
-                    <a href="?logs_page=<?php echo $current_page + 1; ?>" class="px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors">
-                        Next<i class="fas fa-chevron-right ml-1"></i>
+                    <a href="?logs_page=<?php echo $current_page + 1; ?>&logs_per_page=<?php echo $logs_per_page; ?>" class="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg transition-colors shadow-sm">
+                        <i class="fas fa-angle-right"></i>
+                    </a>
+                    <?php endif; ?>
+                    
+                    <!-- Last Page -->
+                    <?php if ($current_page < $total_pages): ?>
+                    <a href="?logs_page=<?php echo $total_pages; ?>&logs_per_page=<?php echo $logs_per_page; ?>" class="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg transition-colors shadow-sm">
+                        <i class="fas fa-angle-double-right"></i>
                     </a>
                     <?php endif; ?>
                 </div>
+                <?php endif; ?>
             </div>
-            <?php endif; ?>
             </div>
         </div>
     </div>
@@ -1183,6 +1249,29 @@ $relayNames = [
                     alert('An error occurred while clearing logs.');
                 });
             }
+        });
+
+        // Page size selector functionality
+        document.getElementById('pageSize').addEventListener('change', function() {
+            const pageSize = this.value;
+            const currentUrl = new URL(window.location);
+            currentUrl.searchParams.set('logs_per_page', pageSize);
+            currentUrl.searchParams.delete('logs_page'); // Reset to first page
+            window.location.href = currentUrl.toString();
+        });
+
+        // Add smooth scrolling to pagination links
+        document.querySelectorAll('a[href*="logs_page"]').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const href = this.getAttribute('href');
+                window.location.href = href;
+                // Smooth scroll to top of logs section
+                document.querySelector('.bg-white.dark\\:bg-gray-800.rounded-2xl.shadow-lg.p-8').scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            });
         });
     </script>
 </body>
