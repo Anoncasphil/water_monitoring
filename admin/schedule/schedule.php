@@ -459,7 +459,7 @@ $relayNames = [
                                             <button onclick="editSchedule(<?php echo $schedule['id']; ?>)" class="p-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors">
                                                 <i class="fas fa-edit"></i>
                                             </button>
-                                            <button onclick="deleteSchedule(<?php echo $schedule['id']; ?>)" class="p-2 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 transition-colors">
+                                            <button onclick="deleteSchedule(<?php echo $schedule['id']; ?>, '<?php echo addslashes($relayNames[$schedule['relay_number']] ?? 'Unknown'); ?> - <?php echo $schedule['action'] == 1 ? 'ON' : 'OFF'; ?>')" class="p-2 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 transition-colors">
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                         </div>
@@ -703,21 +703,37 @@ $relayNames = [
             <form id="scheduleForm" class="p-6">
                 <input type="hidden" id="scheduleId" name="id">
                 
+                <!-- Validation Alert -->
+                <div id="validationAlert" class="hidden p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg mb-6">
+                    <div class="flex items-start">
+                        <i class="fas fa-exclamation-triangle text-red-500 mt-0.5 mr-3"></i>
+                        <div class="flex-1">
+                            <h4 class="text-red-800 dark:text-red-200 font-medium mb-1">Please fix the following errors:</h4>
+                            <ul class="text-red-700 dark:text-red-300 text-sm space-y-1" id="validationErrors">
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <!-- Relay Selection -->
                     <div>
-                        <label for="relayNumber" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Relay</label>
-                        <select id="relayNumber" name="relay_number" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white">
+                        <label for="relayNumber" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Relay <span class="text-red-500">*</span></label>
+                        <select id="relayNumber" name="relay_number" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white">
                             <option value="">Select Relay</option>
                             <option value="1">Filter (Relay 1)</option>
                             <option value="2">Dispense Water (Relay 2)</option>
                         </select>
+                        <div id="relay-error" class="mt-1 text-xs hidden">
+                            <i class="fas fa-times-circle text-red-500 mr-1"></i>
+                            <span class="text-red-600 dark:text-red-400">Please select a relay</span>
+                        </div>
                     </div>
 
                     <!-- Action -->
                     <div>
-                        <label for="action" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Action</label>
-                        <select id="action" name="action" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white">
+                        <label for="action" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Action <span class="text-red-500">*</span></label>
+                        <select id="action" name="action" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white">
                             <option value="1">Turn ON</option>
                             <option value="0">Turn OFF</option>
                         </select>
@@ -725,14 +741,22 @@ $relayNames = [
 
                     <!-- Schedule Date -->
                     <div>
-                        <label for="scheduleDate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Date</label>
-                        <input type="date" id="scheduleDate" name="schedule_date" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white">
+                        <label for="scheduleDate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Date <span class="text-red-500">*</span></label>
+                        <input type="date" id="scheduleDate" name="schedule_date" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white">
+                        <div id="date-error" class="mt-1 text-xs hidden">
+                            <i class="fas fa-times-circle text-red-500 mr-1"></i>
+                            <span class="text-red-600 dark:text-red-400">Please select a valid date</span>
+                        </div>
                     </div>
 
                     <!-- Schedule Time -->
                     <div>
-                        <label for="scheduleTime" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Time</label>
-                        <input type="time" id="scheduleTime" name="schedule_time" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white">
+                        <label for="scheduleTime" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Time <span class="text-red-500">*</span></label>
+                        <input type="time" id="scheduleTime" name="schedule_time" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white">
+                        <div id="time-error" class="mt-1 text-xs hidden">
+                            <i class="fas fa-times-circle text-red-500 mr-1"></i>
+                            <span class="text-red-600 dark:text-red-400">Please select a valid time</span>
+                        </div>
                     </div>
 
                     <!-- Frequency -->
@@ -771,6 +795,50 @@ $relayNames = [
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmationModal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black bg-opacity-50" id="confirmationOverlay"></div>
+        <div class="flex items-center justify-center min-h-screen p-4 relative z-10">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full relative z-20">
+                <div class="p-8">
+                    <!-- Header -->
+                    <div class="text-center mb-6">
+                        <div class="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center mx-auto mb-4" id="confirmationIcon">
+                            <i class="fas fa-trash text-red-500 text-2xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-2" id="confirmationTitle">Delete Schedule</h3>
+                        <p class="text-gray-600 dark:text-gray-400" id="confirmationMessage">Are you sure you want to delete this schedule?</p>
+                    </div>
+                    
+                    <!-- Info Box -->
+                    <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6" id="infoBox">
+                        <div class="flex items-start">
+                            <i class="fas fa-info-circle text-red-500 mt-0.5 mr-3"></i>
+                            <div class="text-sm text-red-800 dark:text-red-200">
+                                <p class="font-medium mb-1" id="infoTitle">What happens when you delete a schedule?</p>
+                                <ul class="space-y-1 text-xs" id="infoList">
+                                    <li>• Schedule will be permanently removed</li>
+                                    <li>• Any pending executions will be cancelled</li>
+                                    <li>• This action cannot be undone</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="flex space-x-4">
+                        <button id="cancelAction" class="flex-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 py-3 px-4 rounded-lg transition-colors font-medium">
+                            Cancel
+                        </button>
+                        <button id="confirmAction" class="flex-1 bg-red-500 hover:bg-red-600 text-white py-3 px-4 rounded-lg transition-colors font-medium">
+                            Delete Schedule
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -819,18 +887,82 @@ $relayNames = [
             }
         });
 
+        // Form validation and submission
+        function validateForm() {
+            const errors = [];
+            const validationAlert = document.getElementById('validationAlert');
+            const validationErrors = document.getElementById('validationErrors');
+            
+            // Clear previous errors
+            validationAlert.classList.add('hidden');
+            validationErrors.innerHTML = '';
+            
+            // Hide all individual error messages
+            document.querySelectorAll('[id$="-error"]').forEach(el => el.classList.add('hidden'));
+            
+            // Validate relay selection
+            const relayNumber = document.getElementById('relayNumber').value;
+            if (!relayNumber) {
+                errors.push('Please select a relay');
+                document.getElementById('relay-error').classList.remove('hidden');
+            }
+            
+            // Validate date
+            const scheduleDate = document.getElementById('scheduleDate').value;
+            if (!scheduleDate) {
+                errors.push('Please select a date');
+                document.getElementById('date-error').classList.remove('hidden');
+            } else {
+                const selectedDate = new Date(scheduleDate);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                
+                if (selectedDate < today) {
+                    errors.push('Schedule date cannot be in the past');
+                    document.getElementById('date-error').classList.remove('hidden');
+                    document.getElementById('date-error').innerHTML = '<i class="fas fa-times-circle text-red-500 mr-1"></i><span class="text-red-600 dark:text-red-400">Schedule date cannot be in the past</span>';
+                }
+            }
+            
+            // Validate time
+            const scheduleTime = document.getElementById('scheduleTime').value;
+            if (!scheduleTime) {
+                errors.push('Please select a time');
+                document.getElementById('time-error').classList.remove('hidden');
+            }
+            
+            // Validate date and time combination for past schedules
+            if (scheduleDate && scheduleTime) {
+                const scheduleDateTime = new Date(scheduleDate + 'T' + scheduleTime);
+                const now = new Date();
+                
+                if (scheduleDateTime <= now) {
+                    errors.push('Schedule date and time cannot be in the past');
+                    document.getElementById('date-error').classList.remove('hidden');
+                    document.getElementById('date-error').innerHTML = '<i class="fas fa-times-circle text-red-500 mr-1"></i><span class="text-red-600 dark:text-red-400">Schedule date and time cannot be in the past</span>';
+                }
+            }
+            
+            // Show errors if any
+            if (errors.length > 0) {
+                validationErrors.innerHTML = errors.map(error => `<li>${error}</li>`).join('');
+                validationAlert.classList.remove('hidden');
+                return false;
+            }
+            
+            return true;
+        }
+
         // Form submission
         scheduleForm.addEventListener('submit', function(e) {
             e.preventDefault();
             
+            if (!validateForm()) {
+                return;
+            }
+            
             const formData = new FormData(scheduleForm);
             const isEdit = scheduleIdInput.value !== '';
-            
-            // Debug: Log form data
-            console.log('Form submission - isEdit:', isEdit);
-            for (let [key, value] of formData.entries()) {
-                console.log('Form data:', key, '=', value);
-            }
             
             fetch('../../api/schedule_control.php', {
                 method: 'POST',
@@ -843,17 +975,23 @@ $relayNames = [
                 return response.json();
             })
             .then(data => {
-                console.log('API response:', data);
                 if (data.success) {
                     closeModal();
                     location.reload(); // Refresh page to show new schedule
                 } else {
-                    alert('Error: ' + data.error);
+                    // Show validation errors from server
+                    const validationAlert = document.getElementById('validationAlert');
+                    const validationErrors = document.getElementById('validationErrors');
+                    validationErrors.innerHTML = `<li>${data.error}</li>`;
+                    validationAlert.classList.remove('hidden');
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('An error occurred while saving the schedule.');
+                const validationAlert = document.getElementById('validationAlert');
+                const validationErrors = document.getElementById('validationErrors');
+                validationErrors.innerHTML = '<li>An error occurred while saving the schedule</li>';
+                validationAlert.classList.remove('hidden');
             });
         });
 
@@ -892,43 +1030,71 @@ $relayNames = [
                 });
         }
 
-        // Delete schedule
-        function deleteSchedule(id) {
-            if (confirm('Are you sure you want to delete this schedule?')) {
+        // Confirmation modal functionality
+        const confirmationModal = document.getElementById('confirmationModal');
+        const confirmationOverlay = document.getElementById('confirmationOverlay');
+        const cancelAction = document.getElementById('cancelAction');
+        const confirmAction = document.getElementById('confirmAction');
+        let currentScheduleId = null;
+        let currentScheduleName = null;
+
+        function showConfirmationModal(scheduleId, scheduleName) {
+            currentScheduleId = scheduleId;
+            currentScheduleName = scheduleName;
+            
+            const confirmationTitle = document.getElementById('confirmationTitle');
+            const confirmationMessage = document.getElementById('confirmationMessage');
+            
+            confirmationTitle.textContent = 'Delete Schedule';
+            confirmationMessage.textContent = `Are you sure you want to delete the schedule "${scheduleName}"?`;
+            
+            confirmationModal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function hideConfirmationModal() {
+            confirmationModal.classList.add('hidden');
+            document.body.style.overflow = 'auto';
+            currentScheduleId = null;
+            currentScheduleName = null;
+        }
+
+        // Confirmation modal event listeners
+        cancelAction.addEventListener('click', hideConfirmationModal);
+        confirmationOverlay.addEventListener('click', hideConfirmationModal);
+
+        // Delete schedule with confirmation modal
+        function deleteSchedule(id, name) {
+            showConfirmationModal(id, name);
+        }
+
+        // Handle confirmation action
+        confirmAction.addEventListener('click', function() {
+            if (currentScheduleId) {
                 const formData = new FormData();
                 formData.append('_method', 'DELETE');
-                formData.append('id', id);
+                formData.append('id', currentScheduleId);
                 
                 fetch('../../api/schedule_control.php', {
                     method: 'POST',
                     body: formData
                 })
                 .then(response => {
-                    console.log('Response status:', response.status);
-                    console.log('Response headers:', response.headers);
-                    
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
-                    
-                    // Get the raw text first to debug
                     return response.text().then(text => {
-                        console.log('Raw response:', text);
-                        console.log('Response length:', text.length);
-                        
-                        // Try to parse as JSON
                         try {
                             return JSON.parse(text);
                         } catch (parseError) {
                             console.error('JSON parse error:', parseError);
-                            console.error('Failed to parse:', text);
                             throw new Error('Invalid JSON response from server');
                         }
                     });
                 })
                 .then(data => {
-                    console.log('Parsed data:', data);
                     if (data.success) {
+                        hideConfirmationModal();
                         location.reload();
                     } else {
                         alert('Error: ' + data.error);
@@ -939,7 +1105,7 @@ $relayNames = [
                     alert('An error occurred while deleting the schedule: ' + error.message);
                 });
             }
-        }
+        });
 
         // Bulk delete
         document.getElementById('bulkDelete').addEventListener('click', function() {
