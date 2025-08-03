@@ -1,4 +1,4 @@
-# API Security Configuration
+# API Security Configuration - Simplified for access
 # Allow legitimate API access while protecting against abuse
 
 # Disable directory browsing
@@ -15,31 +15,37 @@ Options -Indexes
     Header always set Access-Control-Allow-Headers "Content-Type, Authorization"
 </IfModule>
 
-# Allow access to ALL PHP files (including cron jobs)
+# Allow access to ALL PHP files
 <FilesMatch "\.(php)$">
-    Order Allow,Deny
-    Allow from all
-    Satisfy Any
+    Require all granted
 </FilesMatch>
 
-# Prevent access to sensitive files (but allow cron execution files)
-<FilesMatch "\.(htaccess|htpasswd|ini|log|sh|inc|bak|sql|db)$">
-    Order Allow,Deny
-    Deny from all
-</FilesMatch>
-
-# Explicitly allow cron execution files
+# Allow access to specific files explicitly
 <Files "execute_schedules.php">
-    Order Allow,Deny
-    Allow from all
+    Require all granted
 </Files>
 
 <Files "execute_schedules_fixed.php">
-    Order Allow,Deny
-    Allow from all
+    Require all granted
 </Files>
 
 <Files "test_file_structure.php">
-    Order Allow,Deny
-    Allow from all
-</Files> 
+    Require all granted
+</Files>
+
+<Files "check_files.php">
+    Require all granted
+</Files>
+
+<Files "relay_control.php">
+    Require all granted
+</Files>
+
+<Files "schedule_control.php">
+    Require all granted
+</Files>
+
+# Prevent access to sensitive files
+<FilesMatch "\.(htaccess|htpasswd|ini|log|sh|inc|bak|sql|db)$">
+    Require all denied
+</FilesMatch> 

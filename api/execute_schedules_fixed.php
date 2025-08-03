@@ -12,21 +12,8 @@ date_default_timezone_set('Asia/Manila');
 
 echo "=== Schedule Execution Started: " . date('Y-m-d H:i:s') . " ===\n";
 
-// Define the base path
-$base_path = dirname(__DIR__);
-$config_path = $base_path . '/config/database.php';
-
-echo "Base path: $base_path\n";
-echo "Config path: $config_path\n";
-echo "Config exists: " . (file_exists($config_path) ? 'YES' : 'NO') . "\n";
-
 // Load database configuration
-if (!file_exists($config_path)) {
-    echo "ERROR: Database config file not found at: $config_path\n";
-    exit(1);
-}
-
-require_once $config_path;
+require_once '../config/database.php';
 
 try {
     $db = Database::getInstance();
@@ -52,6 +39,25 @@ try {
     )";
     
     $conn->query($createTableSQL);
+    
+    // Ensure schedule_logs table exists
+    $createLogsTableSQL = "
+    CREATE TABLE IF NOT EXISTS schedule_logs (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        schedule_id INT NOT NULL,
+        relay_number INT NOT NULL,
+        action TINYINT(1) NOT NULL,
+        scheduled_time DATETIME NOT NULL,
+        executed_time DATETIME NOT NULL,
+        success TINYINT(1) NOT NULL,
+        details TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_schedule_id (schedule_id),
+        INDEX idx_executed_time (executed_time),
+        INDEX idx_success (success)
+    )";
+    
+    $conn->query($createLogsTableSQL);
     
     $now = date('Y-m-d H:i:s');
     $today = date('Y-m-d');
@@ -129,7 +135,7 @@ try {
  * Execute relay control via API
  */
 function executeRelayControl($relay_number, $action) {
-    $api_url = "http://localhost/projtest/api/relay_control.php";
+    $api_url = "https://waterquality.triple7autosupply.com/api/relay_control.php";
     
     $post_data = [
         'relay_number' => $relay_number,
