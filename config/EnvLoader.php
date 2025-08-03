@@ -18,14 +18,31 @@ class EnvLoader {
         }
         
         if ($path === null) {
-            $path = __DIR__ . '/.env';
+            // Try multiple locations for .env file
+            $possiblePaths = [
+                // For shared hosting (outside public_html)
+                dirname(dirname(__DIR__)) . '/.env',
+                // For local development
+                __DIR__ . '/.env',
+                // Fallback to current directory
+                '.env'
+            ];
+            
+            $path = null;
+            foreach ($possiblePaths as $possiblePath) {
+                if (file_exists($possiblePath)) {
+                    $path = $possiblePath;
+                    break;
+                }
+            }
         }
         
-        if (!file_exists($path)) {
+        if (!$path || !file_exists($path)) {
             // Try to load from example file
             $examplePath = __DIR__ . '/env.example';
             if (file_exists($examplePath)) {
                 error_log("Warning: .env file not found. Please copy env.example to .env and configure your settings.");
+                error_log("Expected locations: " . implode(', ', $possiblePaths));
             }
             return false;
         }
@@ -110,7 +127,7 @@ class EnvLoader {
     public static function getDatabaseConfig() {
         return [
             'host' => self::get('DB_HOST', '127.0.0.1'),
-            'port' => self::get('DB_PORT', 3307),
+            'port' => self::get('DB_PORT', 3306), // Changed default to 3306 for shared hosting
             'database' => self::get('DB_NAME', 'water_quality_db'),
             'username' => self::get('DB_USERNAME', 'root'),
             'password' => self::get('DB_PASSWORD', ''),

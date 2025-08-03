@@ -1,14 +1,5 @@
 # Admin Area Security
-# Prevent direct access to sensitive files
-<FilesMatch "\.(php|log|txt|md|json|xml|yml|yaml|ini|conf|config)$">
-    # Allow access only from localhost or specific IPs
-    Order Deny,Allow
-    Deny from all
-    Allow from 127.0.0.1
-    Allow from ::1
-    # Add your specific IP address here if needed
-    # Allow from YOUR_IP_ADDRESS
-</FilesMatch>
+# Allow access to PHP files but protect sensitive files
 
 # Disable directory browsing
 Options -Indexes
@@ -34,6 +25,57 @@ Options -Indexes
 <FilesMatch "\.(htaccess|htpasswd|ini|log|sh|inc|bak|sql|db)$">
     Order Allow,Deny
     Deny from all
+</FilesMatch>
+
+# Allow access to PHP files but protect against direct access to sensitive ones
+<FilesMatch "\.(php)$">
+    # Allow access to main pages
+    <Files "index.php">
+        Order Allow,Deny
+        Allow from all
+    </Files>
+    
+    # Allow access to dashboard files
+    <Files "dashboard.php">
+        Order Allow,Deny
+        Allow from all
+    </Files>
+    
+    # Allow access to other main admin files
+    <Files "monitor.php">
+        Order Allow,Deny
+        Allow from all
+    </Files>
+    
+    <Files "analytics.php">
+        Order Allow,Deny
+        Allow from all
+    </Files>
+    
+    <Files "controls.php">
+        Order Allow,Deny
+        Allow from all
+    </Files>
+    
+    <Files "schedule.php">
+        Order Allow,Deny
+        Allow from all
+    </Files>
+    
+    <Files "alerts.php">
+        Order Allow,Deny
+        Allow from all
+    </Files>
+    
+    <Files "user.php">
+        Order Allow,Deny
+        Allow from all
+    </Files>
+    
+    <Files "actlogs.php">
+        Order Allow,Deny
+        Allow from all
+    </Files>
 </FilesMatch>
 
 # Optional: Require authentication for all files

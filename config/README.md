@@ -1,61 +1,86 @@
-# Environment Configuration
+# Configuration Setup
 
-This directory contains environment configuration files for the Water Quality Monitor application.
+This directory contains configuration files for the Water Quality Monitoring System.
 
 ## Files
 
-- `env.example` - Sample environment configuration file
-- `.env` - Your actual environment configuration (create this file)
 - `EnvLoader.php` - PHP class to load environment variables
-- `database.php` - Database connection class (updated to use environment variables)
+- `database.php` - Database connection class
+- `env.example` - Example environment configuration file
+- `test_env.php` - Test script to verify environment configuration
 
 ## Setup Instructions
 
-### 1. Create Your Environment File
+### For Shared Hosting (Hostinger, etc.)
 
-Copy the example file to create your actual environment configuration:
+1. **Create your .env file OUTSIDE the public_html folder** for security:
+   ```
+   your-hosting-account/
+   ├── .env                    ← Place your .env file here
+   └── public_html/
+       └── your-project/
+   ```
 
-```bash
-cp env.example .env
-```
+2. **Copy the example file**:
+   ```bash
+   cp env.example ../../.env
+   ```
 
-### 2. Configure Your Environment
+3. **Update your .env file** with your hosting credentials:
+   ```env
+   DB_HOST=localhost
+   DB_PORT=3306
+   DB_NAME=your_database_name
+   DB_USERNAME=your_database_username
+   DB_PASSWORD=your_database_password
+   APP_URL=https://yourdomain.com
+   ```
 
-Edit the `.env` file and update the values according to your setup:
+4. **Test your configuration**:
+   - Upload the `test_env.php` file to your server
+   - Visit `https://yourdomain.com/config/test_env.php`
+   - Verify that all tests pass
+   - **Delete the test file** after successful testing
 
-```env
-# Database Configuration
-DB_HOST=127.0.0.1
-DB_PORT=3307
-DB_NAME=water_quality_db
-DB_USERNAME=root
-DB_PASSWORD=
+### For Local Development (XAMPP)
 
-# Environment
-APP_ENV=development
-APP_DEBUG=true
-```
+1. **Copy the example file**:
+   ```bash
+   cp env.example .env
+   ```
 
-### 3. Environment Variables
+2. **Update your .env file** for local development:
+   ```env
+   DB_HOST=127.0.0.1
+   DB_PORT=3307
+   DB_NAME=water_quality_db
+   DB_USERNAME=root
+   DB_PASSWORD=
+   APP_URL=http://localhost/projtest
+   ```
 
-#### Database Configuration
-- `DB_HOST` - Database server hostname/IP
-- `DB_PORT` - Database port (3306 for standard MySQL, 3307 for XAMPP)
+## Environment Variables
+
+### Database Configuration
+- `DB_HOST` - Database host (localhost for shared hosting)
+- `DB_PORT` - Database port (3306 for shared hosting, 3307 for XAMPP)
 - `DB_NAME` - Database name
 - `DB_USERNAME` - Database username
 - `DB_PASSWORD` - Database password
-- `DB_CHARSET` - Database character set
+- `DB_CHARSET` - Database charset (default: utf8mb4)
 
-#### Application Configuration
+### Application Configuration
 - `APP_ENV` - Environment (development, staging, production)
 - `APP_DEBUG` - Debug mode (true/false)
 - `APP_URL` - Application URL
 - `APP_TIMEZONE` - Application timezone
 
-#### Security
-- `ENCRYPTION_KEY` - 32-character encryption key for security features
+### Security Configuration
+- `SESSION_LIFETIME` - Session lifetime in minutes
+- `SESSION_SECURE` - Use secure sessions (true for HTTPS)
+- `ENCRYPTION_KEY` - 32-character encryption key
 
-## Usage in PHP
+## Usage
 
 The `EnvLoader` class provides easy access to environment variables:
 
@@ -75,40 +100,17 @@ if (EnvLoader::has('APP_DEBUG')) {
 }
 ```
 
-## Security Notes
-
-1. **Never commit `.env` files** to version control
-2. **Keep `.env` files secure** and restrict access
-3. **Use different configurations** for different environments
-4. **Regularly rotate** sensitive values like encryption keys
-
-## Environment-Specific Configurations
-
-### Development
-```env
-APP_ENV=development
-APP_DEBUG=true
-DB_HOST=127.0.0.1
-DB_PORT=3307
-```
-
-### Production
-```env
-APP_ENV=production
-APP_DEBUG=false
-DB_HOST=your-production-db-host
-DB_PORT=3306
-```
-
 ## Troubleshooting
 
-### Common Issues
+1. **Environment file not found**: Ensure the .env file exists in the correct location
+2. **Database connection fails**: Verify your database credentials in the .env file
+3. **Variables not loading**: Ensure `EnvLoader::load()` is called before accessing variables
+4. **Permission issues**: Make sure the .env file is readable by the web server
 
-1. **File not found**: Make sure `.env` file exists in the config directory
-2. **Permission denied**: Check file permissions on `.env` file
-3. **Database connection failed**: Verify database credentials in `.env`
-4. **Variables not loading**: Ensure `EnvLoader::load()` is called before accessing variables
+## Security Notes
 
-### Debug Mode
-
-When `APP_DEBUG=true`, additional error information will be displayed. Set to `false` in production. 
+- **Never commit your .env file** to version control
+- **Place .env files outside public_html** on shared hosting
+- **Use strong passwords** for database credentials
+- **Enable HTTPS** in production environments
+- **Delete test files** after verification 
