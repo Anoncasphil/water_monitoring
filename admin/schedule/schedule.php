@@ -58,13 +58,9 @@ try {
     
     // Get logs with pagination
     $logs_sql = "
-        SELECT sl.*, 
-               COALESCE(rs.schedule_date, 'N/A') as schedule_date, 
-               COALESCE(rs.schedule_time, 'N/A') as schedule_time, 
-               COALESCE(rs.description, 'Schedule deleted') as description 
+        SELECT sl.* 
         FROM schedule_logs sl 
-        LEFT JOIN relay_schedules rs ON sl.schedule_id = rs.id 
-        ORDER BY sl.execution_time DESC 
+        ORDER BY sl.executed_time DESC 
         LIMIT ? OFFSET ?
     ";
     $logs_stmt = $conn->prepare($logs_sql);
@@ -510,7 +506,7 @@ $relayNames = [
                             <th class="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-600">Scheduled Time</th>
                             <th class="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-600">Execution Time</th>
                             <th class="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-600">Status</th>
-                            <th class="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-600">Error Message</th>
+                            <th class="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-600">Details</th>
                         </tr>
                     </thead>
                     <tbody id="logsTableBody">
@@ -536,18 +532,6 @@ $relayNames = [
                                         <div class="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
                                             <span class="text-sm font-semibold text-blue-600 dark:text-blue-400">#<?php echo $log['schedule_id']; ?></span>
                                         </div>
-                                        <div>
-                                            <?php if ($log['description'] === 'Schedule deleted'): ?>
-                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400">
-                                                <i class="fas fa-trash mr-1"></i>Deleted
-                                            </span>
-                                            <?php endif; ?>
-                                            <?php if ($log['description'] && $log['description'] !== 'Schedule deleted'): ?>
-                                            <div class="text-xs text-gray-500 dark:text-gray-400 max-w-xs truncate">
-                                                <?php echo htmlspecialchars($log['description']); ?>
-                                            </div>
-                                            <?php endif; ?>
-                                        </div>
                                     </div>
                                 </td>
                                 <td class="px-6 py-4">
@@ -569,20 +553,20 @@ $relayNames = [
                                 </td>
                                 <td class="px-6 py-4">
                                     <div class="text-sm font-semibold text-gray-900 dark:text-white">
-                                        <?php echo $log['schedule_date'] ? date('M j, Y', strtotime($log['schedule_date'])) : 'N/A'; ?>
+                                        <?php echo $log['scheduled_time'] ? date('M j, Y', strtotime($log['scheduled_time'])) : 'N/A'; ?>
                                     </div>
                                     <div class="text-xs text-gray-500 dark:text-gray-400">
                                         <i class="fas fa-clock mr-1"></i>
-                                        <?php echo $log['schedule_time'] ? date('g:i A', strtotime($log['schedule_time'])) : 'N/A'; ?>
+                                        <?php echo $log['scheduled_time'] ? date('g:i A', strtotime($log['scheduled_time'])) : 'N/A'; ?>
                                     </div>
                                 </td>
                                 <td class="px-6 py-4">
                                     <div class="text-sm font-semibold text-gray-900 dark:text-white">
-                                        <?php echo date('M j, Y', strtotime($log['execution_time'])); ?>
+                                        <?php echo date('M j, Y', strtotime($log['executed_time'])); ?>
                                     </div>
                                     <div class="text-xs text-gray-500 dark:text-gray-400">
                                         <i class="fas fa-play mr-1"></i>
-                                        <?php echo date('g:i A', strtotime($log['execution_time'])); ?>
+                                        <?php echo date('g:i A', strtotime($log['executed_time'])); ?>
                                     </div>
                                 </td>
                                 <td class="px-6 py-4">
@@ -593,11 +577,11 @@ $relayNames = [
                                 </td>
                                 <td class="px-6 py-4">
                                     <div class="text-sm text-gray-900 dark:text-white max-w-xs">
-                                        <?php if ($log['error_message']): ?>
+                                        <?php if ($log['details']): ?>
                                         <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-2">
                                             <div class="flex items-start space-x-2">
                                                 <i class="fas fa-exclamation-triangle text-red-500 dark:text-red-400 mt-0.5 text-xs"></i>
-                                                <span class="text-xs text-red-700 dark:text-red-300"><?php echo htmlspecialchars($log['error_message']); ?></span>
+                                                <span class="text-xs text-red-700 dark:text-red-300"><?php echo htmlspecialchars($log['details']); ?></span>
                                             </div>
                                         </div>
                                         <?php else: ?>
