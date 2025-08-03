@@ -472,7 +472,8 @@ $relayNames = [
         </div>
 
         <!-- Schedule Logs Section -->
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 mt-8">
+        <div class="container mx-auto px-6 py-8">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8">
             <div class="flex items-center justify-between mb-8">
                 <div>
                     <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
@@ -491,25 +492,29 @@ $relayNames = [
                 </div>
             </div>
 
+
+
             <div class="overflow-x-auto">
                 <table class="w-full text-left">
-                    <thead class="bg-gray-50 dark:bg-gray-700">
+                    <thead class="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800">
                         <tr>
-                            <th class="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">Schedule ID</th>
-                            <th class="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">Relay</th>
-                            <th class="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">Action</th>
-                            <th class="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">Scheduled Time</th>
-                            <th class="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">Execution Time</th>
-                            <th class="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">Status</th>
-                            <th class="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">Error Message</th>
+                            <th class="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-600">Schedule ID</th>
+                            <th class="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-600">Relay</th>
+                            <th class="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-600">Action</th>
+                            <th class="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-600">Scheduled Time</th>
+                            <th class="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-600">Execution Time</th>
+                            <th class="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-600">Status</th>
+                            <th class="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-600">Error Message</th>
                         </tr>
                     </thead>
                     <tbody id="logsTableBody">
                         <?php if (empty($schedule_logs)): ?>
                         <tr>
-                            <td colspan="7" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                            <td colspan="7" class="px-6 py-16 text-center text-gray-500 dark:text-gray-400">
                                 <div class="flex flex-col items-center space-y-4">
-                                    <i class="fas fa-history text-4xl"></i>
+                                    <div class="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                                        <i class="fas fa-history text-2xl text-gray-400 dark:text-gray-500"></i>
+                                    </div>
                                     <div>
                                         <p class="text-lg font-medium">No execution logs found</p>
                                         <p class="text-sm">Logs will appear here when schedules are executed</p>
@@ -519,60 +524,79 @@ $relayNames = [
                         </tr>
                         <?php else: ?>
                             <?php foreach ($schedule_logs as $log): ?>
-                            <tr class="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                            <tr class="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-all duration-200 group">
                                 <td class="px-6 py-4">
-                                    <div class="text-sm font-medium text-gray-900 dark:text-white">
-                                        #<?php echo $log['schedule_id']; ?>
-                                        <?php if ($log['description'] === 'Schedule deleted'): ?>
-                                        <span class="ml-2 px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs rounded">Deleted</span>
-                                        <?php endif; ?>
+                                    <div class="flex items-center space-x-2">
+                                        <div class="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                                            <span class="text-sm font-semibold text-blue-600 dark:text-blue-400">#<?php echo $log['schedule_id']; ?></span>
+                                        </div>
+                                        <div>
+                                            <?php if ($log['description'] === 'Schedule deleted'): ?>
+                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400">
+                                                <i class="fas fa-trash mr-1"></i>Deleted
+                                            </span>
+                                            <?php endif; ?>
+                                            <?php if ($log['description'] && $log['description'] !== 'Schedule deleted'): ?>
+                                            <div class="text-xs text-gray-500 dark:text-gray-400 max-w-xs truncate">
+                                                <?php echo htmlspecialchars($log['description']); ?>
+                                            </div>
+                                            <?php endif; ?>
+                                        </div>
                                     </div>
-                                    <?php if ($log['description'] && $log['description'] !== 'Schedule deleted'): ?>
-                                    <div class="text-xs text-gray-500 dark:text-gray-400">
-                                        <?php echo htmlspecialchars($log['description']); ?>
-                                    </div>
-                                    <?php endif; ?>
                                 </td>
                                 <td class="px-6 py-4">
                                     <div class="flex items-center space-x-3">
-                                        <div class="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                                            <i class="fas fa-plug text-blue-500 dark:text-blue-400 text-sm"></i>
+                                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/40 dark:to-blue-800/40 flex items-center justify-center shadow-sm">
+                                            <i class="fas fa-plug text-blue-600 dark:text-blue-400"></i>
                                         </div>
                                         <div>
-                                            <div class="font-medium text-gray-900 dark:text-white"><?php echo $relayNames[$log['relay_number']] ?? 'Unknown'; ?></div>
-                                            <div class="text-sm text-gray-500 dark:text-gray-400">Relay <?php echo $log['relay_number']; ?></div>
+                                            <div class="font-semibold text-gray-900 dark:text-white"><?php echo $relayNames[$log['relay_number']] ?? 'Unknown'; ?></div>
+                                            <div class="text-xs text-gray-500 dark:text-gray-400">Relay <?php echo $log['relay_number']; ?></div>
                                         </div>
                                     </div>
                                 </td>
                                 <td class="px-6 py-4">
-                                    <span class="px-3 py-1 rounded-full text-sm font-medium <?php echo $log['action'] == 1 ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'; ?>">
+                                    <span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold <?php echo $log['action'] == 1 ? 'bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 dark:from-green-900/30 dark:to-emerald-900/30 dark:text-green-300' : 'bg-gradient-to-r from-red-100 to-pink-100 text-red-800 dark:from-red-900/30 dark:to-pink-900/30 dark:text-red-300'; ?>">
+                                        <i class="fas <?php echo $log['action'] == 1 ? 'fa-power-off' : 'fa-stop'; ?> mr-1.5"></i>
                                         <?php echo $log['action'] == 1 ? 'Turn ON' : 'Turn OFF'; ?>
                                     </span>
                                 </td>
                                 <td class="px-6 py-4">
-                                    <div class="text-sm font-medium text-gray-900 dark:text-white">
+                                    <div class="text-sm font-semibold text-gray-900 dark:text-white">
                                         <?php echo $log['schedule_date'] ? date('M j, Y', strtotime($log['schedule_date'])) : 'N/A'; ?>
                                     </div>
-                                    <div class="text-sm text-gray-500 dark:text-gray-400">
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                                        <i class="fas fa-clock mr-1"></i>
                                         <?php echo $log['schedule_time'] ? date('g:i A', strtotime($log['schedule_time'])) : 'N/A'; ?>
                                     </div>
                                 </td>
                                 <td class="px-6 py-4">
-                                    <div class="text-sm font-medium text-gray-900 dark:text-white">
+                                    <div class="text-sm font-semibold text-gray-900 dark:text-white">
                                         <?php echo date('M j, Y', strtotime($log['execution_time'])); ?>
                                     </div>
-                                    <div class="text-sm text-gray-500 dark:text-gray-400">
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                                        <i class="fas fa-play mr-1"></i>
                                         <?php echo date('g:i A', strtotime($log['execution_time'])); ?>
                                     </div>
                                 </td>
                                 <td class="px-6 py-4">
-                                    <span class="status-badge <?php echo $log['success'] == 1 ? 'status-completed' : 'status-overdue'; ?>">
+                                    <span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold <?php echo $log['success'] == 1 ? 'bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 dark:from-green-900/30 dark:to-emerald-900/30 dark:text-green-300' : 'bg-gradient-to-r from-red-100 to-pink-100 text-red-800 dark:from-red-900/30 dark:to-pink-900/30 dark:text-red-300'; ?>">
+                                        <i class="fas <?php echo $log['success'] == 1 ? 'fa-check-circle' : 'fa-exclamation-circle'; ?> mr-1.5"></i>
                                         <?php echo $log['success'] == 1 ? 'Success' : 'Failed'; ?>
                                     </span>
                                 </td>
                                 <td class="px-6 py-4">
-                                    <div class="text-sm text-gray-900 dark:text-white max-w-xs truncate">
-                                        <?php echo $log['error_message'] ? htmlspecialchars($log['error_message']) : '-'; ?>
+                                    <div class="text-sm text-gray-900 dark:text-white max-w-xs">
+                                        <?php if ($log['error_message']): ?>
+                                        <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-2">
+                                            <div class="flex items-start space-x-2">
+                                                <i class="fas fa-exclamation-triangle text-red-500 dark:text-red-400 mt-0.5 text-xs"></i>
+                                                <span class="text-xs text-red-700 dark:text-red-300"><?php echo htmlspecialchars($log['error_message']); ?></span>
+                                            </div>
+                                        </div>
+                                        <?php else: ?>
+                                        <span class="text-gray-400 dark:text-gray-500 text-xs">No errors</span>
+                                        <?php endif; ?>
                                     </div>
                                 </td>
                             </tr>
@@ -609,6 +633,7 @@ $relayNames = [
                 </div>
             </div>
             <?php endif; ?>
+            </div>
         </div>
     </div>
 
