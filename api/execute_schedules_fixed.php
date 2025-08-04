@@ -203,15 +203,30 @@ try {
                     logScheduleExecution($conn, $schedule, true);
                     
                     // Update last_executed timestamp for all successful executions
+                    $current_timestamp = date('Y-m-d H:i:s'); // Get current time right before update
+                    echo "    [DEBUG] Updating last_executed for schedule ID {$schedule['id']} to $current_timestamp\n";
+                    
                     $update_stmt = $conn->prepare("UPDATE relay_schedules SET last_executed = ? WHERE id = ?");
-                    $update_stmt->bind_param("si", $now, $schedule['id']);
+                    $update_stmt->bind_param("si", $current_timestamp, $schedule['id']);
                     $update_result = $update_stmt->execute();
+                    $affected_rows = $update_stmt->affected_rows;
                     $update_stmt->close();
                     
-                    if ($update_result) {
-                        echo "    ✅ Updated last_executed timestamp for schedule ID {$schedule['id']}\n";
+                    if ($update_result && $affected_rows > 0) {
+                        echo "    ✅ Updated last_executed timestamp for schedule ID {$schedule['id']} (affected rows: $affected_rows)\n";
                     } else {
-                        echo "    ⚠️ Failed to update last_executed timestamp for schedule ID {$schedule['id']}\n";
+                        echo "    ❌ Failed to update last_executed for schedule ID {$schedule['id']} (affected rows: $affected_rows)\n";
+                        // Try to get more info about why it failed
+                        $check_stmt = $conn->prepare("SELECT id, last_executed FROM relay_schedules WHERE id = ?");
+                        $check_stmt->bind_param("i", $schedule['id']);
+                        $check_stmt->execute();
+                        $check_result = $check_stmt->get_result();
+                        if ($row = $check_result->fetch_assoc()) {
+                            echo "    [DEBUG] Current last_executed for schedule ID {$schedule['id']}: {$row['last_executed']}\n";
+                        } else {
+                            echo "    [DEBUG] Schedule ID {$schedule['id']} not found in database\n";
+                        }
+                        $check_stmt->close();
                     }
                     
                     // If it's a one-time schedule, remove it after successful execution
