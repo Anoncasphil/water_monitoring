@@ -96,17 +96,25 @@ try {
         // First pass: collect all schedules that should be executed
         while ($schedule = $result->fetch_assoc()) {
             $schedule_datetime = $schedule['schedule_date'] . ' ' . $schedule['schedule_time'];
+            $current_time = time();
+            $scheduled_time = strtotime($schedule_datetime);
             
             // Check if this schedule should be executed (not executed yet or due for re-execution)
             $should_execute = false;
             
+            // First, check if the scheduled time has actually passed
+            if ($scheduled_time > $current_time) {
+                // Schedule is in the future, don't execute
+                echo "Skipping schedule ID {$schedule['id']}: Scheduled time is in the future (Scheduled: $schedule_datetime)\n";
+                continue;
+            }
+            
             if ($schedule['last_executed'] === null) {
-                // Never executed before
+                // Never executed before and time has passed - should execute
                 $should_execute = true;
             } else {
                 // Check if it's time to execute again based on frequency
                 $last_executed_time = strtotime($schedule['last_executed']);
-                $scheduled_time = strtotime($schedule_datetime);
                 
                 if ($schedule['frequency'] === 'once') {
                     // One-time schedules should only execute if not executed before
