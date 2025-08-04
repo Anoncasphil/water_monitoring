@@ -72,11 +72,9 @@ try {
         AND schedule_date <= ? 
         AND (
             last_executed IS NULL 
-            OR (
-                last_executed < CONCAT(schedule_date, ' ', schedule_time)
-                AND CONCAT(schedule_date, ' ', schedule_time) <= ?
-            )
+            OR last_executed < CONCAT(schedule_date, ' ', schedule_time)
         )
+        AND CONCAT(schedule_date, ' ', schedule_time) <= ?
         ORDER BY schedule_date ASC, schedule_time ASC
     ");
     $stmt->bind_param("ss", $today, $now);
@@ -89,45 +87,40 @@ try {
     while ($schedule = $result->fetch_assoc()) {
         $schedule_datetime = $schedule['schedule_date'] . ' ' . $schedule['schedule_time'];
         
-        // Additional check to ensure we only execute schedules that are actually due
-        if (strtotime($schedule_datetime) <= time() && 
-            ($schedule['last_executed'] === null || 
-             strtotime($schedule['last_executed']) < strtotime($schedule_datetime))) {
-            echo "Executing schedule ID {$schedule['id']}: Relay {$schedule['relay_number']} -> " . 
-                 ($schedule['action'] == 1 ? 'ON' : 'OFF') . " (Scheduled: $schedule_datetime)\n";
+        echo "Executing schedule ID {$schedule['id']}: Relay {$schedule['relay_number']} -> " . 
+             ($schedule['action'] == 1 ? 'ON' : 'OFF') . " (Scheduled: $schedule_datetime)\n";
+        
+        // Execute the relay control
+        $relay_control_result = executeRelayControl($schedule['relay_number'], $schedule['action']);
+        
+        if ($relay_control_result['success']) {
+            // Update last_executed timestamp
+            $update_stmt = $conn->prepare("UPDATE relay_schedules SET last_executed = ? WHERE id = ?");
+            $update_stmt->bind_param("si", $now, $schedule['id']);
+            $update_stmt->execute();
+            $update_stmt->close();
             
-            // Execute the relay control
-            $relay_control_result = executeRelayControl($schedule['relay_number'], $schedule['action']);
+            $executed++;
+            echo "  ✓ Successfully executed\n";
             
-            if ($relay_control_result['success']) {
-                // Update last_executed timestamp
-                $update_stmt = $conn->prepare("UPDATE relay_schedules SET last_executed = ? WHERE id = ?");
-                $update_stmt->bind_param("si", $now, $schedule['id']);
-                $update_stmt->execute();
-                $update_stmt->close();
-                
-                $executed++;
-                echo "  ✓ Successfully executed\n";
-                
-                // Log the execution
-                logScheduleExecution($conn, $schedule, true);
-                
-                // If it's a one-time schedule, remove it after successful execution
-                if ($schedule['frequency'] === 'once') {
-                    $delete_stmt = $conn->prepare("DELETE FROM relay_schedules WHERE id = ?");
-                    $delete_stmt->bind_param("i", $schedule['id']);
-                    $delete_stmt->execute();
-                    $delete_stmt->close();
-                    echo "  🗑️ One-time schedule removed (ID: {$schedule['id']})\n";
-                }
-            } else {
-                $errors++;
-                echo "  ✗ Failed to execute\n";
-                
-                // Log the failure with detailed error message
-                $error_message = $relay_control_result['error'] ?? "Unknown error occurred";
-                logScheduleExecution($conn, $schedule, false, $error_message);
+            // Log the execution
+            logScheduleExecution($conn, $schedule, true);
+            
+            // If it's a one-time schedule, remove it after successful execution
+            if ($schedule['frequency'] === 'once') {
+                $delete_stmt = $conn->prepare("DELETE FROM relay_schedules WHERE id = ?");
+                $delete_stmt->bind_param("i", $schedule['id']);
+                $delete_stmt->execute();
+                $delete_stmt->close();
+                echo "  🗑️ One-time schedule removed (ID: {$schedule['id']})\n";
             }
+        } else {
+            $errors++;
+            echo "  ✗ Failed to execute\n";
+            
+            // Log the failure with detailed error message
+            $error_message = $relay_control_result['error'] ?? "Unknown error occurred";
+            logScheduleExecution($conn, $schedule, false, $error_message);
         }
     }
     $stmt->close();
