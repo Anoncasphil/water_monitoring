@@ -79,7 +79,9 @@ try {
     
     $executed = 0;
     $errors = 0;
+    $schedules_to_execute = []; // Collect all schedules that should be executed
     
+    // First pass: collect all schedules that should be executed
     while ($schedule = $result->fetch_assoc()) {
         $schedule_datetime = $schedule['schedule_date'] . ' ' . $schedule['schedule_time'];
         
@@ -103,10 +105,19 @@ try {
             }
         }
         
-        if (!$should_execute) {
+        if ($should_execute) {
+            $schedules_to_execute[] = $schedule;
+            echo "Queued schedule ID {$schedule['id']}: Relay {$schedule['relay_number']} -> " . 
+                 ($schedule['action'] == 1 ? 'ON' : 'OFF') . " (Scheduled: $schedule_datetime)\n";
+        } else {
             echo "Skipping schedule ID {$schedule['id']}: Already executed or not due yet (Scheduled: $schedule_datetime, Last: {$schedule['last_executed']})\n";
-            continue;
         }
+    }
+    $stmt->close();
+    
+    // Second pass: execute all collected schedules
+    foreach ($schedules_to_execute as $schedule) {
+        $schedule_datetime = $schedule['schedule_date'] . ' ' . $schedule['schedule_time'];
         
         echo "Executing schedule ID {$schedule['id']}: Relay {$schedule['relay_number']} -> " . 
              ($schedule['action'] == 1 ? 'ON' : 'OFF') . " (Scheduled: $schedule_datetime)\n";
@@ -115,12 +126,6 @@ try {
         $relay_control_result = executeRelayControl($schedule['relay_number'], $schedule['action']);
         
         if ($relay_control_result['success']) {
-            // Update last_executed timestamp
-            $update_stmt = $conn->prepare("UPDATE relay_schedules SET last_executed = ? WHERE id = ?");
-            $update_stmt->bind_param("si", $now, $schedule['id']);
-            $update_stmt->execute();
-            $update_stmt->close();
-            
             $executed++;
             echo "  ✓ Successfully executed\n";
             
@@ -144,7 +149,17 @@ try {
             logScheduleExecution($conn, $schedule, false, $error_message);
         }
     }
-    $stmt->close();
+    
+    // Third pass: update last_executed timestamps for all successfully executed schedules
+    foreach ($schedules_to_execute as $schedule) {
+        // Skip one-time schedules that were already deleted
+        if ($schedule['frequency'] !== 'once') {
+            $update_stmt = $conn->prepare("UPDATE relay_schedules SET last_executed = ? WHERE id = ?");
+            $update_stmt->bind_param("si", $now, $schedule['id']);
+            $update_stmt->execute();
+            $update_stmt->close();
+        }
+    }
     
     echo "\n=== Execution Summary ===\n";
     echo "Total schedules executed: $executed\n";
