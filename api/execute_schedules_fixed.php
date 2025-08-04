@@ -51,7 +51,7 @@ try {
         scheduled_time DATETIME NOT NULL,
         executed_time DATETIME NOT NULL,
         success TINYINT(1) NOT NULL,
-        details TEXT,
+        error_message TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_schedule_id (schedule_id),
         INDEX idx_executed_time (executed_time),
@@ -293,17 +293,19 @@ function executeRelayControl($relay_number, $action) {
  */
 function logScheduleExecution($conn, $schedule, $success, $error_message = null) {
     $log_sql = "
-    INSERT INTO schedule_logs (schedule_id, relay_number, action, success, error_message)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO schedule_logs (schedule_id, relay_number, action, scheduled_time, executed_time, success, error_message)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
     ";
     
     $success_int = $success ? 1 : 0;
     
     $stmt = $conn->prepare($log_sql);
-    $stmt->bind_param("iiiss", 
+    $stmt->bind_param("iiississ", 
         $schedule['id'], 
         $schedule['relay_number'], 
         $schedule['action'], 
+        $schedule['schedule_date'] . ' ' . $schedule['schedule_time'], // scheduled_time
+        date('Y-m-d H:i:s'), // executed_time
         $success_int, 
         $error_message
     );
