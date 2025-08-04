@@ -42,11 +42,8 @@ try {
     $conn->query($createTableSQL);
     
     // Ensure schedule_logs table exists with correct structure
-    $dropLogsTableSQL = "DROP TABLE IF EXISTS schedule_logs";
-    $conn->query($dropLogsTableSQL);
-    
     $createLogsTableSQL = "
-    CREATE TABLE schedule_logs (
+    CREATE TABLE IF NOT EXISTS schedule_logs (
         id INT AUTO_INCREMENT PRIMARY KEY,
         schedule_id INT NOT NULL,
         relay_number INT NOT NULL,
