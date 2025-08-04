@@ -196,9 +196,17 @@ try {
                     if ($schedule['frequency'] === 'once') {
                         $delete_stmt = $conn->prepare("DELETE FROM relay_schedules WHERE id = ?");
                         $delete_stmt->bind_param("i", $schedule['id']);
-                        $delete_stmt->execute();
+                        $delete_result = $delete_stmt->execute();
                         $delete_stmt->close();
-                        echo "    🗑️ One-time schedule removed (ID: {$schedule['id']})\n";
+                        
+                        if ($delete_result) {
+                            echo "    🗑️ One-time schedule removed (ID: {$schedule['id']})\n";
+                        } else {
+                            echo "    ⚠️ Failed to remove one-time schedule (ID: {$schedule['id']})\n";
+                        }
+                    } else {
+                        // For recurring schedules, add to successful executions for timestamp update
+                        $successful_executions[] = $schedule;
                     }
                 } else {
                     $cycle_errors++;
@@ -207,18 +215,18 @@ try {
                     // Log the failure with detailed error message
                     $error_message = $result['error'] ?? "Unknown error occurred";
                     logScheduleExecution($conn, $schedule, false, $error_message);
+                    
+                    // For failed executions, don't remove one-time schedules (they can be retried)
+                    echo "    ⚠️ One-time schedule failed - will retry on next cycle (ID: {$schedule['id']})\n";
                 }
             }
             
-            // Update last_executed timestamps for all successfully executed schedules
+            // Update last_executed timestamps for all successfully executed recurring schedules
             foreach ($successful_executions as $schedule) {
-                // Skip one-time schedules that were already deleted
-                if ($schedule['frequency'] !== 'once') {
-                    $update_stmt = $conn->prepare("UPDATE relay_schedules SET last_executed = ? WHERE id = ?");
-                    $update_stmt->bind_param("si", $now, $schedule['id']);
-                    $update_stmt->execute();
-                    $update_stmt->close();
-                }
+                $update_stmt = $conn->prepare("UPDATE relay_schedules SET last_executed = ? WHERE id = ?");
+                $update_stmt->bind_param("si", $now, $schedule['id']);
+                $update_stmt->execute();
+                $update_stmt->close();
             }
             
             echo "  ✅ Completed execution for time: $schedule_time\n";
