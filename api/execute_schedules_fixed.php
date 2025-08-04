@@ -202,6 +202,18 @@ try {
                     // Log the execution
                     logScheduleExecution($conn, $schedule, true);
                     
+                    // Update last_executed timestamp for all successful executions
+                    $update_stmt = $conn->prepare("UPDATE relay_schedules SET last_executed = ? WHERE id = ?");
+                    $update_stmt->bind_param("si", $now, $schedule['id']);
+                    $update_result = $update_stmt->execute();
+                    $update_stmt->close();
+                    
+                    if ($update_result) {
+                        echo "    ✅ Updated last_executed timestamp for schedule ID {$schedule['id']}\n";
+                    } else {
+                        echo "    ⚠️ Failed to update last_executed timestamp for schedule ID {$schedule['id']}\n";
+                    }
+                    
                     // If it's a one-time schedule, remove it after successful execution
                     if ($schedule['frequency'] === 'once') {
                         $delete_stmt = $conn->prepare("DELETE FROM relay_schedules WHERE id = ?");
@@ -214,9 +226,6 @@ try {
                         } else {
                             echo "    ⚠️ Failed to remove one-time schedule (ID: {$schedule['id']})\n";
                         }
-                    } else {
-                        // For recurring schedules, add to successful executions for timestamp update
-                        $successful_executions[] = $schedule;
                     }
                 } else {
                     $cycle_errors++;
@@ -231,13 +240,7 @@ try {
                 }
             }
             
-            // Update last_executed timestamps for all successfully executed recurring schedules
-            foreach ($successful_executions as $schedule) {
-                $update_stmt = $conn->prepare("UPDATE relay_schedules SET last_executed = ? WHERE id = ?");
-                $update_stmt->bind_param("si", $now, $schedule['id']);
-                $update_stmt->execute();
-                $update_stmt->close();
-            }
+            // Remove the old timestamp update loop since we're now updating immediately after each successful execution
             
             echo "  ✅ Completed execution for time: $schedule_time\n";
             echo "  Summary: " . count($successful_executions) . " successful, " . count($failed_executions) . " failed\n";
