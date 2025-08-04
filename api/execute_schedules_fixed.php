@@ -70,10 +70,6 @@ try {
         SELECT * FROM relay_schedules 
         WHERE is_active = 1 
         AND schedule_date <= ? 
-        AND (
-            last_executed IS NULL 
-            OR last_executed < CONCAT(schedule_date, ' ', schedule_time)
-        )
         AND CONCAT(schedule_date, ' ', schedule_time) <= ?
         ORDER BY schedule_date ASC, schedule_time ASC
     ");
@@ -86,6 +82,31 @@ try {
     
     while ($schedule = $result->fetch_assoc()) {
         $schedule_datetime = $schedule['schedule_date'] . ' ' . $schedule['schedule_time'];
+        
+        // Check if this schedule should be executed (not executed yet or due for re-execution)
+        $should_execute = false;
+        
+        if ($schedule['last_executed'] === null) {
+            // Never executed before
+            $should_execute = true;
+        } else {
+            // Check if it's time to execute again based on frequency
+            $last_executed_time = strtotime($schedule['last_executed']);
+            $scheduled_time = strtotime($schedule_datetime);
+            
+            if ($schedule['frequency'] === 'once') {
+                // One-time schedules should only execute if not executed before
+                $should_execute = ($last_executed_time < $scheduled_time);
+            } else {
+                // Recurring schedules should execute if the scheduled time has passed since last execution
+                $should_execute = ($last_executed_time < $scheduled_time);
+            }
+        }
+        
+        if (!$should_execute) {
+            echo "Skipping schedule ID {$schedule['id']}: Already executed or not due yet (Scheduled: $schedule_datetime, Last: {$schedule['last_executed']})\n";
+            continue;
+        }
         
         echo "Executing schedule ID {$schedule['id']}: Relay {$schedule['relay_number']} -> " . 
              ($schedule['action'] == 1 ? 'ON' : 'OFF') . " (Scheduled: $schedule_datetime)\n";
