@@ -120,8 +120,18 @@ try {
                     // One-time schedules should only execute if not executed before
                     $should_execute = ($last_executed_time < $scheduled_time);
                 } else {
-                    // Recurring schedules should execute if the scheduled time has passed since last execution
+                    // For recurring schedules, check if we've already executed this specific scheduled time
+                    // We need to check if the last_executed time is before this specific scheduled time
                     $should_execute = ($last_executed_time < $scheduled_time);
+                }
+            }
+            
+            // Additional check: if last_executed is after or equal to scheduled_time, don't execute
+            if ($schedule['last_executed'] !== null) {
+                $last_executed_time = strtotime($schedule['last_executed']);
+                if ($last_executed_time >= $scheduled_time) {
+                    $should_execute = false;
+                    echo "Skipping schedule ID {$schedule['id']}: Already executed for this scheduled time (Scheduled: $schedule_datetime, Last: {$schedule['last_executed']})\n";
                 }
             }
             
