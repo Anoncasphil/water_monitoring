@@ -292,22 +292,53 @@ function executeRelayControl($relay_number, $action) {
  * Log schedule execution
  */
 function logScheduleExecution($conn, $schedule, $success, $error_message = null) {
-    $log_sql = "
-    INSERT INTO schedule_logs (schedule_id, relay_number, action, success, error_message)
-    VALUES (?, ?, ?, ?, ?)
-    ";
+    // Check if the table has the new structure with scheduled_time and executed_time
+    $check_table_sql = "SHOW COLUMNS FROM schedule_logs LIKE 'scheduled_time'";
+    $check_result = $conn->query($check_table_sql);
     
-    $success_int = $success ? 1 : 0;
-    
-    $stmt = $conn->prepare($log_sql);
-    $stmt->bind_param("iiiss", 
-        $schedule['id'], 
-        $schedule['relay_number'], 
-        $schedule['action'], 
-        $success_int, 
-        $error_message
-    );
-    $stmt->execute();
-    $stmt->close();
+    if ($check_result && $check_result->num_rows > 0) {
+        // New table structure with scheduled_time and executed_time
+        $scheduled_datetime = $schedule['schedule_date'] . ' ' . $schedule['schedule_time'];
+        $executed_datetime = date('Y-m-d H:i:s');
+        
+        $log_sql = "
+        INSERT INTO schedule_logs (schedule_id, relay_number, action, scheduled_time, executed_time, success, details)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        ";
+        
+        $success_int = $success ? 1 : 0;
+        
+        $stmt = $conn->prepare($log_sql);
+        $stmt->bind_param("iisssis", 
+            $schedule['id'], 
+            $schedule['relay_number'], 
+            $schedule['action'], 
+            $scheduled_datetime,
+            $executed_datetime,
+            $success_int, 
+            $error_message
+        );
+        $stmt->execute();
+        $stmt->close();
+    } else {
+        // Old table structure with execution_time only
+        $log_sql = "
+        INSERT INTO schedule_logs (schedule_id, relay_number, action, success, error_message)
+        VALUES (?, ?, ?, ?, ?)
+        ";
+        
+        $success_int = $success ? 1 : 0;
+        
+        $stmt = $conn->prepare($log_sql);
+        $stmt->bind_param("iiiss", 
+            $schedule['id'], 
+            $schedule['relay_number'], 
+            $schedule['action'], 
+            $success_int, 
+            $error_message
+        );
+        $stmt->execute();
+        $stmt->close();
+    }
 }
 ?> 

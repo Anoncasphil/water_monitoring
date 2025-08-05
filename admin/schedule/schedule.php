@@ -92,6 +92,16 @@ $relayNames = [
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script>
+        // Theme initialization - must run before page renders to prevent flash
+        (function() {
+            if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        })();
+    </script>
+    <script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
@@ -553,20 +563,75 @@ $relayNames = [
                                 </td>
                                 <td class="px-6 py-4">
                                     <div class="text-sm font-semibold text-gray-900 dark:text-white">
-                                        <?php echo $log['scheduled_time'] ? date('M j, Y', strtotime($log['scheduled_time'])) : 'N/A'; ?>
+                                        <?php 
+                                        // Check if scheduled_time field exists in the table
+                                        $check_scheduled_time = $conn->query("SHOW COLUMNS FROM schedule_logs LIKE 'scheduled_time'");
+                                        
+                                        if ($check_scheduled_time && $check_scheduled_time->num_rows > 0 && !empty($log['scheduled_time'])) {
+                                            // New table structure with scheduled_time field
+                                            echo date('M j, Y', strtotime($log['scheduled_time']));
+                                        } else {
+                                            // Fallback to getting scheduled time from relay_schedules table
+                                            $schedule_query = "SELECT schedule_date, schedule_time FROM relay_schedules WHERE id = ?";
+                                            $schedule_stmt = $conn->prepare($schedule_query);
+                                            $schedule_stmt->bind_param("i", $log['schedule_id']);
+                                            $schedule_stmt->execute();
+                                            $schedule_result = $schedule_stmt->get_result();
+                                            $schedule_data = $schedule_result->fetch_assoc();
+                                            $schedule_stmt->close();
+                                            
+                                            if ($schedule_data) {
+                                                $scheduled_datetime = $schedule_data['schedule_date'] . ' ' . $schedule_data['schedule_time'];
+                                                echo date('M j, Y', strtotime($scheduled_datetime));
+                                            } else {
+                                                echo 'N/A';
+                                            }
+                                        }
+                                        ?>
                                     </div>
                                     <div class="text-xs text-gray-500 dark:text-gray-400">
                                         <i class="fas fa-clock mr-1"></i>
-                                        <?php echo $log['scheduled_time'] ? date('g:i A', strtotime($log['scheduled_time'])) : 'N/A'; ?>
+                                        <?php 
+                                        if ($check_scheduled_time && $check_scheduled_time->num_rows > 0 && !empty($log['scheduled_time'])) {
+                                            // New table structure with scheduled_time field
+                                            echo date('g:i A', strtotime($log['scheduled_time']));
+                                        } else {
+                                            // Fallback to getting scheduled time from relay_schedules table
+                                            if (isset($schedule_data) && $schedule_data) {
+                                                echo date('g:i A', strtotime($scheduled_datetime));
+                                            } else {
+                                                echo 'N/A';
+                                            }
+                                        }
+                                        ?>
                                     </div>
                                 </td>
                                 <td class="px-6 py-4">
                                     <div class="text-sm font-semibold text-gray-900 dark:text-white">
-                                        <?php echo date('M j, Y', strtotime($log['executed_time'])); ?>
+                                        <?php 
+                                        // Check if executed_time field exists in the table
+                                        $check_executed_time = $conn->query("SHOW COLUMNS FROM schedule_logs LIKE 'executed_time'");
+                                        
+                                        if ($check_executed_time && $check_executed_time->num_rows > 0 && !empty($log['executed_time'])) {
+                                            // New table structure with executed_time field
+                                            echo date('M j, Y', strtotime($log['executed_time']));
+                                        } else {
+                                            // Fallback to execution_time field
+                                            echo date('M j, Y', strtotime($log['execution_time']));
+                                        }
+                                        ?>
                                     </div>
                                     <div class="text-xs text-gray-500 dark:text-gray-400">
                                         <i class="fas fa-play mr-1"></i>
-                                        <?php echo date('g:i A', strtotime($log['executed_time'])); ?>
+                                        <?php 
+                                        if ($check_executed_time && $check_executed_time->num_rows > 0 && !empty($log['executed_time'])) {
+                                            // New table structure with executed_time field
+                                            echo date('g:i A', strtotime($log['executed_time']));
+                                        } else {
+                                            // Fallback to execution_time field
+                                            echo date('g:i A', strtotime($log['execution_time']));
+                                        }
+                                        ?>
                                     </div>
                                 </td>
                                 <td class="px-6 py-4">
@@ -590,11 +655,22 @@ $relayNames = [
                                 </td>
                                 <td class="px-6 py-4">
                                     <div class="text-sm text-gray-900 dark:text-white max-w-xs">
-                                        <?php if ($log['details']): ?>
+                                        <?php 
+                                        // Check if details field exists, otherwise use error_message
+                                        $check_details = $conn->query("SHOW COLUMNS FROM schedule_logs LIKE 'details'");
+                                        $error_details = '';
+                                        
+                                        if ($check_details && $check_details->num_rows > 0 && !empty($log['details'])) {
+                                            $error_details = $log['details'];
+                                        } elseif (!empty($log['error_message'])) {
+                                            $error_details = $log['error_message'];
+                                        }
+                                        
+                                        if ($error_details): ?>
                                         <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-2">
                                             <div class="flex items-start space-x-2">
                                                 <i class="fas fa-exclamation-triangle text-red-500 dark:text-red-400 mt-0.5 text-xs"></i>
-                                                <span class="text-xs text-red-700 dark:text-red-300"><?php echo htmlspecialchars($log['details']); ?></span>
+                                                <span class="text-xs text-red-700 dark:text-red-300"><?php echo htmlspecialchars($error_details); ?></span>
                                             </div>
                                         </div>
                                         <?php else: ?>
