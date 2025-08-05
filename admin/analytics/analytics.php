@@ -61,6 +61,16 @@ try {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script>
+        // Theme initialization - must run before page renders to prevent flash
+        (function() {
+            if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        })();
+    </script>
+    <script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
@@ -148,14 +158,86 @@ try {
             background-color: #1E3A8A;
             color: #DBEAFE;
         }
+        
+        /* Loading overlay styles */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.3s ease;
+        }
+        
+        .dark .loading-overlay {
+            background: rgba(0, 0, 0, 0.9);
+        }
+        
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #3B82F6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        .dark .loading-spinner {
+            border: 4px solid rgba(255, 255, 255, 0.2);
+            border-top: 4px solid #60A5FA;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            color: white;
+            font-size: 18px;
+            font-weight: 500;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        
+        .loading-subtext {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+            text-align: center;
+        }
+        
+        .content-hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .content-visible {
+            opacity: 1;
+            pointer-events: auto;
+            transition: opacity 0.5s ease;
+        }
     </style>
 </head>
 <body class="gradient-bg min-h-screen transition-colors duration-300">
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading Analytics Data</div>
+        <div class="loading-subtext">Please wait while we fetch and process your data...</div>
+    </div>
+    
     <!-- Include Sidebar -->
     <?php include '../sidebar/sidebar.php'; ?>
     
     <!-- Main Content -->
-    <div class="lg:ml-64">
+    <div id="mainContent" class="lg:ml-64 content-hidden">
         <div class="container mx-auto px-6 py-8">
             <!-- Header -->
             <div class="flex items-center justify-between mb-8">
@@ -392,10 +474,27 @@ try {
             </div>
         </div>
     </div>
+    </div>
 
     <script>
         let trendsChart = null;
         let dailyChart = null;
+        
+        // Loading state management
+        function showLoading() {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            document.getElementById('mainContent').classList.add('content-hidden');
+            document.getElementById('mainContent').classList.remove('content-visible');
+        }
+        
+        function hideLoading() {
+            document.getElementById('loadingOverlay').style.display = 'none';
+            document.getElementById('mainContent').classList.remove('content-hidden');
+            document.getElementById('mainContent').classList.add('content-visible');
+        }
+        
+        // Show loading initially
+        showLoading();
 
         function formatDate(dateStr) {
             const date = new Date(dateStr);
@@ -657,6 +756,9 @@ try {
         }
 
         function updateData() {
+            // Show loading for data updates
+            showLoading();
+            
             fetch('../../api/get_readings.php')
                 .then(response => response.json())
                 .then(data => {
@@ -666,27 +768,48 @@ try {
                     if (data.historical && data.historical.length > 0) {
                         createTrendsChart(data.historical);
                     }
+                    
+                    // Hide loading after data is processed
+                    setTimeout(() => {
+                        hideLoading();
+                    }, 300);
                 })
                 .catch(error => {
                     console.error('Error fetching data:', error);
+                    // Hide loading even on error
+                    setTimeout(() => {
+                        hideLoading();
+                    }, 300);
                 });
         }
 
         function exportData() {
-            // Create CSV data
-            const csvContent = "data:text/csv;charset=utf-8," 
-                + "Date,Turbidity (NTU),TDS (ppm),pH,Temperature (°C)\n"
-                + <?php echo json_encode(array_map(function($row) {
-                    return $row['reading_time'] . ',' . $row['turbidity'] . ',' . $row['tds'] . ',' . $row['ph'] . ',' . $row['temperature'];
-                }, $hourlyData)); ?>.join('\n');
+            // Show loading for export
+            const exportBtn = document.getElementById('exportData');
+            const originalText = exportBtn.innerHTML;
+            exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Exporting...';
+            exportBtn.disabled = true;
+            
+            setTimeout(() => {
+                // Create CSV data
+                const csvContent = "data:text/csv;charset=utf-8," 
+                    + "Date,Turbidity (NTU),TDS (ppm),pH,Temperature (°C)\n"
+                    + <?php echo json_encode(array_map(function($row) {
+                        return $row['reading_time'] . ',' . $row['turbidity'] . ',' . $row['tds'] . ',' . $row['ph'] . ',' . $row['temperature'];
+                    }, $hourlyData)); ?>.join('\n');
 
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `water-quality-data-${new Date().toISOString().split('T')[0]}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", `water-quality-data-${new Date().toISOString().split('T')[0]}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                // Restore button
+                exportBtn.innerHTML = originalText;
+                exportBtn.disabled = false;
+            }, 500); // Small delay to show loading state
         }
 
         function exportChart(chartId, filename) {
@@ -696,13 +819,25 @@ try {
                 return;
             }
             
-            // Create a temporary link to download the chart
-            const link = document.createElement('a');
-            link.download = `${filename}-${new Date().toISOString().split('T')[0]}.png`;
-            link.href = canvas.toDataURL('image/png');
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            // Show loading for chart export
+            const exportBtn = event.target;
+            const originalText = exportBtn.innerHTML;
+            exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Exporting...';
+            exportBtn.disabled = true;
+            
+            setTimeout(() => {
+                // Create a temporary link to download the chart
+                const link = document.createElement('a');
+                link.download = `${filename}-${new Date().toISOString().split('T')[0]}.png`;
+                link.href = canvas.toDataURL('image/png');
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                // Restore button
+                exportBtn.innerHTML = originalText;
+                exportBtn.disabled = false;
+            }, 300); // Small delay to show loading state
         }
 
         // Initialize charts with PHP data
@@ -713,6 +848,11 @@ try {
         <?php if (!empty($dailyData)): ?>
         createDailyChart(<?php echo json_encode($dailyData); ?>);
         <?php endif; ?>
+        
+        // Hide loading overlay after charts are initialized
+        setTimeout(() => {
+            hideLoading();
+        }, 500); // Small delay to ensure smooth transition
 
         // Event listeners
         document.getElementById('exportData').addEventListener('click', exportData);
@@ -724,8 +864,17 @@ try {
         // Time range selector
         document.getElementById('timeRange').addEventListener('change', function() {
             const timeRange = this.value;
-            // Here you would typically fetch new data based on the selected time range
-            console.log('Time range changed to:', timeRange);
+            // Show loading when changing time range
+            showLoading();
+            
+            // Simulate data fetching for different time ranges
+            setTimeout(() => {
+                // Here you would typically fetch new data based on the selected time range
+                console.log('Time range changed to:', timeRange);
+                
+                // Hide loading after data is processed
+                hideLoading();
+            }, 1000); // Simulate processing time
         });
 
         // Dark mode toggle
