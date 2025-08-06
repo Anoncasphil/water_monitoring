@@ -30,23 +30,36 @@ try {
     // Split the SQL into individual statements
     $statements = array_filter(array_map('trim', explode(';', $migration_sql)));
     
-    foreach ($statements as $statement) {
+    foreach ($statements as $index => $statement) {
         if (!empty($statement) && !preg_match('/^(USE|--)/', $statement)) {
-            echo "Executing: " . substr($statement, 0, 50) . "...\n";
+            echo "Executing statement " . ($index + 1) . ": " . substr($statement, 0, 60) . "...\n";
             
             $result = $conn->query($statement);
             
             if ($result === false) {
-                echo "Warning: " . $conn->error . "\n";
+                echo "❌ Error: " . $conn->error . "\n";
+                echo "Statement: " . $statement . "\n";
+                
+                // Continue with other statements even if one fails
+                continue;
             } else {
                 echo "✓ Success\n";
             }
         }
     }
     
-    echo "\n=== Migration Completed Successfully ===\n";
+    echo "\n=== Migration Completed ===\n";
     echo "The schedule_logs table has been updated with new fields.\n";
     echo "Scheduled time and execution time should now display correctly.\n";
+    
+    // Show final table structure
+    echo "\n=== Final Table Structure ===\n";
+    $result = $conn->query("DESCRIBE schedule_logs");
+    if ($result) {
+        while ($row = $result->fetch_assoc()) {
+            echo $row['Field'] . " | " . $row['Type'] . " | " . $row['Null'] . " | " . $row['Key'] . "\n";
+        }
+    }
     
 } catch (Exception $e) {
     echo "Error: " . $e->getMessage() . "\n";
