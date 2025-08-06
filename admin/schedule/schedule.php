@@ -656,15 +656,8 @@ $relayNames = [
                                 <td class="px-6 py-4">
                                     <div class="text-sm text-gray-900 dark:text-white max-w-xs">
                                         <?php 
-                                        // Check if details field exists, otherwise use error_message
-                                        $check_details = $conn->query("SHOW COLUMNS FROM schedule_logs LIKE 'details'");
-                                        $error_details = '';
-                                        
-                                        if ($check_details && $check_details->num_rows > 0 && !empty($log['details'])) {
-                                            $error_details = $log['details'];
-                                        } elseif (!empty($log['error_message'])) {
-                                            $error_details = $log['error_message'];
-                                        }
+                                        // Use error_message field (the actual field name in the table)
+                                        $error_details = !empty($log['error_message']) ? $log['error_message'] : '';
                                         
                                         if ($error_details): ?>
                                         <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-2">

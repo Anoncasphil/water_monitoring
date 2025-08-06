@@ -51,7 +51,7 @@ try {
         scheduled_time DATETIME NOT NULL,
         executed_time DATETIME NOT NULL,
         success TINYINT(1) NOT NULL,
-        details TEXT,
+        error_message TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_schedule_id (schedule_id),
         INDEX idx_executed_time (executed_time),
@@ -172,10 +172,17 @@ try {
                 }
             }
             
+            echo "  📊 Execution Results Summary:\n";
+            echo "    - Successful executions: " . count($successful_executions) . "\n";
+            echo "    - Failed executions: " . count($failed_executions) . "\n";
+            
             // Log all executions for this time
+            echo "  📝 Starting to log executions...\n";
             foreach ($execution_results as $execution) {
                 $schedule = $execution['schedule'];
                 $result = $execution['result'];
+                
+                echo "    Logging schedule ID {$schedule['id']} - Success: " . ($result['success'] ? 'Yes' : 'No') . "\n";
                 
                 if ($result['success']) {
                     $cycle_executed++;
@@ -183,15 +190,6 @@ try {
                     
                     // Log the execution
                     logScheduleExecution($conn, $schedule, true);
-                    
-                    // If it's a one-time schedule, remove it after successful execution
-                    if ($schedule['frequency'] === 'once') {
-                        $delete_stmt = $conn->prepare("DELETE FROM relay_schedules WHERE id = ?");
-                        $delete_stmt->bind_param("i", $schedule['id']);
-                        $delete_stmt->execute();
-                        $delete_stmt->close();
-                        echo "    🗑️ One-time schedule removed (ID: {$schedule['id']})\n";
-                    }
                 } else {
                     $cycle_errors++;
                     $total_errors++;
@@ -201,17 +199,43 @@ try {
                     logScheduleExecution($conn, $schedule, false, $error_message);
                 }
             }
+            echo "  ✅ Finished logging all executions\n";
             
             // Update last_executed timestamps for all successful executions AFTER all schedules for this time are processed
+            echo "  🔄 Starting to update last_executed timestamps...\n";
             foreach ($successful_executions as $schedule) {
-                // Skip one-time schedules that were already deleted
-                if ($schedule['frequency'] !== 'once') {
-                    $update_stmt = $conn->prepare("UPDATE relay_schedules SET last_executed = ? WHERE id = ?");
-                    $update_stmt->bind_param("si", $now, $schedule['id']);
-                    $update_stmt->execute();
-                    $update_stmt->close();
+                echo "    Updating last_executed for schedule ID {$schedule['id']} to: $now\n";
+                
+                // Update last_executed for all successful schedules (including one-time schedules before deletion)
+                $update_stmt = $conn->prepare("UPDATE relay_schedules SET last_executed = ? WHERE id = ?");
+                $update_stmt->bind_param("si", $now, $schedule['id']);
+                $update_result = $update_stmt->execute();
+                $affected_rows = $update_stmt->affected_rows;
+                $update_stmt->close();
+                
+                if ($update_result && $affected_rows > 0) {
+                    echo "      ✅ Successfully updated last_executed (affected rows: $affected_rows)\n";
+                } else {
+                    echo "      ❌ Failed to update last_executed (affected rows: $affected_rows)\n";
+                }
+                
+                // If it's a one-time schedule, remove it after updating last_executed
+                if ($schedule['frequency'] === 'once') {
+                    echo "      🗑️ Removing one-time schedule ID {$schedule['id']}\n";
+                    $delete_stmt = $conn->prepare("DELETE FROM relay_schedules WHERE id = ?");
+                    $delete_stmt->bind_param("i", $schedule['id']);
+                    $delete_result = $delete_stmt->execute();
+                    $affected_rows = $delete_stmt->affected_rows;
+                    $delete_stmt->close();
+                    
+                    if ($delete_result && $affected_rows > 0) {
+                        echo "        ✅ Successfully removed one-time schedule (affected rows: $affected_rows)\n";
+                    } else {
+                        echo "        ❌ Failed to remove one-time schedule (affected rows: $affected_rows)\n";
+                    }
                 }
             }
+            echo "  ✅ Finished updating last_executed timestamps\n";
             
             echo "  ✅ Completed execution for time: $schedule_time";
             echo "\n  Summary: " . count($successful_executions) . " successful, " . count($failed_executions) . " failed\n";
@@ -240,6 +264,33 @@ try {
     echo "Total schedules executed: $total_executed\n";
     echo "Total errors: $total_errors\n";
     echo "Execution completed at: " . date('Y-m-d H:i:s T') . " (Asia/Manila)\n";
+    
+    // Show current state of schedules and logs
+    echo "\n=== Current Database State ===\n";
+    
+    // Check relay_schedules
+    $schedules_result = $conn->query("SELECT COUNT(*) as total, SUM(CASE WHEN last_executed IS NOT NULL THEN 1 ELSE 0 END) as executed FROM relay_schedules");
+    if ($schedules_result) {
+        $schedules_data = $schedules_result->fetch_assoc();
+        echo "Relay Schedules: {$schedules_data['total']} total, {$schedules_data['executed']} with last_executed\n";
+    }
+    
+    // Check schedule_logs
+    $logs_result = $conn->query("SELECT COUNT(*) as total FROM schedule_logs");
+    if ($logs_result) {
+        $logs_data = $logs_result->fetch_assoc();
+        echo "Schedule Logs: {$logs_data['total']} total entries\n";
+    }
+    
+    // Show recent logs
+    $recent_logs = $conn->query("SELECT schedule_id, relay_number, action, scheduled_time, executed_time, success FROM schedule_logs ORDER BY executed_time DESC LIMIT 3");
+    if ($recent_logs && $recent_logs->num_rows > 0) {
+        echo "Recent Logs:\n";
+        while ($log = $recent_logs->fetch_assoc()) {
+            echo "  - Schedule ID {$log['schedule_id']}: Relay {$log['relay_number']} -> " . 
+                 ($log['action'] == 1 ? 'ON' : 'OFF') . " (Success: " . ($log['success'] ? 'Yes' : 'No') . ")\n";
+        }
+    }
     
 } catch (Exception $e) {
     echo "Error: " . $e->getMessage() . "\n";
@@ -292,53 +343,55 @@ function executeRelayControl($relay_number, $action) {
  * Log schedule execution
  */
 function logScheduleExecution($conn, $schedule, $success, $error_message = null) {
-    // Check if the table has the new structure with scheduled_time and executed_time
-    $check_table_sql = "SHOW COLUMNS FROM schedule_logs LIKE 'scheduled_time'";
-    $check_result = $conn->query($check_table_sql);
+    // Use the correct table structure based on the actual database schema
+    $scheduled_datetime = $schedule['schedule_date'] . ' ' . $schedule['schedule_time'];
+    $executed_datetime = date('Y-m-d H:i:s');
     
-    if ($check_result && $check_result->num_rows > 0) {
-        // New table structure with scheduled_time and executed_time
-        $scheduled_datetime = $schedule['schedule_date'] . ' ' . $schedule['schedule_time'];
-        $executed_datetime = date('Y-m-d H:i:s');
-        
-        $log_sql = "
-        INSERT INTO schedule_logs (schedule_id, relay_number, action, scheduled_time, executed_time, success, details)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-        ";
-        
-        $success_int = $success ? 1 : 0;
-        
-        $stmt = $conn->prepare($log_sql);
-        $stmt->bind_param("iisssis", 
-            $schedule['id'], 
-            $schedule['relay_number'], 
-            $schedule['action'], 
-            $scheduled_datetime,
-            $executed_datetime,
-            $success_int, 
-            $error_message
-        );
-        $stmt->execute();
-        $stmt->close();
-    } else {
-        // Old table structure with execution_time only
-        $log_sql = "
-        INSERT INTO schedule_logs (schedule_id, relay_number, action, success, error_message)
-        VALUES (?, ?, ?, ?, ?)
-        ";
-        
-        $success_int = $success ? 1 : 0;
-        
-        $stmt = $conn->prepare($log_sql);
-        $stmt->bind_param("iiiss", 
-            $schedule['id'], 
-            $schedule['relay_number'], 
-            $schedule['action'], 
-            $success_int, 
-            $error_message
-        );
-        $stmt->execute();
-        $stmt->close();
+    echo "      📝 Attempting to log execution for schedule ID {$schedule['id']}\n";
+    echo "        - Scheduled: $scheduled_datetime\n";
+    echo "        - Executed: $executed_datetime\n";
+    echo "        - Success: " . ($success ? 'Yes' : 'No') . "\n";
+    if ($error_message) {
+        echo "        - Error: $error_message\n";
     }
+    
+    $log_sql = "
+    INSERT INTO schedule_logs (schedule_id, relay_number, action, scheduled_time, executed_time, success, error_message)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+    ";
+    
+    $success_int = $success ? 1 : 0;
+    
+    $stmt = $conn->prepare($log_sql);
+    if (!$stmt) {
+        echo "        ❌ Failed to prepare statement: " . $conn->error . "\n";
+        return;
+    }
+    
+    $bind_result = $stmt->bind_param("iisssis", 
+        $schedule['id'], 
+        $schedule['relay_number'], 
+        $schedule['action'], 
+        $scheduled_datetime,
+        $executed_datetime,
+        $success_int, 
+        $error_message
+    );
+    
+    if (!$bind_result) {
+        echo "        ❌ Failed to bind parameters: " . $stmt->error . "\n";
+        $stmt->close();
+        return;
+    }
+    
+    $execute_result = $stmt->execute();
+    if ($execute_result) {
+        $insert_id = $stmt->insert_id;
+        echo "        ✅ Successfully logged execution (insert ID: $insert_id)\n";
+    } else {
+        echo "        ❌ Failed to execute log insert: " . $stmt->error . "\n";
+    }
+    
+    $stmt->close();
 }
 ?> 
