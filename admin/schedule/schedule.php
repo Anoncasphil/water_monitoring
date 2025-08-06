@@ -352,7 +352,7 @@ $relayNames = [
                     </div>
                     <div class="flex space-x-3">
                         <div class="flex items-center space-x-2">
-                            <div id="realtimeIndicator" class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                            <div id="realtimeIndicator" class="w-2 h-2 bg-green-500 rounded-full animate-pulse" style="background-color: #10B981;"></div>
                             <span class="text-xs text-gray-500 dark:text-gray-400">Live</span>
                         </div>
                         <button id="refreshSchedules" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors">
@@ -1477,10 +1477,11 @@ $relayNames = [
         function updateRealtimeIndicator() {
             const indicator = document.getElementById('realtimeIndicator');
             if (indicator) {
-                indicator.style.backgroundColor = '#10B981'; // Green
+                // Flash green briefly to show activity, then return to green
+                indicator.style.backgroundColor = '#059669'; // Darker green flash
                 setTimeout(() => {
-                    indicator.style.backgroundColor = '#6B7280'; // Gray
-                }, 500);
+                    indicator.style.backgroundColor = '#10B981'; // Back to normal green
+                }, 200);
             }
         }
 
