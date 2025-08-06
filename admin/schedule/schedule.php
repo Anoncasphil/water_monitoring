@@ -351,6 +351,10 @@ $relayNames = [
                         <p class="text-gray-600 dark:text-gray-400">Manage automated relay control schedules</p>
                     </div>
                     <div class="flex space-x-3">
+                        <div class="flex items-center space-x-2">
+                            <div id="realtimeIndicator" class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                            <span class="text-xs text-gray-500 dark:text-gray-400">Live</span>
+                        </div>
                         <button id="refreshSchedules" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors">
                             <i class="fas fa-sync-alt mr-2"></i>Refresh
                         </button>
@@ -1384,6 +1388,15 @@ $relayNames = [
                     if (data.success && data.schedules) {
                         updateScheduleTable(data.schedules);
                         updateStatsWithData(data.schedules);
+                        
+                        // Add visual feedback for real-time updates
+                        const refreshBtn = document.getElementById('refreshSchedules');
+                        if (refreshBtn) {
+                            refreshBtn.innerHTML = '<i class="fas fa-sync-alt fa-spin mr-2"></i>Updating...';
+                            setTimeout(() => {
+                                refreshBtn.innerHTML = '<i class="fas fa-sync-alt mr-2"></i>Refresh';
+                            }, 1000);
+                        }
                     }
                 })
                 .catch(error => {
@@ -1457,6 +1470,172 @@ $relayNames = [
         document.addEventListener('visibilitychange', function() {
             if (!document.hidden) {
                 updateScheduleStatus();
+            }
+        });
+
+        // Update real-time indicator
+        function updateRealtimeIndicator() {
+            const indicator = document.getElementById('realtimeIndicator');
+            if (indicator) {
+                indicator.style.backgroundColor = '#10B981'; // Green
+                setTimeout(() => {
+                    indicator.style.backgroundColor = '#6B7280'; // Gray
+                }, 500);
+            }
+        }
+
+        // Update indicator on each refresh
+        setInterval(updateRealtimeIndicator, 10000);
+
+        // Real-time updates for schedule logs
+        function updateScheduleLogs() {
+            fetch('../../api/get_schedule_logs.php')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        updateLogsTable(data.logs);
+                        updateLogsPagination(data.pagination);
+                    }
+                })
+                .catch(error => {
+                    console.error('Failed to update schedule logs:', error);
+                });
+        }
+
+        function updateLogsTable(logs) {
+            const tbody = document.getElementById('logsTableBody');
+            if (!tbody) return;
+
+            tbody.innerHTML = '';
+            
+            if (logs.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="px-6 py-16 text-center text-gray-500 dark:text-gray-400">
+                            <div class="flex flex-col items-center space-y-4">
+                                <div class="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                                    <i class="fas fa-history text-2xl text-gray-400 dark:text-gray-500"></i>
+                                </div>
+                                <div>
+                                    <p class="text-lg font-medium">No execution logs found</p>
+                                    <p class="text-sm">Logs will appear here when schedules are executed</p>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            logs.forEach(log => {
+                const row = document.createElement('tr');
+                row.className = 'border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-all duration-200 group';
+                
+                const relayName = getRelayName(log.relay_number);
+                const actionText = log.action == 1 ? 'Turn ON' : 'Turn OFF';
+                const actionClass = log.action == 1 ? 'bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 dark:from-green-900/30 dark:to-emerald-900/30 dark:text-green-300' : 'bg-gradient-to-r from-red-100 to-pink-100 text-red-800 dark:from-red-900/30 dark:to-pink-900/30 dark:text-red-300';
+                const actionIcon = log.action == 1 ? 'fa-power-off' : 'fa-stop';
+                
+                const scheduledDate = log.scheduled_time ? new Date(log.scheduled_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
+                const scheduledTime = log.scheduled_time ? new Date(log.scheduled_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : 'N/A';
+                const executedDate = log.executed_time ? new Date(log.executed_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
+                const executedTime = log.executed_time ? new Date(log.executed_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : 'N/A';
+                
+                const statusHtml = log.success == 1 ? 
+                    `<div class="flex items-center space-x-2">
+                        <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                        <span class="inline-flex items-center px-4 py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 dark:from-green-900/20 dark:to-emerald-900/20 dark:text-green-300 border border-green-200 dark:border-green-800 shadow-sm">
+                            <i class="fas fa-check-circle mr-2 text-green-600 dark:text-green-400"></i>
+                            Successfully Executed
+                        </span>
+                    </div>` :
+                    `<div class="flex items-center space-x-2">
+                        <div class="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                        <span class="inline-flex items-center px-4 py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-red-50 to-pink-50 text-red-700 dark:from-red-900/20 dark:to-pink-900/20 dark:text-red-300 border border-red-200 dark:border-red-800 shadow-sm">
+                            <i class="fas fa-times-circle mr-2 text-red-600 dark:text-red-400"></i>
+                            Failed to Execute
+                        </span>
+                    </div>`;
+                
+                const errorDetails = log.error_message ? 
+                    `<div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-2">
+                        <div class="flex items-start space-x-2">
+                            <i class="fas fa-exclamation-triangle text-red-500 dark:text-red-400 mt-0.5 text-xs"></i>
+                            <span class="text-xs text-red-700 dark:text-red-300">${log.error_message}</span>
+                        </div>
+                    </div>` :
+                    `<span class="text-gray-400 dark:text-gray-500 text-xs">No errors</span>`;
+                
+                row.innerHTML = `
+                    <td class="px-6 py-4">
+                        <div class="flex items-center space-x-2">
+                            <div class="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                                <span class="text-sm font-semibold text-blue-600 dark:text-blue-400">#${log.schedule_id}</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/40 dark:to-blue-800/40 flex items-center justify-center shadow-sm">
+                                <i class="fas fa-plug text-blue-600 dark:text-blue-400"></i>
+                            </div>
+                            <div>
+                                <div class="font-semibold text-gray-900 dark:text-white">${relayName}</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">Relay ${log.relay_number}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold ${actionClass}">
+                            <i class="fas ${actionIcon} mr-1.5"></i>
+                            ${actionText}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="text-sm font-semibold text-gray-900 dark:text-white">${scheduledDate}</div>
+                        <div class="text-xs text-gray-500 dark:text-gray-400">
+                            <i class="fas fa-clock mr-1"></i>${scheduledTime}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="text-sm font-semibold text-gray-900 dark:text-white">${executedDate}</div>
+                        <div class="text-xs text-gray-500 dark:text-gray-400">
+                            <i class="fas fa-play mr-1"></i>${executedTime}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">${statusHtml}</td>
+                    <td class="px-6 py-4">
+                        <div class="text-sm text-gray-900 dark:text-white max-w-xs">${errorDetails}</div>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+
+        function updateLogsPagination(pagination) {
+            // Update pagination info if needed
+            const totalLogsElement = document.querySelector('.text-sm.text-gray-700.dark\\:text-gray-300');
+            if (totalLogsElement && pagination.total) {
+                totalLogsElement.innerHTML = `<span class="font-semibold">${pagination.total}</span> total logs`;
+            }
+        }
+
+        function getRelayName(relayNumber) {
+            const relayNames = {
+                1: 'Filter',
+                2: 'Dispense Water'
+            };
+            return relayNames[relayNumber] || 'Unknown';
+        }
+
+        // Auto-refresh logs every 10 seconds
+        setInterval(updateScheduleLogs, 10000);
+
+        // Also update logs when the page becomes visible
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) {
+                updateScheduleLogs();
             }
         });
 
