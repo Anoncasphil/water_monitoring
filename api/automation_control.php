@@ -48,7 +48,7 @@ try {
         }
         
         // Analyze sensor data for automation triggers
-        $analysis = analyzeSensorData($latest_reading);
+        $analysis = analyzeSensorData($latest_reading, $conn);
         
         echo json_encode([
             "success" => true,
@@ -99,7 +99,7 @@ try {
 /**
  * Analyze sensor data and determine if automation should trigger
  */
-function analyzeSensorData($sensor_data) {
+function analyzeSensorData($sensor_data, $conn = null) {
     if (!$sensor_data) {
         return [
             'tds_status' => 'unknown',
@@ -112,19 +112,59 @@ function analyzeSensorData($sensor_data) {
     $tds = $sensor_data['tds'];
     $turbidity = $sensor_data['turbidity'];
     
+    // Get thresholds from database if connection provided, otherwise use constants
+    if ($conn) {
+        $thresholds_result = $conn->query("SELECT 
+            tds_critical_min, tds_critical_max, tds_medium_min, tds_medium_max,
+            turbidity_critical_min, turbidity_critical_max, turbidity_medium_min, turbidity_medium_max
+            FROM automation_settings WHERE id = 1");
+        $thresholds = $thresholds_result->fetch_assoc();
+        
+        if ($thresholds) {
+            $tds_critical_min = $thresholds['tds_critical_min'];
+            $tds_critical_max = $thresholds['tds_critical_max'];
+            $tds_medium_min = $thresholds['tds_medium_min'];
+            $tds_medium_max = $thresholds['tds_medium_max'];
+            $turbidity_critical_min = $thresholds['turbidity_critical_min'];
+            $turbidity_critical_max = $thresholds['turbidity_critical_max'];
+            $turbidity_medium_min = $thresholds['turbidity_medium_min'];
+            $turbidity_medium_max = $thresholds['turbidity_medium_max'];
+        } else {
+            // Fallback to constants if no database settings
+            $tds_critical_min = TDS_CRITICAL_MIN;
+            $tds_critical_max = TDS_CRITICAL_MAX;
+            $tds_medium_min = TDS_MEDIUM_MIN;
+            $tds_medium_max = TDS_MEDIUM_MAX;
+            $turbidity_critical_min = TURBIDITY_CRITICAL_MIN;
+            $turbidity_critical_max = TURBIDITY_CRITICAL_MAX;
+            $turbidity_medium_min = TURBIDITY_MEDIUM_MIN;
+            $turbidity_medium_max = TURBIDITY_MEDIUM_MAX;
+        }
+    } else {
+        // Use constants if no database connection provided
+        $tds_critical_min = TDS_CRITICAL_MIN;
+        $tds_critical_max = TDS_CRITICAL_MAX;
+        $tds_medium_min = TDS_MEDIUM_MIN;
+        $tds_medium_max = TDS_MEDIUM_MAX;
+        $turbidity_critical_min = TURBIDITY_CRITICAL_MIN;
+        $turbidity_critical_max = TURBIDITY_CRITICAL_MAX;
+        $turbidity_medium_min = TURBIDITY_MEDIUM_MIN;
+        $turbidity_medium_max = TURBIDITY_MEDIUM_MAX;
+    }
+    
     // Determine TDS status
     $tds_status = 'normal';
-    if ($tds >= TDS_CRITICAL_MIN && $tds <= TDS_CRITICAL_MAX) {
+    if ($tds >= $tds_critical_min && $tds <= $tds_critical_max) {
         $tds_status = 'critical';
-    } elseif ($tds >= TDS_MEDIUM_MIN && $tds <= TDS_MEDIUM_MAX) {
+    } elseif ($tds >= $tds_medium_min && $tds <= $tds_medium_max) {
         $tds_status = 'medium';
     }
     
     // Determine turbidity status
     $turbidity_status = 'normal';
-    if ($turbidity >= TURBIDITY_CRITICAL_MIN && $turbidity <= TURBIDITY_CRITICAL_MAX) {
+    if ($turbidity >= $turbidity_critical_min && $turbidity <= $turbidity_critical_max) {
         $turbidity_status = 'critical';
-    } elseif ($turbidity >= TURBIDITY_MEDIUM_MIN && $turbidity <= TURBIDITY_MEDIUM_MAX) {
+    } elseif ($turbidity >= $turbidity_medium_min && $turbidity <= $turbidity_medium_max) {
         $turbidity_status = 'medium';
     }
     
@@ -167,7 +207,7 @@ function checkAndTriggerAutomation($conn) {
     }
     
     // Analyze sensor data
-    $analysis = analyzeSensorData($latest_reading);
+    $analysis = analyzeSensorData($latest_reading, $conn);
     
     // Get current relay state for filter (relay 1)
     $relay_result = $conn->query("SELECT state FROM relay_states WHERE relay_number = 1");

@@ -83,23 +83,51 @@ try {
     
     logMessage("Latest reading - TDS: {$latest_reading['tds']} ppm, Turbidity: {$latest_reading['turbidity']} NTU, Time: {$latest_reading['reading_time']}");
     
+    // Get thresholds from database
+    $thresholds_result = $conn->query("SELECT 
+        tds_critical_min, tds_critical_max, tds_medium_min, tds_medium_max,
+        turbidity_critical_min, turbidity_critical_max, turbidity_medium_min, turbidity_medium_max
+        FROM automation_settings WHERE id = 1");
+    $thresholds = $thresholds_result->fetch_assoc();
+    
+    if (!$thresholds) {
+        logMessage("No automation thresholds found, using default constants", "WARNING");
+        $tds_critical_min = TDS_CRITICAL_MIN;
+        $tds_critical_max = TDS_CRITICAL_MAX;
+        $tds_medium_min = TDS_MEDIUM_MIN;
+        $tds_medium_max = TDS_MEDIUM_MAX;
+        $turbidity_critical_min = TURBIDITY_CRITICAL_MIN;
+        $turbidity_critical_max = TURBIDITY_CRITICAL_MAX;
+        $turbidity_medium_min = TURBIDITY_MEDIUM_MIN;
+        $turbidity_medium_max = TURBIDITY_MEDIUM_MAX;
+    } else {
+        $tds_critical_min = $thresholds['tds_critical_min'];
+        $tds_critical_max = $thresholds['tds_critical_max'];
+        $tds_medium_min = $thresholds['tds_medium_min'];
+        $tds_medium_max = $thresholds['tds_medium_max'];
+        $turbidity_critical_min = $thresholds['turbidity_critical_min'];
+        $turbidity_critical_max = $thresholds['turbidity_critical_max'];
+        $turbidity_medium_min = $thresholds['turbidity_medium_min'];
+        $turbidity_medium_max = $thresholds['turbidity_medium_max'];
+    }
+    
     // Analyze sensor data
     $tds = $latest_reading['tds'];
     $turbidity = $latest_reading['turbidity'];
     
     // Determine TDS status
     $tds_status = 'normal';
-    if ($tds >= TDS_CRITICAL_MIN && $tds <= TDS_CRITICAL_MAX) {
+    if ($tds >= $tds_critical_min && $tds <= $tds_critical_max) {
         $tds_status = 'critical';
-    } elseif ($tds >= TDS_MEDIUM_MIN && $tds <= TDS_MEDIUM_MAX) {
+    } elseif ($tds >= $tds_medium_min && $tds <= $tds_medium_max) {
         $tds_status = 'medium';
     }
     
     // Determine turbidity status
     $turbidity_status = 'normal';
-    if ($turbidity >= TURBIDITY_CRITICAL_MIN && $turbidity <= TURBIDITY_CRITICAL_MAX) {
+    if ($turbidity >= $turbidity_critical_min && $turbidity <= $turbidity_critical_max) {
         $turbidity_status = 'critical';
-    } elseif ($turbidity >= TURBIDITY_MEDIUM_MIN && $turbidity <= TURBIDITY_MEDIUM_MAX) {
+    } elseif ($turbidity >= $turbidity_medium_min && $turbidity <= $turbidity_medium_max) {
         $turbidity_status = 'medium';
     }
     
