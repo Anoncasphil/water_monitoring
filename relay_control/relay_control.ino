@@ -12,8 +12,8 @@ const char* relayControlUrl = "https://waterquality.triple7autosupply.com/api/re
 
 // Pin definitions
 const int tdsPin = 32;        // TDS sensor on GPIO32
-const int turbidityPin = 35;  // Turbidity sensor on GPIO33
-const int phPin = 34;         // DFRobot pH sensor on GPIO34
+const int turbidityPin = 34;  // Turbidity sensor on GPIO34 (was 35)
+const int phPin = 35;         // DFRobot pH sensor on GPIO35 (was 34)
 const int relayPins[] = { 25, 26, 27, 14 };
 const int numRelays = 4;
   
@@ -35,30 +35,51 @@ const int RELAY_OFF = HIGH;
 #define TEMP_OFFSET 0.0      // Temperature offset
 #define TEMP_SLOPE 1.0       // Temperature slope
 
-// Calibration values (adjust these after calibration)
-#define PH_NEUTRAL_VOLTAGE 1.5    // Voltage at pH 7.0
-#define PH_ACID_VOLTAGE 2.0       // Voltage at pH 4.0
+// Improved pH calibration for better sensitivity
+// Adjusted pH calibration based on storage solution reading
+#define PH_NEUTRAL_VOLTAGE 2.56   // Voltage at pH 7.0 (based on storage solution)
+#define PH_ACID_VOLTAGE 3.8       // Voltage at pH 2.0 (very acidic)
 #define PH_NEUTRAL_PH 7.0         // Neutral pH value
-#define PH_ACID_PH 4.0            // Acid pH value
+#define PH_ACID_PH 2.0            // Acid pH value (more acidic range)
+#define PH_VREF 5.0               // Reference voltage for 5V sensors
 
-// Add these constants after the other calibration constants
-#define TURBIDITY_VOLTAGE_OFFSET 0.0
-#define TURBIDITY_VOLTAGE_SLOPE 1.0
-#define TURBIDITY_NTU_OFFSET 0.0
-#define TURBIDITY_NTU_SLOPE 1.0
+// Updated pH calibration based on actual voltage reading
+#define PH_NEUTRAL_VOLTAGE 1.94   // Voltage at pH 7.0 (based on actual reading)
+#define PH_ACID_VOLTAGE 2.5       // Voltage at pH 2.0 (very acidic)
+#define PH_NEUTRAL_PH 7.0         // Neutral pH value
+#define PH_ACID_PH 2.0            // Acid pH value (more acidic range)
+#define PH_VREF 5.0               // Reference voltage for 5V sensors
+
+// DFRobot Turbidity Sensor calibration constants
+#define TURBIDITY_VREF 5.0          // Reference voltage (DFRobot sensor uses 5V)
+#define TURBIDITY_ADC_RESOLUTION 4095.0  // 12-bit ADC resolution
+#define TURBIDITY_CLEAR_VOLTAGE 4.5  // Voltage at 0 NTU (clear water)
+#define TURBIDITY_TURBID_VOLTAGE 0.4 // Voltage at 100 NTU (very turbid water)
+
+// Corrected turbidity calibration based on actual readings
+#define TURBIDITY_MIN_VOLTAGE 0.8   // Voltage in clear water (0 NTU)
+#define TURBIDITY_MAX_VOLTAGE 0.4   // Voltage in turbid water (100 NTU)
+
+// Updated turbidity calibration for high voltage readings
+#define TURBIDITY_MIN_VOLTAGE 2.5   // Voltage in clear water (0 NTU)
+#define TURBIDITY_MAX_VOLTAGE 1.5   // Voltage in turbid water (100 NTU)
+
+// Turbidity sensor constants
+#define TURBIDITY_ARRAY_LENGTH 10  // Number of readings to average
+#define TURBIDITY_SAMPLING_INTERVAL 50  // Time between readings (ms)
 
 // TDS sensor constants
 #define TDS_ARRAY_LENGTH 40       // Number of readings to average
 #define TDS_SAMPLING_INTERVAL 20  // Time between readings (ms)
-#define TDS_VOLTAGE_REF 3.3       // Reference voltage
+#define TDS_VOLTAGE_REF 5.0       // Reference voltage for 5V sensors
 #define TDS_ADC_RESOLUTION 4095.0 // 12-bit ADC resolution
 #define TDS_SPIKE_THRESHOLD 500   // Maximum allowed change between readings
-#define TDS_VREF 3.3              // Reference voltage for TDS calculation
+#define TDS_VREF 5.0              // Reference voltage for TDS calculation
 #define TDS_KVALUE 1.0            // TDS calibration constant
 
 // Timing constants
-const unsigned long SENSOR_READ_INTERVAL = 2000;
-const unsigned long RELAY_CHECK_INTERVAL = 1000;
+const unsigned long SENSOR_READ_INTERVAL = 5000;  // Changed from 2000 to 5000 (5 seconds)
+const unsigned long RELAY_CHECK_INTERVAL = 5000;  // Changed from 1000 to 5000 (5 seconds)
 unsigned long lastSensorRead = 0;
 unsigned long lastRelayCheck = 0;
 
@@ -72,9 +93,27 @@ int tdsArrayIndex = 0;
 float lastValidTds = 0.0;
 bool tdsInitialized = false;
 
+// Turbidity sensor variables
+int turbidityArray[TURBIDITY_ARRAY_LENGTH];
+int turbidityArrayIndex = 0;
+
+// Function to map float values (like Arduino's map but for floats)
+float mapFloat(float x, float in_min, float in_max, float out_min, float out_max) {
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
 void setup() {
   Serial.begin(115200);
   delay(1000);
+  
+  Serial.println("🌊 Water Quality Monitoring System Starting...");
+  Serial.println("⚠️  WARNING: Sensors use 5V but ESP32 ADC max is 3.3V!");
+  Serial.println("   Make sure you have voltage dividers (2:1 ratio) on sensor pins!");
+  Serial.println("🔧 REQUIRED: Add 10kΩ + 10kΩ resistors to each sensor pin!");
+  Serial.println("   - pH sensor: GPIO35");
+  Serial.println("   - Turbidity sensor: GPIO34");
+  Serial.println("   - TDS sensor: GPIO32");
+  Serial.println();
   
   // Initialize ADC
   analogReadResolution(12);  // Set ADC resolution to 12 bits
@@ -91,9 +130,14 @@ void setup() {
     tdsArray[i] = 0;
   }
 
+  // Initialize turbidity array with default values
+  for (int i = 0; i < TURBIDITY_ARRAY_LENGTH; i++) {
+    turbidityArray[i] = 0;
+  }
+
   // Connect to Wi-Fi
   WiFi.begin(ssid, password);
-  Serial.print("Connecting to WiFi");
+  Serial.print("📶 Connecting to WiFi");
   int attempts = 0;
   while (WiFi.status() != WL_CONNECTED && attempts < 20) {
     delay(500);
@@ -102,11 +146,12 @@ void setup() {
   }
   
   if (WiFi.status() == WL_CONNECTED) {
-    Serial.println("\nWiFi Connected!");
-    Serial.print("IP Address: ");
+    Serial.println(" ✅");
+    Serial.print("📍 IP: ");
     Serial.println(WiFi.localIP());
   } else {
-    Serial.println("\nWiFi Connection Failed!");
+    Serial.println(" ❌");
+    Serial.println("⚠️  WiFi connection failed!");
   }
 }
 
@@ -139,50 +184,79 @@ void loop() {
         phValue = phValue / PH_ARRAY_LENGTH;
         
         // Convert to voltage (ESP32 reference voltage is 3.3V)
-        float phVoltage = (phValue * 3.3) / 4095.0;
+        float phVoltage = (phValue * PH_VREF) / 4095.0;
         
-        // Calculate pH value using calibration
-        float ph = ((phVoltage - PH_NEUTRAL_VOLTAGE) * (PH_ACID_PH - PH_NEUTRAL_PH) / 
-                   (PH_ACID_VOLTAGE - PH_NEUTRAL_VOLTAGE)) + PH_NEUTRAL_PH;
+        // Calculate pH value using DFRobot calibration formula
+        // pH = 7 - ((voltage - neutral_voltage) * (7 - 4) / (acid_voltage - neutral_voltage))
+        float voltageDiff = phVoltage - PH_NEUTRAL_VOLTAGE;
+        float voltageRange = PH_ACID_VOLTAGE - PH_NEUTRAL_VOLTAGE;
+        float phRange = PH_NEUTRAL_PH - PH_ACID_PH;
+        
+        float ph = PH_NEUTRAL_PH - (voltageDiff * phRange / voltageRange);
+        
+        // Ensure pH is within reasonable range (0-14)
+        ph = constrain(ph, 0.0, 14.0);
+
+        // Invert the pH result
+        ph = 14.0 - ph;
+
+        // Debug pH sensor
+        Serial.print("pH Raw: ");
+        Serial.print(phValue);
+        Serial.print(", V: ");
+        Serial.print(phVoltage, 3);
+        Serial.print("V, pH: ");
+        Serial.print(ph, 2);
+        Serial.println();
+        
+        // Check if pH sensor is connected properly
+        if (phValue < 10 || phValue > 4085) {
+          Serial.println("⚠️  pH sensor may not be connected properly!");
+        }
+        
+        // Check if pH sensor is responding to different solutions
+        static float lastPhVoltage = 0;
+        float voltageChange = abs(phVoltage - lastPhVoltage);
+        if (voltageChange < 0.01 && lastPhVoltage > 0) {
+          Serial.println("⚠️  pH sensor not responding to solution changes!");
+        }
+        lastPhVoltage = phVoltage;
+        
+        // Check for pH sensor voltage divider issues
+        if (phValue > 4085) {
+          Serial.println("⚠️  pH: No voltage divider! Sensor outputting 5V to ESP32!");
+          Serial.println("   Add 2:1 voltage divider (10kΩ + 10kΩ resistors)");
+        }
+        
+        // Additional pH debugging for calibration
+        Serial.print("  pH Cal: V7=");
+        Serial.print(PH_NEUTRAL_VOLTAGE, 2);
+        Serial.print("V, V4=");
+        Serial.print(PH_ACID_VOLTAGE, 2);
+        Serial.print("V, Diff=");
+        Serial.print(voltageDiff, 3);
+        Serial.print("V, Range=");
+        Serial.print(voltageRange, 3);
+        Serial.println("V");
 
         // Set temperature for now
         float temperature = 25.0;  // Default temperature
 
         // Read turbidity sensor with debugging
-        int turbidityRaw = analogRead(turbidityPin);
-        float turbidityVoltage = (turbidityRaw * 3.3) / 4095.0;
-        
-        // Convert voltage to NTU
-        // For this sensor, higher voltage means clearer water (lower turbidity)
-        // Using an inverse linear conversion: NTU = 100 - ((voltage - min_voltage) * scale_factor)
-        float minVoltage = 0.0;  // Minimum voltage at 100 NTU
-        float maxVoltage = 3.3;  // Maximum voltage at 0 NTU
-        float scaleFactor = 100.0 / (maxVoltage - minVoltage);
-        float turbidityNTU = 100.0 - ((turbidityVoltage - minVoltage) * scaleFactor);
-        
-        // Ensure turbidity is within reasonable range (0-100 NTU)
-        turbidityNTU = constrain(turbidityNTU, 0.0, 100.0);
+        float turbidityNTU = readTurbidityValue();
 
         // Read TDS sensor with averaging and spike filtering
         float tdsValue = readTDSValue();
 
         // Debug prints
-        Serial.println("\n--- Sensor Readings ---");
-        Serial.print("Turbidity Raw: ");
-        Serial.print(turbidityRaw);
-        Serial.print(", Voltage: ");
-        Serial.print(turbidityVoltage, 3);
-        Serial.print("V, NTU: ");
+        Serial.println("\n=== SENSOR READINGS ===");
+        Serial.print("Turbidity: ");
         Serial.print(turbidityNTU, 1);
-        Serial.println(" NTU");
-        
-        Serial.print("pH Raw: ");
-        Serial.print(phValue);
-        Serial.print(", Voltage: ");
-        Serial.print(phVoltage, 3);
-        Serial.print("V, pH: ");
+        Serial.print(" NTU | TDS: ");
+        Serial.print(tdsValue, 1);
+        Serial.print(" ppm | pH: ");
         Serial.print(ph, 2);
-        Serial.print(", Temperature: ");
+        Serial.print(" | Temp: ");
         Serial.print(temperature, 1);
         Serial.println("°C");
         
@@ -191,7 +265,7 @@ void loop() {
         printTime = millis();
       }
     } else {
-      Serial.println("WiFi disconnected. Reconnecting...");
+      Serial.println("📶 WiFi disconnected - reconnecting...");
       WiFi.reconnect();
     }
   }
@@ -202,6 +276,13 @@ void loop() {
     if (WiFi.status() == WL_CONNECTED) {
       checkRelayStates();
     }
+  }
+
+  // Sensor health check (every 10 seconds)
+  static unsigned long lastHealthCheck = 0;
+  if (currentMillis - lastHealthCheck >= 10000) {
+    lastHealthCheck = currentMillis;
+    checkSensorHealth();
   }
 
   // Update relay outputs
@@ -225,14 +306,15 @@ void uploadSensorData(float turbidity, float tds, float ph, float temperature) {
 
   if (httpCode > 0) {
     String response = http.getString();
-    Serial.println("Server response: " + response);
     
     // Check if response contains error message
     if (response.indexOf("ERR_NGROK") != -1) {
-      Serial.println("Warning: Server endpoint is offline. Please update the ngrok URL.");
+      Serial.println("⚠️  Server offline - update ngrok URL");
+    } else {
+      Serial.println("✅ Data uploaded successfully");
     }
   } else {
-    Serial.println("Error on HTTP request: " + String(httpCode));
+    Serial.println("❌ Upload failed - HTTP error: " + String(httpCode));
   }
 
   http.end();
@@ -246,11 +328,10 @@ void checkRelayStates() {
 
   if (httpCode > 0) {
     String response = http.getString();
-    Serial.println("Relay states: " + response);
 
     // Check if response contains error message
     if (response.indexOf("ERR_NGROK") != -1) {
-      Serial.println("Warning: Server endpoint is offline. Please update the ngrok URL.");
+      Serial.println("⚠️  Relay server offline - update ngrok URL");
       return;
     }
 
@@ -261,6 +342,8 @@ void checkRelayStates() {
     if (!error) {
       if (doc.containsKey("states") && doc["states"].is<JsonArray>()) {
         JsonArray states = doc["states"];
+        bool relayChanged = false;
+        
         for (JsonObject state : states) {
           if (state.containsKey("relay_number") && state.containsKey("state")) {
             int relay = state["relay_number"];
@@ -270,22 +353,27 @@ void checkRelayStates() {
               if (relayStates[relay - 1] != newState) {
                 relayStates[relay - 1] = newState;
                 digitalWrite(relayPins[relay - 1], relayStates[relay - 1] ? RELAY_ON : RELAY_OFF);
-                Serial.print("Relay ");
+                Serial.print("🔌 Relay ");
                 Serial.print(relay);
-                Serial.print(" set to ");
+                Serial.print(": ");
                 Serial.println(newState ? "ON" : "OFF");
+                relayChanged = true;
               }
             }
           }
         }
+        
+        if (!relayChanged) {
+          Serial.println("🔌 All relays: OFF");
+        }
       } else {
-        Serial.println("Invalid JSON format: missing 'states' array");
+        Serial.println("❌ Invalid relay data format");
       }
     } else {
-      Serial.println("JSON parsing failed: " + String(error.c_str()));
+      Serial.println("❌ Relay data parsing failed");
     }
   } else {
-    Serial.println("Error checking relay states: " + String(httpCode));
+    Serial.println("❌ Relay check failed - HTTP error: " + String(httpCode));
   }
 
   http.end();
@@ -370,13 +458,121 @@ float readTDSValue() {
   tdsInitialized = true;
   
   // Debug output
-  Serial.print("TDS Raw Avg: ");
-  Serial.print(tdsRawAverage, 1);
-  Serial.print(", Voltage: ");
-  Serial.print(tdsVoltage, 3);
-  Serial.print("V, TDS: ");
+  Serial.print("TDS: ");
   Serial.print(tdsValue, 1);
   Serial.println(" ppm");
   
   return tdsValue;
+}
+
+float readTurbidityValue() {
+  int rawValue = 0;
+
+  // Take 10 readings for smoothing
+  for (int i = 0; i < 10; i++) {
+    rawValue += analogRead(turbidityPin);
+    delay(10);
+  }
+  rawValue /= 10;
+
+  // Convert Raw ADC (0–4095) to 1–1000 NTU based on your observed range
+  // Example: 1700 ~ cloudy, 2100 ~ clear
+  float ntu = mapFloat(rawValue, 1700, 2100, 1000, 1);
+
+  // Clamp NTU to stay in range
+  if (ntu < 1) ntu = 1;
+  if (ntu > 1000) ntu = 1000;
+
+  // Print results
+  Serial.print("Turbidity Raw: ");
+  Serial.print(rawValue);
+  Serial.print(" | NTU: ");
+  Serial.println(ntu, 2);
+
+  return ntu;
+}
+
+void checkSensorHealth() {
+  Serial.println("\n🔍 SENSOR HEALTH CHECK:");
+  
+  // Check pH sensor
+  int phRaw = analogRead(phPin);
+  float phVoltage = (phRaw * 5.0) / 4095.0;
+  Serial.print("pH: Raw=");
+  Serial.print(phRaw);
+  Serial.print(", V=");
+  Serial.print(phVoltage, 3);
+  Serial.print("V");
+  if (phRaw > 4085) {
+    Serial.println(" ❌ NO VOLTAGE DIVIDER!");
+  } else if (phRaw < 10) {
+    Serial.println(" ❌ NOT CONNECTED!");
+  } else {
+    Serial.println(" ✅ OK");
+  }
+  
+  // Check turbidity sensor
+  int turbidityRaw = analogRead(turbidityPin);
+  float turbidityVoltage = (turbidityRaw * 5.0) / 4095.0;
+  Serial.print("Turbidity: Raw=");
+  Serial.print(turbidityRaw);
+  Serial.print(", V=");
+  Serial.print(turbidityVoltage, 3);
+  Serial.print("V");
+  if (turbidityRaw > 4085) {
+    Serial.println(" ❌ NO VOLTAGE DIVIDER!");
+  } else if (turbidityRaw < 10) {
+    Serial.println(" ❌ NOT CONNECTED!");
+  } else {
+    Serial.println(" ✅ OK");
+  }
+  
+  // Check TDS sensor
+  int tdsRaw = analogRead(tdsPin);
+  float tdsVoltage = (tdsRaw * 5.0) / 4095.0;
+  Serial.print("TDS: Raw=");
+  Serial.print(tdsRaw);
+  Serial.print(", V=");
+  Serial.print(tdsVoltage, 3);
+  Serial.print("V");
+  if (tdsRaw > 4085) {
+    Serial.println(" ❌ NO VOLTAGE DIVIDER!");
+  } else if (tdsRaw < 10) {
+    Serial.println(" ❌ NOT CONNECTED!");
+  } else {
+    Serial.println(" ✅ OK");
+  }
+  
+  Serial.println();
+  
+  // Additional troubleshooting for sensors reading 0
+  if (turbidityRaw == 0) {
+    Serial.println("🔧 TURBIDITY TROUBLESHOOTING:");
+    Serial.println("   - Check if sensor is powered (red wire to 5V)");
+    Serial.println("   - Check if GND is connected (black wire)");
+    Serial.println("   - Check voltage divider wiring (2 resistors)");
+    Serial.println("   - Try disconnecting and reconnecting sensor");
+    
+    // Test voltage divider
+    Serial.println("🔧 TESTING TURBIDITY VOLTAGE DIVIDER:");
+    Serial.println("   - Disconnect sensor signal wire from voltage divider");
+    Serial.println("   - Connect 5V directly to voltage divider input");
+    Serial.println("   - Should read ~2048 (2.5V) if voltage divider is working");
+    Serial.println("   - If still 0, voltage divider wiring is wrong");
+  }
+  
+  if (tdsRaw == 0) {
+    Serial.println("🔧 TDS TROUBLESHOOTING:");
+    Serial.println("   - Check if sensor is powered (red wire to 5V)");
+    Serial.println("   - Check if GND is connected (black wire)");
+    Serial.println("   - Check voltage divider wiring (2 resistors)");
+    Serial.println("   - Try disconnecting and reconnecting sensor");
+    
+    // Test voltage divider
+    Serial.println("🔧 TESTING TDS VOLTAGE DIVIDER:");
+    Serial.println("   - Disconnect sensor signal wire from voltage divider");
+    Serial.println("   - Connect 5V directly to voltage divider input");
+    Serial.println("   - Should read ~2048 (2.5V) if voltage divider is working");
+    Serial.println("   - If still 0, voltage divider wiring is wrong");
+  }
 }
