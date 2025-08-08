@@ -47,6 +47,15 @@ const int RELAY_OFF = HIGH;
 #define TURBIDITY_NTU_OFFSET 0.0
 #define TURBIDITY_NTU_SLOPE 1.0
 
+// TDS sensor constants
+#define TDS_ARRAY_LENGTH 40       // Number of readings to average
+#define TDS_SAMPLING_INTERVAL 20  // Time between readings (ms)
+#define TDS_VOLTAGE_REF 3.3       // Reference voltage
+#define TDS_ADC_RESOLUTION 4095.0 // 12-bit ADC resolution
+#define TDS_SPIKE_THRESHOLD 500   // Maximum allowed change between readings
+#define TDS_VREF 3.3              // Reference voltage for TDS calculation
+#define TDS_KVALUE 1.0            // TDS calibration constant
+
 // Timing constants
 const unsigned long SENSOR_READ_INTERVAL = 2000;
 const unsigned long RELAY_CHECK_INTERVAL = 1000;
@@ -56,6 +65,12 @@ unsigned long lastRelayCheck = 0;
 // pH sensor variables
 int phArray[PH_ARRAY_LENGTH];
 int phArrayIndex = 0;
+
+// TDS sensor variables
+int tdsArray[TDS_ARRAY_LENGTH];
+int tdsArrayIndex = 0;
+float lastValidTds = 0.0;
+bool tdsInitialized = false;
 
 void setup() {
   Serial.begin(115200);
@@ -69,6 +84,11 @@ void setup() {
     pinMode(relayPins[i], OUTPUT);
     digitalWrite(relayPins[i], RELAY_OFF);
     relayStates[i] = false;
+  }
+  
+  // Initialize TDS array with default values
+  for (int i = 0; i < TDS_ARRAY_LENGTH; i++) {
+    tdsArray[i] = 0;
   }
 
   // Connect to Wi-Fi
@@ -143,8 +163,8 @@ void loop() {
         // Ensure turbidity is within reasonable range (0-100 NTU)
         turbidityNTU = constrain(turbidityNTU, 0.0, 100.0);
 
-        // Read TDS sensor
-        int tdsValue = analogRead(tdsPin);
+        // Read TDS sensor with averaging and spike filtering
+        float tdsValue = readTDSValue();
 
         // Debug prints
         Serial.println("\n--- Sensor Readings ---");
@@ -307,4 +327,56 @@ void handleRelayCommand(int relay, int state) {
 
     http.end();
   }
+}
+
+float readTDSValue() {
+  // Read multiple TDS samples with averaging
+  int tdsRawSum = 0;
+  int validReadings = 0;
+  
+  // Take multiple readings and average them
+  for (int i = 0; i < TDS_ARRAY_LENGTH; i++) {
+    int reading = analogRead(tdsPin);
+    tdsArray[i] = reading;
+    tdsRawSum += reading;
+    validReadings++;
+    delay(TDS_SAMPLING_INTERVAL);
+  }
+  
+  // Calculate average raw value
+  float tdsRawAverage = (float)tdsRawSum / validReadings;
+  
+  // Convert to voltage
+  float tdsVoltage = (tdsRawAverage * TDS_VREF) / TDS_ADC_RESOLUTION;
+  
+  // Convert voltage to TDS value (ppm)
+  // TDS formula: TDS = (133.42 * voltage^3 - 255.86 * voltage^2 + 857.39 * voltage) * KVALUE
+  // Simplified linear approximation for more stable readings
+  float tdsValue = (tdsVoltage * 1000.0) * TDS_KVALUE;  // Basic conversion
+  
+  // Apply spike filtering
+  if (tdsInitialized) {
+    float difference = abs(tdsValue - lastValidTds);
+    if (difference > TDS_SPIKE_THRESHOLD) {
+      // If change is too large, use weighted average with previous value
+      tdsValue = (lastValidTds * 0.8) + (tdsValue * 0.2);
+      Serial.print("TDS spike detected, filtered value: ");
+      Serial.println(tdsValue);
+    }
+  }
+  
+  // Update last valid reading
+  lastValidTds = tdsValue;
+  tdsInitialized = true;
+  
+  // Debug output
+  Serial.print("TDS Raw Avg: ");
+  Serial.print(tdsRawAverage, 1);
+  Serial.print(", Voltage: ");
+  Serial.print(tdsVoltage, 3);
+  Serial.print("V, TDS: ");
+  Serial.print(tdsValue, 1);
+  Serial.println(" ppm");
+  
+  return tdsValue;
 }
