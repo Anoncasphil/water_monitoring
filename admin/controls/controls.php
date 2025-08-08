@@ -265,6 +265,119 @@ try {
                 </div>
             </div>
 
+            <!-- Automation Control Panel -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 mb-8">
+                <div class="flex items-center justify-between mb-8">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                            <i class="fas fa-robot text-purple-500 mr-3"></i>
+                            Automation System
+                        </h2>
+                        <p class="text-gray-600 dark:text-gray-400">Smart automation based on water quality sensor readings</p>
+                    </div>
+                    <div class="flex space-x-3">
+                        <button id="checkAutomation" class="power-button px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl">
+                            <i class="fas fa-sync-alt mr-2"></i>Check Now
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Automation Status -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="control-card bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-2xl p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Automation Status</h3>
+                                <p class="text-sm font-medium text-gray-600 dark:text-gray-400" id="automationStatus">Loading...</p>
+                            </div>
+                            <div class="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                                <i class="fas fa-robot text-purple-500 dark:text-purple-400 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="control-card bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-2xl p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">TDS Status</h3>
+                                <p class="text-sm font-medium text-gray-600 dark:text-gray-400" id="tdsStatus">Loading...</p>
+                            </div>
+                            <div class="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                                <i class="fas fa-tint text-blue-500 dark:text-blue-400 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="control-card bg-gradient-to-r from-emerald-50 to-emerald-100 dark:from-emerald-900/20 dark:to-emerald-800/20 rounded-2xl p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Turbidity Status</h3>
+                                <p class="text-sm font-medium text-gray-600 dark:text-gray-400" id="turbidityStatus">Loading...</p>
+                            </div>
+                            <div class="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                                <i class="fas fa-water text-emerald-500 dark:text-emerald-400 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Automation Controls -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="control-card bg-white dark:bg-gray-700 rounded-2xl p-6">
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">
+                            <i class="fas fa-cog text-gray-500 mr-2"></i>
+                            Automation Settings
+                        </h3>
+                        
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Master Automation</label>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">Enable/disable all automation</p>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox" id="masterAutomation" onchange="updateAutomationSettings()">
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                            
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Filter Automation</label>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">Auto-activate filter based on water quality</p>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox" id="filterAutomation" onchange="updateAutomationSettings()">
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="control-card bg-white dark:bg-gray-700 rounded-2xl p-6">
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">
+                            <i class="fas fa-info-circle text-blue-500 mr-2"></i>
+                            Current Analysis
+                        </h3>
+                        
+                        <div class="space-y-3">
+                            <div class="text-sm">
+                                <span class="font-medium text-gray-700 dark:text-gray-300">Latest Reading:</span>
+                                <span class="text-gray-600 dark:text-gray-400" id="latestReading">Loading...</span>
+                            </div>
+                            <div class="text-sm">
+                                <span class="font-medium text-gray-700 dark:text-gray-300">Filter Action:</span>
+                                <span class="text-gray-600 dark:text-gray-400" id="filterAction">Loading...</span>
+                            </div>
+                            <div class="text-sm">
+                                <span class="font-medium text-gray-700 dark:text-gray-300">Reason:</span>
+                                <span class="text-gray-600 dark:text-gray-400" id="automationReason">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Relay Control Panel -->
             <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8">
                 <div class="flex items-center justify-between mb-8">
@@ -480,6 +593,189 @@ try {
         // Fetch relay states every 5 seconds
         fetchRelayStates();
         setInterval(fetchRelayStates, 5000);
+
+        // Automation functions
+        function fetchAutomationData() {
+            fetch('../../api/automation_control.php')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        updateAutomationUI(data);
+                    }
+                })
+                .catch(error => console.error('Error fetching automation data:', error));
+        }
+
+        function updateAutomationUI(data) {
+            // Update automation status
+            const automationStatus = document.getElementById('automationStatus');
+            const tdsStatus = document.getElementById('tdsStatus');
+            const turbidityStatus = document.getElementById('turbidityStatus');
+            const latestReading = document.getElementById('latestReading');
+            const filterAction = document.getElementById('filterAction');
+            const automationReason = document.getElementById('automationReason');
+
+            // Update automation settings checkboxes
+            if (data.automation_settings) {
+                document.getElementById('masterAutomation').checked = data.automation_settings.enabled == 1;
+                document.getElementById('filterAutomation').checked = data.automation_settings.filter_auto_enabled == 1;
+            }
+
+            // Update status displays
+            if (data.automation_settings) {
+                automationStatus.textContent = data.automation_settings.enabled == 1 ? 'Enabled' : 'Disabled';
+                automationStatus.className = data.automation_settings.enabled == 1 ? 
+                    'text-sm font-medium text-green-600 dark:text-green-400' : 
+                    'text-sm font-medium text-red-600 dark:text-red-400';
+            }
+
+            if (data.analysis) {
+                // Update TDS status
+                const tdsStatusText = `${data.analysis.tds_value} ppm (${data.analysis.tds_status})`;
+                tdsStatus.textContent = tdsStatusText;
+                tdsStatus.className = getStatusClass(data.analysis.tds_status);
+
+                // Update turbidity status
+                const turbidityStatusText = `${data.analysis.turbidity_value} NTU (${data.analysis.turbidity_status})`;
+                turbidityStatus.textContent = turbidityStatusText;
+                turbidityStatus.className = getStatusClass(data.analysis.turbidity_status);
+
+                // Update analysis info
+                if (data.sensor_data) {
+                    const readingTime = new Date(data.sensor_data.reading_time).toLocaleString();
+                    latestReading.textContent = readingTime;
+                }
+
+                filterAction.textContent = data.analysis.should_activate_filter ? 'Should Activate' : 'Should Deactivate';
+                filterAction.className = data.analysis.should_activate_filter ? 
+                    'text-gray-600 dark:text-gray-400 text-green-600 dark:text-green-400' : 
+                    'text-gray-600 dark:text-gray-400 text-red-600 dark:text-red-400';
+
+                automationReason.textContent = data.analysis.reason;
+            }
+        }
+
+        function getStatusClass(status) {
+            switch (status) {
+                case 'critical':
+                    return 'text-sm font-medium text-red-600 dark:text-red-400';
+                case 'medium':
+                    return 'text-sm font-medium text-yellow-600 dark:text-yellow-400';
+                case 'normal':
+                    return 'text-sm font-medium text-green-600 dark:text-green-400';
+                default:
+                    return 'text-sm font-medium text-gray-600 dark:text-gray-400';
+            }
+        }
+
+        function updateAutomationSettings() {
+            const masterEnabled = document.getElementById('masterAutomation').checked ? 1 : 0;
+            const filterEnabled = document.getElementById('filterAutomation').checked ? 1 : 0;
+
+            fetch('../../api/automation_control.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `action=update_settings&enabled=${masterEnabled}&filter_auto_enabled=${filterEnabled}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Refresh automation data
+                    fetchAutomationData();
+                } else {
+                    console.error('Error updating automation settings:', data.error);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function checkAutomationNow() {
+            const button = document.getElementById('checkAutomation');
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Checking...';
+
+            fetch('../../api/automation_control.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'action=check_and_trigger'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Refresh both automation data and relay states
+                    fetchAutomationData();
+                    fetchRelayStates();
+                    
+                    // Show success message
+                    if (data.action_taken !== 'none') {
+                        const message = data.action_taken === 'filter_activated' ? 
+                            'Filter activated automatically!' : 
+                            'Filter deactivated automatically!';
+                        showNotification(message, 'success');
+                    } else {
+                        showNotification('Automation check completed - no action needed', 'info');
+                    }
+                } else {
+                    console.error('Error checking automation:', data.error);
+                    showNotification('Error checking automation', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('Error checking automation', 'error');
+            })
+            .finally(() => {
+                button.disabled = false;
+                button.innerHTML = '<i class="fas fa-sync-alt mr-2"></i>Check Now';
+            });
+        }
+
+        function showNotification(message, type) {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg transition-all duration-300 transform translate-x-full`;
+            
+            switch (type) {
+                case 'success':
+                    notification.className += ' bg-green-500 text-white';
+                    break;
+                case 'error':
+                    notification.className += ' bg-red-500 text-white';
+                    break;
+                case 'info':
+                    notification.className += ' bg-blue-500 text-white';
+                    break;
+                default:
+                    notification.className += ' bg-gray-500 text-white';
+            }
+            
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            // Animate in
+            setTimeout(() => {
+                notification.classList.remove('translate-x-full');
+            }, 100);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                notification.classList.add('translate-x-full');
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 3000);
+        }
+
+        // Initialize automation data
+        fetchAutomationData();
+        setInterval(fetchAutomationData, 10000); // Update every 10 seconds
+
+        // Add event listener for check automation button
+        document.getElementById('checkAutomation').addEventListener('click', checkAutomationNow);
 
         // Dark mode toggle
         const themeToggle = document.getElementById('themeToggle');
