@@ -239,12 +239,13 @@ function checkAndTriggerAutomation($conn) {
         $action_taken = "filter_activated";
         
         // Log the automation action
-        $stmt = $conn->prepare("INSERT INTO activity_logs (user_id, action, details, ip_address, created_at) VALUES (?, ?, ?, ?, NOW())");
+        $stmt = $conn->prepare("INSERT INTO activity_logs (user_id, action_type, performed_by, message, details, timestamp) VALUES (?, ?, ?, ?, ?, NOW())");
         $system_user_id = 0; // System user
-        $action_desc = "Automation: Filter activated due to water quality";
+        $action_type = "automation_triggered";
+        $performed_by = "Automation System";
+        $message = "Filter activated due to water quality";
         $details = $analysis['reason'];
-        $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
-        $stmt->bind_param("isss", $system_user_id, $action_desc, $details, $ip);
+        $stmt->bind_param("issss", $system_user_id, $action_type, $performed_by, $message, $details);
         $stmt->execute();
         
     } elseif (!$analysis['should_activate_filter'] && $filter_currently_on) {
@@ -255,12 +256,13 @@ function checkAndTriggerAutomation($conn) {
         $action_taken = "filter_deactivated";
         
         // Log the automation action
-        $stmt = $conn->prepare("INSERT INTO activity_logs (user_id, action, details, ip_address, created_at) VALUES (?, ?, ?, ?, NOW())");
+        $stmt = $conn->prepare("INSERT INTO activity_logs (user_id, action_type, performed_by, message, details, timestamp) VALUES (?, ?, ?, ?, ?, NOW())");
         $system_user_id = 0; // System user
-        $action_desc = "Automation: Filter deactivated - water quality normal";
+        $action_type = "automation_triggered";
+        $performed_by = "Automation System";
+        $message = "Filter deactivated - water quality normal";
         $details = "TDS: {$analysis['tds_value']} ppm ({$analysis['tds_status']}), Turbidity: {$analysis['turbidity_value']} NTU ({$analysis['turbidity_status']})";
-        $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
-        $stmt->bind_param("isss", $system_user_id, $action_desc, $details, $ip);
+        $stmt->bind_param("issss", $system_user_id, $action_type, $performed_by, $message, $details);
         $stmt->execute();
     }
     

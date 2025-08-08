@@ -166,12 +166,13 @@ try {
         logMessage("Filter activated automatically: {$reason}", "ACTION");
         
         // Log the automation action
-        $stmt = $conn->prepare("INSERT INTO activity_logs (user_id, action, details, ip_address, created_at) VALUES (?, ?, ?, ?, NOW())");
+        $stmt = $conn->prepare("INSERT INTO activity_logs (user_id, action_type, performed_by, message, details, timestamp) VALUES (?, ?, ?, ?, ?, NOW())");
         $system_user_id = 0; // System user
-        $action_desc = "Automation: Filter activated due to water quality";
+        $action_type = "automation_triggered";
+        $performed_by = "Automation System";
+        $message = "Filter activated due to water quality";
         $details = $reason;
-        $ip = '127.0.0.1'; // Local execution
-        $stmt->bind_param("isss", $system_user_id, $action_desc, $details, $ip);
+        $stmt->bind_param("issss", $system_user_id, $action_type, $performed_by, $message, $details);
         $stmt->execute();
         
     } elseif (!$should_activate_filter && $filter_currently_on) {
@@ -183,12 +184,13 @@ try {
         logMessage("Filter deactivated automatically - water quality normal", "ACTION");
         
         // Log the automation action
-        $stmt = $conn->prepare("INSERT INTO activity_logs (user_id, action, details, ip_address, created_at) VALUES (?, ?, ?, ?, NOW())");
+        $stmt = $conn->prepare("INSERT INTO activity_logs (user_id, action_type, performed_by, message, details, timestamp) VALUES (?, ?, ?, ?, ?, NOW())");
         $system_user_id = 0; // System user
-        $action_desc = "Automation: Filter deactivated - water quality normal";
+        $action_type = "automation_triggered";
+        $performed_by = "Automation System";
+        $message = "Filter deactivated - water quality normal";
         $details = "TDS: {$tds} ppm ({$tds_status}), Turbidity: {$turbidity} NTU ({$turbidity_status})";
-        $ip = '127.0.0.1'; // Local execution
-        $stmt->bind_param("isss", $system_user_id, $action_desc, $details, $ip);
+        $stmt->bind_param("issss", $system_user_id, $action_type, $performed_by, $message, $details);
         $stmt->execute();
     }
     
