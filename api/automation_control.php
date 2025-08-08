@@ -8,10 +8,10 @@ define('TDS_CRITICAL_MAX', 500);  // ppm - Critical range ends at 500
 define('TDS_MEDIUM_MIN', 150);    // ppm - Medium range starts at 150
 define('TDS_MEDIUM_MAX', 200);    // ppm - Medium range ends at 200
 
-define('TURBIDITY_CRITICAL_MIN', 5.0);  // NTU - Critical range starts at 5.0
-define('TURBIDITY_CRITICAL_MAX', 10.0); // NTU - Critical range ends at 10.0
-define('TURBIDITY_MEDIUM_MIN', 2.0);    // NTU - Medium range starts at 2.0
-define('TURBIDITY_MEDIUM_MAX', 5.0);    // NTU - Medium range ends at 5.0
+define('TURBIDITY_CRITICAL_MIN', 10.0);  // NTU - Critical range starts at 10.0 (EPA limit)
+define('TURBIDITY_CRITICAL_MAX', 50.0);  // NTU - Critical range ends at 50.0
+define('TURBIDITY_MEDIUM_MIN', 5.0);     // NTU - Medium range starts at 5.0
+define('TURBIDITY_MEDIUM_MAX', 10.0);    // NTU - Medium range ends at 10.0
 
 try {
     $db = Database::getInstance();
