@@ -167,7 +167,7 @@ try {
         
         // Log the automation action
         $stmt = $conn->prepare("INSERT INTO activity_logs (user_id, action_type, performed_by, message, details, timestamp) VALUES (?, ?, ?, ?, ?, NOW())");
-        $system_user_id = 0; // System user
+        $system_user_id = null; // System user (NULL for foreign key constraint)
         $action_type = "automation_triggered";
         $performed_by = "Automation System";
         $message = "Filter activated due to water quality";
@@ -185,7 +185,7 @@ try {
         
         // Log the automation action
         $stmt = $conn->prepare("INSERT INTO activity_logs (user_id, action_type, performed_by, message, details, timestamp) VALUES (?, ?, ?, ?, ?, NOW())");
-        $system_user_id = 0; // System user
+        $system_user_id = null; // System user (NULL for foreign key constraint)
         $action_type = "automation_triggered";
         $performed_by = "Automation System";
         $message = "Filter deactivated - water quality normal";
