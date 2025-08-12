@@ -1,6 +1,6 @@
 # Water Quality Monitoring System
 
-[![Version](https://img.shields.io/badge/version-3.2.0-blue.svg)](https://github.com/Anoncasphil/water_monitoring)
+[![Version](https://img.shields.io/badge/version-3.3.0-blue.svg)](https://github.com/Anoncasphil/water_monitoring)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![PHP](https://img.shields.io/badge/PHP-8.0+-777BB4.svg)](https://php.net)
 [![MySQL](https://img.shields.io/badge/MySQL-5.7+-4479A1.svg)](https://mysql.com)
@@ -32,7 +32,8 @@ The Water Quality Monitoring System is designed for real-time monitoring and con
 ### Key Capabilities
 
 - **Real-time Monitoring**: Continuous tracking of pH, turbidity, TDS, and temperature
-- **Automated Control**: Intelligent relay management with scheduling capabilities
+- **Intelligent Automation**: AI-powered water quality analysis with automatic filter control
+- **Advanced Control**: 4-channel relay system with manual and automated operation
 - **Advanced Analytics**: Historical data analysis and trend visualization
 - **User Management**: Role-based access control with audit trails
 - **Mobile Responsive**: Modern web interface accessible from any device
@@ -53,10 +54,20 @@ The Water Quality Monitoring System is designed for real-time monitoring and con
 - **Historical Analysis**: Trend analysis and statistical reporting
 - **Data Export**: CSV and chart export capabilities
 
-### 🎛️ System Control
-- **Relay Management**: 4-channel relay control system with real-time status
-- **Automated Scheduling**: Advanced time-based and recurring schedules with execution logs
-- **Manual Override**: Direct control with safety measures and validation
+### 🤖 Intelligent Automation System
+- **Smart Water Quality Analysis**: Real-time TDS and turbidity monitoring with configurable thresholds
+- **Automatic Filter Control**: Intelligent filter activation/deactivation based on water quality parameters
+- **Configurable Thresholds**: Customizable critical and medium range settings for TDS and turbidity
+- **Automation Scheduling**: Cron-based automation with configurable check intervals
+- **Real-time Status Monitoring**: Live automation status with detailed analysis display
+- **Manual Trigger**: On-demand automation checks with immediate feedback
+- **Comprehensive Logging**: Detailed automation actions logged to activity system
+
+### 🎛️ Advanced System Control
+- **4-Channel Relay Control**: Complete relay management with real-time status
+- **Smart Automation Integration**: Seamless integration between manual control and automated systems
+- **Real-time Status Updates**: Live relay state monitoring with visual indicators
+- **Bulk Operations**: All On/Off functionality with safety measures
 - **Status Monitoring**: Real-time system status tracking with visual indicators
 - **Execution Logging**: Complete control action history with detailed error reporting
 - **Schedule Management**: Intuitive interface for creating and managing automated operations
@@ -76,6 +87,7 @@ The Water Quality Monitoring System is designed for real-time monitoring and con
 - **Accessibility**: WCAG compliant interface with keyboard navigation
 - **Consistent Layout**: Unified design system across all admin sections
 - **Interactive Elements**: Hover effects, transitions, and visual feedback
+- **Enhanced Controls**: Improved control panel with automation status and real-time analysis
 
 ## 🏗️ Architecture
 
@@ -90,7 +102,9 @@ The Water Quality Monitoring System is designed for real-time monitoring and con
 │ • TDS Sensor    │    │ • Session Mgmt  │    │ • Optimized     │
 │ • Temperature   │    │ • File Upload   │    │ • Indexed       │
 │ • Relay Control │    │ • Authentication│    │ • Partitioned   │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
+└─────────────────┘    │ • Automation    │    └─────────────────┘
+                       │ • Cron Jobs     │
+                       └─────────────────┘
 ```
 
 ### Technology Stack
@@ -107,7 +121,8 @@ The Water Quality Monitoring System is designed for real-time monitoring and con
 - **MySQL/MariaDB**: Reliable relational database
 - **RESTful APIs**: Clean API design principles
 - **MVC Pattern**: Organized code architecture
-- **Composer**: Dependency management (future)
+- **Automation Engine**: Intelligent water quality analysis and control
+- **Cron Integration**: Automated background processing
 
 #### Hardware
 - **ESP32**: WiFi-enabled microcontroller
@@ -126,6 +141,7 @@ The Water Quality Monitoring System is designed for real-time monitoring and con
 - **Memory**: Minimum 512MB RAM
 - **Storage**: 1GB available space
 - **Network**: Stable internet connection
+- **Cron Support**: For automated water quality monitoring
 
 #### Development Environment
 - **Arduino IDE**: 2.0+ with ESP32 board support
@@ -188,6 +204,7 @@ SOURCE database/05_schedules.sql;
 SOURCE database/06_schedule_logs.sql;
 SOURCE database/07_activity_logs.sql;
 SOURCE database/08_indexes_and_constraints.sql;
+SOURCE database/10_automation_settings.sql;
 
 -- Optional: Add sample data
 SOURCE database/09_sample_data.sql;
@@ -221,9 +238,33 @@ APP_TIMEZONE=UTC
 # Security Configuration
 SESSION_SECURE=true
 SESSION_HTTP_ONLY=true
+
+# Automation Configuration
+AUTOMATION_CHECK_INTERVAL=30
 ```
 
-### 5. ESP32 Setup
+### 5. Automation Setup
+
+#### Cron Job Configuration
+```bash
+# Add to crontab for automated water quality monitoring
+crontab -e
+
+# Check water quality every 5 minutes
+*/5 * * * * php /var/www/water_monitoring/api/automation_cron.php
+
+# Alternative: Check every 10 minutes
+*/10 * * * * php /var/www/water_monitoring/api/automation_cron.php
+```
+
+#### Automation Settings
+The system includes intelligent automation with configurable thresholds:
+- **TDS Thresholds**: Critical (200-500 ppm), Medium (150-200 ppm)
+- **Turbidity Thresholds**: Critical (10-50 NTU), Medium (5-10 NTU)
+- **Filter Automation**: Automatic activation based on water quality
+- **Check Intervals**: Configurable automation check frequency
+
+### 6. ESP32 Setup
 
 #### Arduino IDE Configuration
 1. **Add ESP32 Board Support**:
@@ -284,6 +325,34 @@ OPTIMIZE TABLE water_readings;
 ANALYZE TABLE water_readings;
 ```
 
+### Automation Configuration
+
+#### Threshold Settings
+```sql
+-- Update automation thresholds
+UPDATE automation_settings SET 
+    tds_critical_min = 200,
+    tds_critical_max = 500,
+    tds_medium_min = 150,
+    tds_medium_max = 200,
+    turbidity_critical_min = 10.0,
+    turbidity_critical_max = 50.0,
+    turbidity_medium_min = 5.0,
+    turbidity_medium_max = 10.0,
+    check_interval = 30
+WHERE id = 1;
+```
+
+#### Automation Control
+```php
+// Enable/disable automation features
+UPDATE automation_settings SET 
+    enabled = 1,                    -- Master automation switch
+    filter_auto_enabled = 1,        -- Filter automation
+    check_interval = 30             -- Check every 30 seconds
+WHERE id = 1;
+```
+
 ### Hardware Configuration
 
 #### Pin Assignment
@@ -319,8 +388,8 @@ ANALYZE TABLE water_readings;
 | Admin Dashboard | `http://your-domain.com/water_monitoring/admin/dashboard/` | Main dashboard |
 | Real-time Monitor | `http://your-domain.com/water_monitoring/admin/monitor/` | Live monitoring |
 | Analytics | `http://your-domain.com/water_monitoring/admin/analytics/` | Data analysis |
-| Control Panel | `http://your-domain.com/water_monitoring/admin/controls/` | System control |
-| Schedule Management | `http://your-domain.com/water_monitoring/admin/schedule/` | Automation |
+| Control Panel | `http://your-domain.com/water_monitoring/admin/controls/` | System control & automation |
+| Schedule Management | `http://your-domain.com/water_monitoring/admin/schedule/` | Automation scheduling |
 | User Management | `http://your-domain.com/water_monitoring/admin/user/` | User administration |
 | Activity Logs | `http://your-domain.com/water_monitoring/admin/actlogs/` | Audit trail |
 | Login | `http://your-domain.com/water_monitoring/login/` | Authentication |
@@ -342,11 +411,20 @@ ANALYZE TABLE water_readings;
 3. Monitor water quality status
 4. Check system alerts
 
+#### Intelligent Automation Control
+1. Access **Controls** section
+2. View real-time automation status and analysis
+3. Configure automation settings (master switch, filter automation)
+4. Monitor TDS and turbidity status with quality indicators
+5. Trigger manual automation checks
+6. View detailed automation reasoning and actions
+
 #### System Control
 1. Access **Controls** section
-2. Toggle relay states manually
-3. Monitor system status
-4. View control history
+2. Toggle relay states manually with real-time feedback
+3. Use bulk operations (All On/Off) for system-wide control
+4. Monitor system status and uptime
+5. View control history and last commands
 
 #### Schedule Management
 1. Go to **Schedule** section
@@ -416,8 +494,56 @@ Content-Type: application/json
 
 {
   "relay": 1,
-  "action": "on"
+  "state": 1
 }
+```
+
+### Automation Endpoints
+
+#### Get Automation Status
+```http
+GET /api/automation_control.php
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "sensor_data": {
+    "turbidity": 1.7,
+    "tds": 150,
+    "ph": 7.2,
+    "temperature": 25.5,
+    "reading_time": "2024-12-15 10:30:00"
+  },
+  "automation_settings": {
+    "enabled": 1,
+    "filter_auto_enabled": 1,
+    "last_check": "2024-12-15 10:30:00"
+  },
+  "analysis": {
+    "tds_status": "medium",
+    "turbidity_status": "normal",
+    "should_activate_filter": true,
+    "reason": "TDS (150 ppm, medium) is in critical/medium range"
+  }
+}
+```
+
+#### Update Automation Settings
+```http
+POST /api/automation_control.php
+Content-Type: application/x-www-form-urlencoded
+
+action=update_settings&enabled=1&filter_auto_enabled=1
+```
+
+#### Trigger Automation Check
+```http
+POST /api/automation_control.php
+Content-Type: application/x-www-form-urlencoded
+
+action=check_and_trigger
 ```
 
 ### User Management Endpoints
@@ -502,14 +628,18 @@ water_monitoring/
 │   ├── dashboard/            # Main dashboard
 │   ├── monitor/              # Real-time monitoring
 │   ├── analytics/            # Data analytics
-│   ├── controls/             # System controls
+│   ├── controls/             # System controls & automation
 │   ├── schedule/             # Schedule management
 │   ├── user/                 # User management
 │   ├── actlogs/              # Activity logging
 │   └── sidebar/              # Navigation component
 ├── api/                      # RESTful API endpoints
+│   ├── automation_control.php # Intelligent automation system
+│   ├── automation_cron.php   # Automated cron job processing
+│   └── ...                   # Other API endpoints
 ├── config/                   # Configuration files
 ├── database/                 # Database schema and structure
+│   └── 10_automation_settings.sql # Automation configuration
 ├── login/                    # Authentication system
 ├── relay_control/            # ESP32 Arduino code
 ├── logs/                     # Application logs
@@ -551,6 +681,9 @@ php tests/api_test.php
 
 # Run integration tests
 php tests/integration_test.php
+
+# Test automation system
+php api/automation_control.php
 ```
 
 ### Contributing
@@ -572,6 +705,7 @@ php tests/integration_test.php
 - **PHP**: 8.0+ with required extensions
 - **Database**: MySQL 5.7+ or MariaDB 10.4+
 - **SSL Certificate**: Valid SSL certificate for HTTPS
+- **Cron Support**: For automated water quality monitoring
 
 #### Deployment Steps
 
@@ -581,7 +715,7 @@ php tests/integration_test.php
 sudo apt update && sudo apt upgrade -y
 
 # Install required packages
-sudo apt install apache2 php mysql-server php-mysql php-curl php-json
+sudo apt install apache2 php mysql-server php-mysql php-curl php-json cron
 ```
 
 2. **Application Deployment**
@@ -617,7 +751,19 @@ nano config/.env
 sudo nano /etc/apache2/sites-available/water_monitoring.conf
 ```
 
-5. **Security Hardening**
+5. **Automation Setup**
+```bash
+# Setup cron job for automation
+crontab -e
+
+# Add automation cron job (check every 5 minutes)
+*/5 * * * * php /var/www/water_monitoring/api/automation_cron.php
+
+# Verify cron is running
+sudo systemctl status cron
+```
+
+6. **Security Hardening**
 ```bash
 # Enable HTTPS
 sudo a2enmod ssl
@@ -671,6 +817,9 @@ mysql -u water_user -p -e "SELECT 1;"
 # Application status
 curl -I http://your-domain.com/water_monitoring/
 
+# Automation cron job status
+tail -f /var/www/water_monitoring/logs/automation_cron.log
+
 # Log monitoring
 tail -f /var/log/apache2/error.log
 ```
@@ -706,6 +855,21 @@ mysql -u water_user -p -h localhost
 
 # Check error logs
 sudo tail -f /var/log/mysql/error.log
+```
+
+#### Automation System Issues
+```bash
+# Check automation cron job
+crontab -l
+
+# Test automation manually
+php /var/www/water_monitoring/api/automation_control.php
+
+# Check automation logs
+tail -f /var/www/water_monitoring/logs/automation_cron.log
+
+# Verify automation settings
+mysql -u water_user -p water_quality_db -e "SELECT * FROM automation_settings;"
 ```
 
 #### ESP32 Connection Problems
@@ -821,29 +985,36 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Version**: 3.2.0  
+**Version**: 3.3.0  
 **Last Updated**: December 2024  
 **Maintainer**: Water Quality Monitoring System Team  
 **Repository**: [https://github.com/Anoncasphil/water_monitoring](https://github.com/Anoncasphil/water_monitoring)
 
-## 📝 Recent Updates (v3.2.0)
+## 📝 Recent Updates (v3.3.0)
 
 ### ✨ New Features
-- **Enhanced Schedule Management**: Improved layout consistency and streamlined interface
-- **Real-time Statistics**: Live schedule statistics with next execution tracking
-- **Bulk Operations**: Support for bulk schedule deletion and management
-- **Execution Logs**: Detailed logging with success/failure tracking and error messages
-- **Improved UI/UX**: Better visual consistency across admin sections
+- **Intelligent Automation System**: AI-powered water quality analysis with automatic filter control
+- **Real-time Automation Dashboard**: Live automation status with detailed TDS and turbidity analysis
+- **Configurable Quality Thresholds**: Customizable critical and medium range settings for water quality parameters
+- **Automated Cron Processing**: Background automation with configurable check intervals
+- **Enhanced Control Panel**: Improved relay control with automation integration and real-time feedback
+- **Smart Filter Control**: Automatic filter activation/deactivation based on water quality analysis
 
 ### 🔧 Improvements
-- **Layout Consistency**: Fixed execution logs section positioning to match scheduled operations
-- **UI Streamlining**: Removed redundant statistics cards for cleaner interface
-- **Code Organization**: Better structured schedule management code
-- **Error Handling**: Enhanced error reporting and user feedback
-- **Performance**: Optimized schedule loading and status updates
+- **Automation Integration**: Seamless integration between manual control and automated systems
+- **Real-time Analysis Display**: Live water quality status with detailed reasoning and recommendations
+- **Enhanced User Experience**: Improved control panel layout with automation status cards
+- **Performance Optimization**: Optimized automation checks and real-time updates
+- **Better Error Handling**: Enhanced error reporting and user feedback for automation operations
 
 ### 🐛 Bug Fixes
-- **Schedule Display**: Fixed schedule table rendering and status indicators
-- **Modal Functionality**: Improved schedule creation and editing modals
-- **Real-time Updates**: Enhanced live status updates and statistics
-- **Mobile Responsiveness**: Better mobile layout for schedule management 
+- **Automation System**: Fixed automation threshold handling and filter control logic
+- **Real-time Updates**: Enhanced live status updates and automation feedback
+- **Control Panel**: Improved relay state management and status indicators
+- **Mobile Responsiveness**: Better mobile layout for automation controls and status display
+
+### 🗄️ Database Updates
+- **New Table**: `automation_settings` table for configurable automation parameters
+- **Enhanced Schema**: Support for TDS and turbidity thresholds with configurable ranges
+- **Performance Indexes**: Optimized database queries for automation operations
+- **Logging Integration**: Comprehensive automation action logging to activity system 
