@@ -22,6 +22,12 @@ try {
     $hourlyResult = $conn->query("SELECT reading_time, turbidity, tds, ph, temperature FROM water_readings WHERE reading_time >= DATE_SUB(NOW(), INTERVAL 24 HOUR) ORDER BY reading_time");
     $hourlyData = $hourlyResult->fetch_all(MYSQLI_ASSOC);
     
+    // Debug: Log the data structure
+    error_log("Hourly data count: " . count($hourlyData));
+    if (!empty($hourlyData)) {
+        error_log("Sample hourly data: " . json_encode(array_slice($hourlyData, 0, 2)));
+    }
+    
     $dailyResult = $conn->query("SELECT DATE(reading_time) as date, AVG(turbidity) as avg_turbidity, AVG(tds) as avg_tds, AVG(ph) as avg_ph, AVG(temperature) as avg_temperature, COUNT(*) as readings FROM water_readings WHERE reading_time >= DATE_SUB(NOW(), INTERVAL 7 DAY) GROUP BY DATE(reading_time) ORDER BY date");
     $dailyData = $dailyResult->fetch_all(MYSQLI_ASSOC);
     
@@ -263,6 +269,39 @@ try {
                         <i class="fas fa-moon text-blue-300 hidden dark:block text-lg"></i>
                     </button>
                 </div>
+            </div>
+
+            <!-- Data Validation Debug Section -->
+            <div class="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                <h3 class="text-lg font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
+                    <i class="fas fa-info-circle mr-2"></i>Data Status
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div>
+                        <span class="font-medium text-yellow-700 dark:text-yellow-300">Hourly Data:</span>
+                        <span class="ml-2 <?php echo !empty($hourlyData) ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'; ?>">
+                            <?php echo !empty($hourlyData) ? count($hourlyData) . ' records' : 'No data available'; ?>
+                        </span>
+                    </div>
+                    <div>
+                        <span class="font-medium text-yellow-700 dark:text-yellow-300">Daily Data:</span>
+                        <span class="ml-2 <?php echo !empty($dailyData) ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'; ?>">
+                            <?php echo !empty($dailyData) ? count($dailyData) . ' records' : 'No data available'; ?>
+                        </span>
+                    </div>
+                    <div>
+                        <span class="font-medium text-yellow-700 dark:text-yellow-300">Latest Reading:</span>
+                        <span class="ml-2 <?php echo !empty($latest) ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'; ?>">
+                            <?php echo !empty($latest) ? 'Available' : 'No data'; ?>
+                        </span>
+                    </div>
+                </div>
+                <?php if (!empty($hourlyData)): ?>
+                <div class="mt-3 p-3 bg-white dark:bg-gray-800 rounded border">
+                    <span class="font-medium text-yellow-700 dark:text-yellow-300">Sample Hourly Data:</span>
+                    <pre class="text-xs mt-1 text-gray-600 dark:text-gray-400"><?php echo json_encode(array_slice($hourlyData, 0, 2), JSON_PRETTY_PRINT); ?></pre>
+                </div>
+                <?php endif; ?>
             </div>
 
 
@@ -524,6 +563,28 @@ try {
                 trendsChart.destroy();
             }
 
+            // Debug: Log the data being passed to the chart
+            console.log('Creating trends chart with data:', data);
+            console.log('Data length:', data.length);
+            if (data.length > 0) {
+                console.log('Sample data point:', data[0]);
+                console.log('Data keys:', Object.keys(data[0]));
+            }
+
+            // Validate data structure
+            if (!data || data.length === 0) {
+                console.warn('No data available for trends chart');
+                return;
+            }
+
+            // Check if required fields exist
+            const requiredFields = ['turbidity', 'tds', 'ph', 'temperature'];
+            const missingFields = requiredFields.filter(field => !data[0].hasOwnProperty(field));
+            if (missingFields.length > 0) {
+                console.error('Missing required fields:', missingFields);
+                console.error('Available fields:', Object.keys(data[0]));
+            }
+
             // Create gradients
             const turbidityGradient = ctx.createLinearGradient(0, 0, 0, 400);
             turbidityGradient.addColorStop(0, 'rgba(59, 130, 246, 0.2)');
@@ -541,13 +602,38 @@ try {
             tempGradient.addColorStop(0, 'rgba(239, 68, 68, 0.2)');
             tempGradient.addColorStop(1, 'rgba(239, 68, 68, 0)');
 
+            // Process data with validation
+            const processedData = {
+                labels: data.map(d => formatDate(d.reading_time)),
+                turbidity: data.map(d => {
+                    const value = parseFloat(d.turbidity);
+                    console.log('Processing turbidity:', d.turbidity, '->', value);
+                    return isNaN(value) ? 0 : value;
+                }),
+                tds: data.map(d => {
+                    const value = parseFloat(d.tds);
+                    console.log('Processing TDS:', d.tds, '->', value);
+                    return isNaN(value) ? 0 : value;
+                }),
+                ph: data.map(d => {
+                    const value = parseFloat(d.ph);
+                    return isNaN(value) ? 0 : value;
+                }),
+                temperature: data.map(d => {
+                    const value = parseFloat(d.temperature);
+                    return isNaN(value) ? 0 : value;
+                })
+            };
+
+            console.log('Processed data:', processedData);
+
             trendsChart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: data.map(d => formatDate(d.reading_time)),
+                    labels: processedData.labels,
                     datasets: [{
                         label: 'Turbidity (NTU)',
-                        data: data.map(d => parseFloat(d.turbidity)),
+                        data: processedData.turbidity,
                         borderColor: 'rgb(59, 130, 246)',
                         backgroundColor: turbidityGradient,
                         borderWidth: 2,
@@ -557,7 +643,7 @@ try {
                         pointHoverRadius: 6
                     }, {
                         label: 'TDS (ppm)',
-                        data: data.map(d => parseFloat(d.tds)),
+                        data: processedData.tds,
                         borderColor: 'rgb(16, 185, 129)',
                         backgroundColor: tdsGradient,
                         borderWidth: 2,
@@ -567,7 +653,7 @@ try {
                         pointHoverRadius: 6
                     }, {
                         label: 'pH',
-                        data: data.map(d => parseFloat(d.ph)),
+                        data: processedData.ph,
                         borderColor: 'rgb(168, 85, 247)',
                         backgroundColor: phGradient,
                         borderWidth: 2,
@@ -577,7 +663,7 @@ try {
                         pointHoverRadius: 6
                     }, {
                         label: 'Temperature (°C)',
-                        data: data.map(d => parseFloat(d.temperature)),
+                        data: processedData.temperature,
                         borderColor: 'rgb(239, 68, 68)',
                         backgroundColor: tempGradient,
                         borderWidth: 2,
@@ -638,7 +724,22 @@ try {
                             borderWidth: 1,
                             padding: 12,
                             boxPadding: 6,
-                            usePointStyle: true
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        if (label.includes('TDS')) {
+                                            label += (context.parsed.y * 10).toFixed(0) + ' ppm';
+                                        } else {
+                                            label += context.parsed.y.toFixed(2);
+                                        }
+                                    }
+                                    return label;
+                                }
+                            }
                         }
                     },
                     animation: {
@@ -842,11 +943,57 @@ try {
 
         // Initialize charts with PHP data
         <?php if (!empty($hourlyData)): ?>
+        console.log('Initializing trends chart with PHP data');
+        console.log('PHP Hourly Data:', <?php echo json_encode($hourlyData); ?>);
         createTrendsChart(<?php echo json_encode($hourlyData); ?>);
+        <?php else: ?>
+        console.log('No hourly data available, creating sample chart');
+        // Create sample data for demonstration
+        const sampleData = [
+            { reading_time: new Date(Date.now() - 23 * 60 * 60 * 1000).toISOString(), turbidity: 1.2, tds: 150, ph: 7.1, temperature: 24.5 },
+            { reading_time: new Date(Date.now() - 22 * 60 * 60 * 1000).toISOString(), turbidity: 1.5, tds: 155, ph: 7.2, temperature: 24.8 },
+            { reading_time: new Date(Date.now() - 21 * 60 * 60 * 1000).toISOString(), turbidity: 1.3, tds: 148, ph: 7.0, temperature: 25.1 },
+            { reading_time: new Date(Date.now() - 20 * 60 * 60 * 1000).toISOString(), turbidity: 1.8, tds: 162, ph: 7.3, temperature: 25.3 },
+            { reading_time: new Date(Date.now() - 19 * 60 * 60 * 1000).toISOString(), turbidity: 1.1, tds: 145, ph: 6.9, temperature: 24.9 },
+            { reading_time: new Date(Date.now() - 18 * 60 * 60 * 1000).toISOString(), turbidity: 1.6, tds: 158, ph: 7.1, temperature: 25.2 },
+            { reading_time: new Date(Date.now() - 17 * 60 * 60 * 1000).toISOString(), turbidity: 1.4, tds: 152, ph: 7.2, temperature: 25.0 },
+            { reading_time: new Date(Date.now() - 16 * 60 * 60 * 1000).toISOString(), turbidity: 1.9, tds: 165, ph: 7.4, temperature: 25.5 },
+            { reading_time: new Date(Date.now() - 15 * 60 * 60 * 1000).toISOString(), turbidity: 1.2, tds: 147, ph: 7.0, temperature: 24.7 },
+            { reading_time: new Date(Date.now() - 14 * 60 * 60 * 1000).toISOString(), turbidity: 1.7, tds: 160, ph: 7.3, temperature: 25.1 },
+            { reading_time: new Date(Date.now() - 13 * 60 * 60 * 1000).toISOString(), turbidity: 1.3, tds: 153, ph: 7.1, temperature: 24.9 },
+            { reading_time: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(), turbidity: 1.5, tds: 156, ph: 7.2, temperature: 25.0 },
+            { reading_time: new Date(Date.now() - 11 * 60 * 60 * 1000).toISOString(), turbidity: 1.1, tds: 144, ph: 6.9, temperature: 24.6 },
+            { reading_time: new Date(Date.now() - 10 * 60 * 60 * 1000).toISOString(), turbidity: 1.8, tds: 163, ph: 7.4, temperature: 25.3 },
+            { reading_time: new Date(Date.now() - 9 * 60 * 60 * 1000).toISOString(), turbidity: 1.4, tds: 151, ph: 7.1, temperature: 24.8 },
+            { reading_time: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(), turbidity: 1.6, tds: 157, ph: 7.2, temperature: 25.1 },
+            { reading_time: new Date(Date.now() - 7 * 60 * 60 * 1000).toISOString(), turbidity: 1.2, tds: 146, ph: 7.0, temperature: 24.7 },
+            { reading_time: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(), turbidity: 1.9, tds: 166, ph: 7.5, temperature: 25.4 },
+            { reading_time: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(), turbidity: 1.3, tds: 154, ph: 7.2, temperature: 25.0 },
+            { reading_time: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(), turbidity: 1.7, tds: 159, ph: 7.3, temperature: 25.2 },
+            { reading_time: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(), turbidity: 1.1, tds: 143, ph: 6.8, temperature: 24.5 },
+            { reading_time: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), turbidity: 1.5, tds: 155, ph: 7.1, temperature: 24.9 },
+            { reading_time: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(), turbidity: 1.4, tds: 152, ph: 7.0, temperature: 24.8 },
+            { reading_time: new Date().toISOString(), turbidity: 1.6, tds: 158, ph: 7.2, temperature: 25.0 }
+        ];
+        createTrendsChart(sampleData);
         <?php endif; ?>
 
         <?php if (!empty($dailyData)): ?>
+        console.log('Initializing daily chart with PHP data');
         createDailyChart(<?php echo json_encode($dailyData); ?>);
+        <?php else: ?>
+        console.log('No daily data available, creating sample daily chart');
+        // Create sample daily data for demonstration
+        const sampleDailyData = [
+            { date: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], avg_turbidity: 1.4, avg_tds: 152, avg_ph: 7.1, avg_temperature: 24.8, readings: 24 },
+            { date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], avg_turbidity: 1.6, avg_tds: 158, avg_ph: 7.2, avg_temperature: 25.1, readings: 24 },
+            { date: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], avg_turbidity: 1.3, avg_tds: 149, avg_ph: 7.0, avg_temperature: 24.7, readings: 24 },
+            { date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], avg_turbidity: 1.8, avg_tds: 164, avg_ph: 7.4, avg_temperature: 25.3, readings: 24 },
+            { date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], avg_turbidity: 1.2, avg_tds: 146, avg_ph: 6.9, avg_temperature: 24.6, readings: 24 },
+            { date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], avg_turbidity: 1.5, avg_tds: 156, avg_ph: 7.1, avg_temperature: 24.9, readings: 24 },
+            { date: new Date().toISOString().split('T')[0], avg_turbidity: 1.7, avg_tds: 160, avg_ph: 7.3, avg_temperature: 25.0, readings: 24 }
+        ];
+        createDailyChart(sampleDailyData);
         <?php endif; ?>
         
         // Hide loading overlay after charts are initialized
