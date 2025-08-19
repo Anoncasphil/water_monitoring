@@ -58,6 +58,47 @@ function randomInRange(float $min, float $max, int $decimals = 2): float {
 	return round($rand, $decimals);
 }
 
+function getRangesFromCategories(string $phCategory, string $turbidityCategory, string $tdsCategory): array {
+	// Map categories to numeric ranges
+	switch ($phCategory) {
+		case 'low':
+			$phRange = '3-6';
+			break;
+		case 'neutral':
+			$phRange = '6-7';
+			break;
+		case 'high':
+			$phRange = '7-9';
+			break;
+		default:
+			$phRange = '6-7';
+	}
+
+	switch ($turbidityCategory) {
+		case 'clean':
+			$turbidityRange = '1-2';
+			break;
+		case 'turbid':
+			$turbidityRange = '30-100';
+			break;
+		default:
+			$turbidityRange = '2-10';
+	}
+
+	switch ($tdsCategory) {
+		case 'low':
+			$tdsRange = '0-150';
+			break;
+		case 'high':
+			$tdsRange = '150-1000';
+			break;
+		default:
+			$tdsRange = '0-150';
+	}
+
+	return [$phRange, $turbidityRange, $tdsRange];
+}
+
 $messages = [];
 $errors = [];
 
@@ -96,12 +137,80 @@ try {
 
 			$stmt = $conn->prepare("INSERT INTO water_readings (turbidity, tds, ph, temperature, `in`) VALUES (?, ?, ?, ?, ?)");
 			$stmt->bind_param('ddddd', $turbidity, $tds, $ph, $temperature, $inValue);
-			if ($stmt->execute()) {
+			$ok = $stmt->execute();
+			$stmt->close();
+
+			$isAjax = isset($_POST['ajax']) && $_POST['ajax'] === '1';
+			if ($isAjax) {
+				header('Content-Type: application/json');
+				echo json_encode([
+					'success' => $ok,
+					'data' => [
+						'ph' => $ph,
+						'turbidity' => $turbidity,
+						'tds' => $tds,
+						'temperature' => $temperature,
+						'in' => $inValue,
+					]
+				]);
+				exit;
+			}
+
+			if ($ok) {
 				$messages[] = 'Reading inserted successfully.';
 			} else {
 				$errors[] = 'Failed to insert reading.';
 			}
+		}
+
+		if ($action === 'insert_reading_categories') {
+			$phCategory = isset($_POST['ph_category']) ? (string)$_POST['ph_category'] : 'neutral';
+			$turbidityCategory = isset($_POST['turbidity_category']) ? (string)$_POST['turbidity_category'] : 'clean';
+			$tdsCategory = isset($_POST['tds_category']) ? (string)$_POST['tds_category'] : 'low';
+			$temperature = isset($_POST['temperature']) && $_POST['temperature'] !== '' ? (float)$_POST['temperature'] : 25.0;
+			$inValue = isset($_POST['in_value']) && $_POST['in_value'] !== '' ? (float)$_POST['in_value'] : 0.0;
+
+			[$phRangeStr, $turbidityRangeStr, $tdsRangeStr] = getRangesFromCategories($phCategory, $turbidityCategory, $tdsCategory);
+
+			[$phMin, $phMax] = parseRange($phRangeStr);
+			[$turMin, $turMax] = parseRange($turbidityRangeStr);
+			[$tdsMin, $tdsMax] = parseRange($tdsRangeStr);
+
+			$ph = randomInRange($phMin, $phMax, 2);
+			$turbidity = randomInRange($turMin, $turMax, 2);
+			$tds = randomInRange($tdsMin, $tdsMax, 2);
+
+			$stmt = $conn->prepare("INSERT INTO water_readings (turbidity, tds, ph, temperature, `in`) VALUES (?, ?, ?, ?, ?)");
+			$stmt->bind_param('ddddd', $turbidity, $tds, $ph, $temperature, $inValue);
+			$ok = $stmt->execute();
 			$stmt->close();
+
+			$isAjax = isset($_POST['ajax']) && $_POST['ajax'] === '1';
+			if ($isAjax) {
+				header('Content-Type: application/json');
+				echo json_encode([
+					'success' => $ok,
+					'data' => [
+						'ph' => $ph,
+						'turbidity' => $turbidity,
+						'tds' => $tds,
+						'temperature' => $temperature,
+						'in' => $inValue,
+						'categories' => [
+							'ph' => $phCategory,
+							'turbidity' => $turbidityCategory,
+							'tds' => $tdsCategory,
+						]
+					]
+				]);
+				exit;
+			}
+
+			if ($ok) {
+				$messages[] = 'Reading inserted successfully.';
+			} else {
+				$errors[] = 'Failed to insert reading.';
+			}
 		}
 	}
 
@@ -153,6 +262,7 @@ $tdsRanges = [
 		label { display: inline-block; width: 160px; }
 		select, input[type="number"] { padding: 6px 8px; }
 		button { padding: 8px 14px; cursor: pointer; }
+		.small { font-size: 12px; color: #666; }
 	</style>
 </head>
 <body>
@@ -221,6 +331,108 @@ $tdsRanges = [
 			</div>
 		</form>
 	</section>
+
+	<section>
+		<h2>Continuous Insert (every second)</h2>
+		<p class="small">This will insert a new row in `water_readings` every second until you stop it.</p>
+		<div class="row">
+			<label for="cont_temperature">Temperature (°C)</label>
+			<input id="cont_temperature" type="number" step="0.1" value="25" />
+		</div>
+		<div class="row">
+			<label for="cont_in">In (flow/level)</label>
+			<input id="cont_in" type="number" step="0.01" value="0" />
+		</div>
+		<div class="row">
+			<label for="ph_category">pH category</label>
+			<select id="ph_category">
+				<option value="low">Low (3 - 6)</option>
+				<option value="neutral" selected>Neutral (6 - 7)</option>
+				<option value="high">High (7 - 9)</option>
+			</select>
+		</div>
+		<div class="row">
+			<label for="turbidity_category">Turbidity</label>
+			<select id="turbidity_category">
+				<option value="clean" selected>Clean (1 - 2)</option>
+				<option value="turbid">Turbid (30 - 100)</option>
+			</select>
+		</div>
+		<div class="row">
+			<label for="tds_category">TDS ppm</label>
+			<select id="tds_category">
+				<option value="low" selected>Low/Clean (0 - 150)</option>
+				<option value="high">High (150 - 1000)</option>
+			</select>
+		</div>
+		<div class="row">
+			<button id="startBtn" type="button">Start</button>
+			<button id="stopBtn" type="button" disabled>Stop</button>
+		</div>
+		<div id="cont_status" class="small"></div>
+	</section>
+
+	<script>
+	(function() {
+		var timerId = null;
+		var lastResponse = null;
+
+		function setRunning(running) {
+			document.getElementById('startBtn').disabled = running;
+			document.getElementById('stopBtn').disabled = !running;
+		}
+
+		function insertOnce() {
+			var temp = document.getElementById('cont_temperature').value || '25';
+			var inv = document.getElementById('cont_in').value || '0';
+			var phC = document.getElementById('ph_category').value;
+			var turbC = document.getElementById('turbidity_category').value;
+			var tdsC = document.getElementById('tds_category').value;
+
+			var formData = new FormData();
+			formData.append('action', 'insert_reading_categories');
+			formData.append('ajax', '1');
+			formData.append('temperature', temp);
+			formData.append('in_value', inv);
+			formData.append('ph_category', phC);
+			formData.append('turbidity_category', turbC);
+			formData.append('tds_category', tdsC);
+
+			fetch(window.location.href, {
+				method: 'POST',
+				body: formData,
+				credentials: 'same-origin'
+			}).then(function(r) { return r.json(); })
+			.then(function(json) {
+				lastResponse = json;
+				var el = document.getElementById('cont_status');
+				if (json && json.success) {
+					el.textContent = 'Inserted: pH ' + json.data.ph + ', Turbidity ' + json.data.turbidity + ', TDS ' + json.data.tds + ' at ' + (new Date()).toLocaleTimeString();
+				} else {
+					el.textContent = 'Insert failed at ' + (new Date()).toLocaleTimeString();
+				}
+			}).catch(function(err) {
+				var el = document.getElementById('cont_status');
+				el.textContent = 'Request error: ' + err;
+			});
+		}
+
+		document.getElementById('startBtn').addEventListener('click', function() {
+			if (timerId !== null) return;
+			setRunning(true);
+			insertOnce();
+			timerId = setInterval(insertOnce, 1000);
+		});
+
+		document.getElementById('stopBtn').addEventListener('click', function() {
+			if (timerId !== null) {
+				clearInterval(timerId);
+				timerId = null;
+				setRunning(false);
+			}
+		});
+	})();
+	</script>
 
 </body>
 </html>
