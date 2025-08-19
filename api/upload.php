@@ -9,6 +9,25 @@ try {
     $db = Database::getInstance();
     $conn = $db->getConnection();
 
+    // Check if uploads are disabled via system settings
+    $uploadsDisabled = false;
+    try {
+        $result = $conn->query("SELECT `value` AS v FROM `system_settings` WHERE `name` = 'uploads_disabled' LIMIT 1");
+        if ($result && $row = $result->fetch_assoc()) {
+            $uploadsDisabled = ($row['v'] === '1');
+        }
+    } catch (Exception $e) {
+        // If the settings table does not exist or query fails, default to uploads enabled
+    }
+
+    if ($uploadsDisabled) {
+        http_response_code(403);
+        echo json_encode([
+            "error" => "Uploads are currently disabled"
+        ]);
+        exit;
+    }
+
     // Get POST data
     $turbidity = isset($_POST['turbidity']) ? floatval($_POST['turbidity']) : null;
     $tds = isset($_POST['tds']) ? floatval($_POST['tds']) : null;
