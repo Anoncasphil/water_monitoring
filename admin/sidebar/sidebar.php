@@ -68,10 +68,10 @@ if (isset($_SESSION['user_id'])) {
                 <span>Monitor</span>
             </a>
 
-            <!-- Analytics -->
+            <!-- Data Overview -->
             <a href="../analytics" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200 <?php echo $is_analytics_page ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'; ?>">
                 <i class="fas fa-chart-line w-5 h-5 mr-3"></i>
-                <span>Analytics</span>
+                <span>Data Overview</span>
             </a>
 
             <!-- Controls -->
