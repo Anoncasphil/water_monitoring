@@ -67,87 +67,7 @@ try {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
             
-            <!-- Data Status Overview (moved below) -->
-            <div class="analytics-card bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 mt-8">
-                <div class="flex items-center justify-between mb-6">
-                    <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
-                        <i class="fas fa-database text-indigo-500 mr-3"></i>
-                        Data Status Overview
-                    </h2>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-6">
-                    <div class="rounded-xl border border-gray-200 dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-900/30">
-                        <div class="text-gray-600 dark:text-gray-400 text-xs mb-1">Hourly Data</div>
-                        <div class="text-lg font-semibold text-gray-900 dark:text-white">
-                            <?php echo !empty($hourlyData) ? count($hourlyData) . ' records' : 'No data available'; ?>
-                        </div>
-                    </div>
-                    <div class="rounded-xl border border-gray-200 dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-900/30">
-                        <div class="text-gray-600 dark:text-gray-400 text-xs mb-1">Daily Data</div>
-                        <div class="text-lg font-semibold text-gray-900 dark:text-white">
-                            <?php echo !empty($dailyData) ? count($dailyData) . ' records' : 'No data available'; ?>
-                        </div>
-                    </div>
-                    <div class="rounded-xl border border-gray-200 dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-900/30">
-                        <div class="text-gray-600 dark:text-gray-400 text-xs mb-1">Latest Reading</div>
-                        <div class="text-lg font-semibold text-gray-900 dark:text-white">
-                            <?php echo !empty($latest) ? 'Available' : 'No data'; ?>
-                        </div>
-                    </div>
-                </div>
-                <?php if (!empty($hourlyData)): ?>
-                <div class="rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-                    <div class="px-4 py-3 bg-gray-50 dark:bg-gray-900/40 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                        <h3 class="font-semibold text-gray-900 dark:text-white">
-                            <i class="fas fa-table mr-2 text-indigo-500"></i>Recent Data Samples
-                        </h3>
-                        <div class="text-xs text-gray-500 dark:text-gray-400">Showing latest 5 of <?php echo count($hourlyData); ?> records</div>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full text-sm">
-                            <thead class="bg-gray-50 dark:bg-gray-900/60">
-                                <tr>
-                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Time</th>
-                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Turbidity (NTU)</th>
-                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">TDS (ppm)</th>
-                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">pH</th>
-                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Temperature (°C)</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                                <?php foreach(array_slice($hourlyData, 0, 5) as $index => $row): ?>
-                                <tr class="<?php echo $index % 2 === 0 ? 'bg-white/60 dark:bg-gray-900/20' : 'bg-white dark:bg-gray-800/40'; ?>">
-                                    <td class="px-4 py-2 text-gray-900 dark:text-gray-100 font-mono text-xs">
-                                        <?php echo date('H:i:s', strtotime($row['reading_time'])); ?>
-                                    </td>
-                                    <td class="px-4 py-2 text-gray-900 dark:text-gray-100">
-                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
-                                            <?php echo number_format($row['turbidity'], 2); ?>
-                                        </span>
-                                    </td>
-                                    <td class="px-4 py-2 text-gray-900 dark:text-gray-100">
-                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
-                                            <?php echo number_format($row['tds'], 2); ?>
-                                        </span>
-                                    </td>
-                                    <td class="px-4 py-2 text-gray-900 dark:text-gray-100">
-                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200">
-                                            <?php echo number_format($row['ph'], 2); ?>
-                                        </span>
-                                    </td>
-                                    <td class="px-4 py-2 text-gray-900 dark:text-gray-100">
-                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200">
-                                            <?php echo $row['temperature']; ?>
-                                        </span>
-                                    </td>
-                                </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <?php endif; ?>
-            </div>
+            
 
     <script>
         // Theme initialization - must run before page renders to prevent flash
@@ -559,6 +479,104 @@ try {
                             <span class="text-sm font-semibold text-gray-900 dark:text-white">
                                 T: <?php echo number_format($stats['min_turbidity'] ?? 0, 1); ?>-<?php echo number_format($stats['max_turbidity'] ?? 0, 1); ?> NTU
                             </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Data Status Overview (two-column within same grid) -->
+                <div class="analytics-card bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
+                            <i class="fas fa-database text-indigo-500 mr-3"></i>
+                            Data Status Overview
+                        </h2>
+                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Left column: stats -->
+                        <div>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm mb-6">
+                                <div class="rounded-xl border border-gray-200 dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-900/30">
+                                    <div class="text-gray-600 dark:text-gray-400 text-xs mb-1">Hourly Data</div>
+                                    <div class="text-lg font-semibold text-gray-900 dark:text-white">
+                                        <?php echo !empty($hourlyData) ? count($hourlyData) . ' records' : 'No data available'; ?>
+                                    </div>
+                                </div>
+                                <div class="rounded-xl border border-gray-200 dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-900/30">
+                                    <div class="text-gray-600 dark:text-gray-400 text-xs mb-1">Daily Data</div>
+                                    <div class="text-lg font-semibold text-gray-900 dark:text-white">
+                                        <?php echo !empty($dailyData) ? count($dailyData) . ' records' : 'No data available'; ?>
+                                    </div>
+                                </div>
+                                <div class="rounded-xl border border-gray-200 dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-900/30">
+                                    <div class="text-gray-600 dark:text-gray-400 text-xs mb-1">Latest Reading</div>
+                                    <div class="text-lg font-semibold text-gray-900 dark:text-white">
+                                        <?php echo !empty($latest) ? 'Available' : 'No data'; ?>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                                Summary of raw records collected and availability of the latest reading.
+                            </p>
+                        </div>
+
+                        <!-- Right column: recent samples table -->
+                        <div>
+                            <?php if (!empty($hourlyData)): ?>
+                            <div class="rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                                <div class="px-4 py-3 bg-gray-50 dark:bg-gray-900/40 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                                    <h3 class="font-semibold text-gray-900 dark:text-white">
+                                        <i class="fas fa-table mr-2 text-indigo-500"></i>Recent Data Samples
+                                    </h3>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">Showing latest 5 of <?php echo count($hourlyData); ?> records</div>
+                                </div>
+                                <div class="overflow-x-auto">
+                                    <table class="min-w-full text-sm">
+                                        <thead class="bg-gray-50 dark:bg-gray-900/60">
+                                            <tr>
+                                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Time</th>
+                                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Turbidity (NTU)</th>
+                                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">TDS (ppm)</th>
+                                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">pH</th>
+                                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Temperature (°C)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                                            <?php foreach(array_slice($hourlyData, 0, 5) as $index => $row): ?>
+                                            <tr class="<?php echo $index % 2 === 0 ? 'bg-white/60 dark:bg-gray-900/20' : 'bg-white dark:bg-gray-800/40'; ?>">
+                                                <td class="px-4 py-2 text-gray-900 dark:text-gray-100 font-mono text-xs">
+                                                    <?php echo date('H:i:s', strtotime($row['reading_time'])); ?>
+                                                </td>
+                                                <td class="px-4 py-2 text-gray-900 dark:text-gray-100">
+                                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
+                                                        <?php echo number_format($row['turbidity'], 2); ?>
+                                                    </span>
+                                                </td>
+                                                <td class="px-4 py-2 text-gray-900 dark:text-gray-100">
+                                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
+                                                        <?php echo number_format($row['tds'], 2); ?>
+                                                    </span>
+                                                </td>
+                                                <td class="px-4 py-2 text-gray-900 dark:text-gray-100">
+                                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200">
+                                                        <?php echo number_format($row['ph'], 2); ?>
+                                                    </span>
+                                                </td>
+                                                <td class="px-4 py-2 text-gray-900 dark:text-gray-100">
+                                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200">
+                                                        <?php echo $row['temperature']; ?>
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <?php else: ?>
+                            <div class="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 p-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                                No recent data available.
+                            </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
