@@ -484,7 +484,7 @@ try {
                 </div>
 
                 <!-- Data Status Overview (Enhanced Design) -->
-                <div class="analytics-card bg-gradient-to-br from-white to-blue-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl shadow-xl p-8 border border-blue-100 dark:border-blue-900/30">
+                <div class="col-span-2 analytics-card bg-gradient-to-br from-white to-blue-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl shadow-xl p-8 border border-blue-100 dark:border-blue-900/30">
                     <div class="flex items-center justify-between mb-8">
                         <div class="flex items-center space-x-4">
                             <div class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
