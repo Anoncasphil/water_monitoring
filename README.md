@@ -79,6 +79,13 @@ The Water Quality Monitoring System is designed for real-time monitoring and con
 - **Quality Insights**: Automated recommendations
 - **Performance Metrics**: Key performance indicators
 
+### 🗄️ Data Retention & Archival (New)
+- **Tiered Storage**: Keep recent raw data fast in `water_readings` (default 14 days)
+- **Long-term Archive**: Automatically move older rows to `water_readings_archive`
+- **Hourly Rollups**: Compact history in `water_readings_hourly` for quick long-range charts
+- **Unified View**: Query all history via `water_readings_all` (live + archive)
+- **Configurable Policy**: Adjust retention days by editing the archival event
+
 ### 🎨 User Interface
 - **Modern Design**: Clean, responsive interface with Tailwind CSS 3.0+
 - **Dark/Light Theme**: User preference toggle with persistent settings
@@ -205,6 +212,9 @@ SOURCE database/06_schedule_logs.sql;
 SOURCE database/07_activity_logs.sql;
 SOURCE database/08_indexes_and_constraints.sql;
 SOURCE database/10_automation_settings.sql;
+
+-- Enable retention & archival (recommended)
+SOURCE database/11_retention_archival.sql;
 
 -- Optional: Add sample data
 SOURCE database/09_sample_data.sql;

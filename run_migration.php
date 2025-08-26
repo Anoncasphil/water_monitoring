@@ -18,32 +18,37 @@ try {
     
     echo "Connected to database successfully.\n";
     
-    // Read and execute the migration SQL
-    $migration_sql = file_get_contents('database/update_schedule_logs.sql');
+    // Read and execute the migration SQL files
+    $migrationFiles = [
+        'database/update_schedule_logs.sql',
+        'database/11_retention_archival.sql'
+    ];
     
-    if ($migration_sql === false) {
-        throw new Exception("Could not read migration file: database/update_schedule_logs.sql");
-    }
-    
-    echo "Executing migration SQL...\n";
-    
-    // Split the SQL into individual statements
-    $statements = array_filter(array_map('trim', explode(';', $migration_sql)));
-    
-    foreach ($statements as $index => $statement) {
-        if (!empty($statement) && !preg_match('/^(USE|--)/', $statement)) {
-            echo "Executing statement " . ($index + 1) . ": " . substr($statement, 0, 60) . "...\n";
-            
-            $result = $conn->query($statement);
-            
-            if ($result === false) {
-                echo "❌ Error: " . $conn->error . "\n";
-                echo "Statement: " . $statement . "\n";
-                
-                // Continue with other statements even if one fails
-                continue;
-            } else {
-                echo "✓ Success\n";
+    foreach ($migrationFiles as $file) {
+        echo "\n--- Executing migration file: {$file} ---\n";
+        $migration_sql = file_get_contents($file);
+        if ($migration_sql === false) {
+            echo "⚠️  Skipping: Could not read migration file: {$file}\n";
+            continue;
+        }
+
+        // Split the SQL into individual statements
+        $statements = array_filter(array_map('trim', explode(';', $migration_sql)));
+
+        foreach ($statements as $index => $statement) {
+            if (!empty($statement) && !preg_match('/^(USE|--)/', $statement)) {
+                echo "Executing statement " . ($index + 1) . ": " . substr($statement, 0, 60) . "...\n";
+
+                $result = $conn->query($statement);
+
+                if ($result === false) {
+                    echo "❌ Error: " . $conn->error . "\n";
+                    echo "Statement: " . $statement . "\n";
+                    // Continue with other statements even if one fails
+                    continue;
+                } else {
+                    echo "✓ Success\n";
+                }
             }
         }
     }
