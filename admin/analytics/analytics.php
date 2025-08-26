@@ -61,7 +61,7 @@ try {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Analytics - Water Quality System</title>
+    <title>Data Overview - Water Quality System</title>
     <link rel="icon" type="image/png" href="../../assets/images/icons/icon.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -235,8 +235,8 @@ try {
     <!-- Loading Overlay -->
     <div id="loadingOverlay" class="loading-overlay">
         <div class="loading-spinner"></div>
-        <div class="loading-text">Loading Analytics Data</div>
-        <div class="loading-subtext">Please wait while we fetch and process your data...</div>
+        <div class="loading-text">Loading Data Overview</div>
+        <div class="loading-subtext">Please wait while we fetch your water quality data...</div>
     </div>
     
     <!-- Include Sidebar -->
@@ -250,9 +250,9 @@ try {
                 <div>
                     <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
                         <i class="fas fa-chart-line text-blue-500 mr-3"></i>
-                        Analytics Dashboard
+                        Data Overview Dashboard
                     </h1>
-                    <p class="text-gray-600 dark:text-gray-400 text-lg">Water quality data analysis and insights</p>
+                    <p class="text-gray-600 dark:text-gray-400 text-lg">Water quality data summary and insights</p>
                 </div>
                 <div class="flex items-center space-x-4">
                     <select id="timeRange" class="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
@@ -272,34 +272,81 @@ try {
             </div>
 
             <!-- Data Validation Debug Section -->
-            <div class="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                <h3 class="text-lg font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
-                    <i class="fas fa-info-circle mr-2"></i>Data Status
+            <div class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <h3 class="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-2">
+                    <i class="fas fa-database mr-2"></i>Data Status Overview
                 </h3>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                    <div>
-                        <span class="font-medium text-yellow-700 dark:text-yellow-300">Hourly Data:</span>
-                        <span class="ml-2 <?php echo !empty($hourlyData) ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'; ?>">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-4">
+                    <div class="bg-white dark:bg-gray-800 p-3 rounded-lg border">
+                        <span class="font-medium text-blue-700 dark:text-blue-300">Hourly Data:</span>
+                        <span class="ml-2 text-green-600 dark:text-green-400 font-semibold">
                             <?php echo !empty($hourlyData) ? count($hourlyData) . ' records' : 'No data available'; ?>
                         </span>
                     </div>
-                    <div>
-                        <span class="font-medium text-yellow-700 dark:text-yellow-300">Daily Data:</span>
-                        <span class="ml-2 <?php echo !empty($dailyData) ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'; ?>">
+                    <div class="bg-white dark:bg-gray-800 p-3 rounded-lg border">
+                        <span class="font-medium text-blue-700 dark:text-blue-300">Daily Data:</span>
+                        <span class="ml-2 text-green-600 dark:text-green-400 font-semibold">
                             <?php echo !empty($dailyData) ? count($dailyData) . ' records' : 'No data available'; ?>
                         </span>
                     </div>
-                    <div>
-                        <span class="font-medium text-yellow-700 dark:text-yellow-300">Latest Reading:</span>
-                        <span class="ml-2 <?php echo !empty($latest) ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'; ?>">
+                    <div class="bg-white dark:bg-gray-800 p-3 rounded-lg border">
+                        <span class="font-medium text-blue-700 dark:text-blue-300">Latest Reading:</span>
+                        <span class="ml-2 text-green-600 dark:text-green-400 font-semibold">
                             <?php echo !empty($latest) ? 'Available' : 'No data'; ?>
                         </span>
                     </div>
                 </div>
                 <?php if (!empty($hourlyData)): ?>
-                <div class="mt-3 p-3 bg-white dark:bg-gray-800 rounded border">
-                    <span class="font-medium text-yellow-700 dark:text-yellow-300">Sample Hourly Data:</span>
-                    <pre class="text-xs mt-1 text-gray-600 dark:text-gray-400"><?php echo json_encode(array_slice($hourlyData, 0, 2), JSON_PRETTY_PRINT); ?></pre>
+                <div class="bg-white dark:bg-gray-800 rounded-lg border p-4">
+                    <h4 class="font-semibold text-blue-700 dark:text-blue-300 mb-3">
+                        <i class="fas fa-table mr-2"></i>Recent Data Samples
+                    </h4>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-sm">
+                            <thead class="bg-gray-50 dark:bg-gray-700">
+                                <tr>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Time</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Turbidity (NTU)</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">TDS (ppm)</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">pH</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Temperature (°C)</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                <?php foreach(array_slice($hourlyData, 0, 5) as $index => $row): ?>
+                                <tr class="<?php echo $index % 2 === 0 ? 'bg-gray-50 dark:bg-gray-700' : 'bg-white dark:bg-gray-800'; ?>">
+                                    <td class="px-3 py-2 text-gray-900 dark:text-gray-100 font-mono text-xs">
+                                        <?php echo date('H:i:s', strtotime($row['reading_time'])); ?>
+                                    </td>
+                                    <td class="px-3 py-2 text-gray-900 dark:text-gray-100">
+                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
+                                            <?php echo number_format($row['turbidity'], 2); ?>
+                                        </span>
+                                    </td>
+                                    <td class="px-3 py-2 text-gray-900 dark:text-gray-100">
+                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
+                                            <?php echo number_format($row['tds'], 2); ?>
+                                        </span>
+                                    </td>
+                                    <td class="px-3 py-2 text-gray-900 dark:text-gray-100">
+                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200">
+                                            <?php echo number_format($row['ph'], 2); ?>
+                                        </span>
+                                    </td>
+                                    <td class="px-3 py-2 text-gray-900 dark:text-gray-100">
+                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200">
+                                            <?php echo $row['temperature']; ?>
+                                        </span>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="mt-3 text-xs text-gray-500 dark:text-gray-400">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Showing latest 5 readings. Total: <?php echo count($hourlyData); ?> records available.
+                    </div>
                 </div>
                 <?php endif; ?>
             </div>
@@ -389,9 +436,9 @@ try {
                         <div>
                             <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
                                 <i class="fas fa-chart-line text-blue-500 mr-3"></i>
-                                Real-time Trends
+                                Water Quality Trends
                             </h2>
-                            <p class="text-gray-600 dark:text-gray-400">24-hour water quality parameter trends</p>
+                            <p class="text-gray-600 dark:text-gray-400">24-hour water quality measurements</p>
                         </div>
                         <div class="flex space-x-2">
                             <button class="px-3 py-1 text-sm bg-blue-50 dark:bg-blue-900 text-blue-600 dark:text-blue-300 rounded-full hover:bg-blue-100 dark:hover:bg-blue-800">
@@ -413,9 +460,9 @@ try {
                         <div>
                             <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
                                 <i class="fas fa-chart-bar text-purple-500 mr-3"></i>
-                                Daily Averages
+                                Daily Measurements
                             </h2>
-                            <p class="text-gray-600 dark:text-gray-400">7-day average water quality metrics</p>
+                            <p class="text-gray-600 dark:text-gray-400">7-day average water quality values</p>
                         </div>
                         <div class="flex space-x-2">
                             <button class="px-3 py-1 text-sm bg-purple-50 dark:bg-purple-900 text-purple-600 dark:text-purple-300 rounded-full hover:bg-purple-100 dark:hover:bg-purple-800">
@@ -439,7 +486,7 @@ try {
                     <div class="flex items-center justify-between mb-6">
                         <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
                             <i class="fas fa-lightbulb text-yellow-500 mr-3"></i>
-                            Quality Insights
+                            Water Quality Summary
                         </h2>
                     </div>
                     <div class="space-y-4">
