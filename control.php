@@ -427,7 +427,7 @@ $tdsRanges = [
 
 	<section>
 		<h2>Data Manipulation Settings</h2>
-		<p class="small">Control data manipulation with start/stop. When running, applies manipulation to every new reading every second.</p>
+		<p class="small">Control data manipulation with start/stop. When running, generates random values within specified ranges for every new reading every second.</p>
 		<form method="post">
 			<input type="hidden" name="action" value="save_manipulation_settings" />
 			<div class="row">
@@ -441,48 +441,59 @@ $tdsRanges = [
 				<div>
 					<h3>pH Sensor</h3>
 					<div class="row">
-						<label for="ph_offset">Offset:</label>
-						<input id="ph_offset" name="ph_offset" type="number" step="0.01" value="<?php echo $manipulationSettings['ph_offset']; ?>" />
-					</div>
-					<div class="row">
-						<label for="ph_multiplier">Multiplier:</label>
-						<input id="ph_multiplier" name="ph_multiplier" type="number" step="0.01" value="<?php echo $manipulationSettings['ph_multiplier']; ?>" />
+						<label for="ph_range">pH Range:</label>
+						<select id="ph_range" name="ph_range">
+							<option value="3-4">3 - 4 (Very Acidic)</option>
+							<option value="4-5">4 - 5 (Acidic)</option>
+							<option value="5-6">5 - 6 (Slightly Acidic)</option>
+							<option value="6-7" selected>6 - 7 (Neutral)</option>
+							<option value="7-8">7 - 8 (Slightly Alkaline)</option>
+							<option value="8-9">8 - 9 (Alkaline)</option>
+							<option value="9-10">9 - 10 (Very Alkaline)</option>
+						</select>
 					</div>
 				</div>
 				
 				<div>
 					<h3>Turbidity Sensor</h3>
 					<div class="row">
-						<label for="turbidity_offset">Offset:</label>
-						<input id="turbidity_offset" name="turbidity_offset" type="number" step="0.01" value="<?php echo $manipulationSettings['turbidity_offset']; ?>" />
-					</div>
-					<div class="row">
-						<label for="turbidity_multiplier">Multiplier:</label>
-						<input id="turbidity_multiplier" name="turbidity_multiplier" type="number" step="0.01" value="<?php echo $manipulationSettings['turbidity_multiplier']; ?>" />
+						<label for="turbidity_range">Turbidity Range (NTU):</label>
+						<select id="turbidity_range" name="turbidity_range">
+							<option value="1-2">1 - 2 (Very Clear)</option>
+							<option value="2-5">2 - 5 (Clear)</option>
+							<option value="5-10">5 - 10 (Slightly Turbid)</option>
+							<option value="10-20">10 - 20 (Turbid)</option>
+							<option value="20-50">20 - 50 (Very Turbid)</option>
+							<option value="50-100">50 - 100 (Extremely Turbid)</option>
+						</select>
 					</div>
 				</div>
 				
 				<div>
 					<h3>TDS Sensor</h3>
 					<div class="row">
-						<label for="tds_offset">Offset:</label>
-						<input id="tds_offset" name="tds_offset" type="number" step="0.01" value="<?php echo $manipulationSettings['tds_offset']; ?>" />
-					</div>
-					<div class="row">
-						<label for="tds_multiplier">Multiplier:</label>
-						<input id="tds_multiplier" name="tds_multiplier" type="number" step="0.01" value="<?php echo $manipulationSettings['tds_multiplier']; ?>" />
+						<label for="tds_range">TDS Range (ppm):</label>
+						<select id="tds_range" name="tds_range">
+							<option value="0-50">0 - 50 (Very Low)</option>
+							<option value="50-150">50 - 150 (Low)</option>
+							<option value="150-300">150 - 300 (Medium)</option>
+							<option value="300-500">300 - 500 (High)</option>
+							<option value="500-1000">500 - 1000 (Very High)</option>
+						</select>
 					</div>
 				</div>
 				
 				<div>
 					<h3>Temperature Sensor</h3>
 					<div class="row">
-						<label for="temperature_offset">Offset:</label>
-						<input id="temperature_offset" name="temperature_offset" type="number" step="0.01" value="<?php echo $manipulationSettings['temperature_offset']; ?>" />
-					</div>
-					<div class="row">
-						<label for="temperature_multiplier">Multiplier:</label>
-						<input id="temperature_multiplier" name="temperature_multiplier" type="number" step="0.01" value="<?php echo $manipulationSettings['temperature_multiplier']; ?>" />
+						<label for="temperature_range">Temperature Range (°C):</label>
+						<select id="temperature_range" name="temperature_range">
+							<option value="15-20">15 - 20 (Cool)</option>
+							<option value="20-25" selected>20 - 25 (Room Temp)</option>
+							<option value="25-30">25 - 30 (Warm)</option>
+							<option value="30-35">30 - 35 (Hot)</option>
+							<option value="35-40">35 - 40 (Very Hot)</option>
+						</select>
 					</div>
 				</div>
 			</div>
@@ -493,16 +504,16 @@ $tdsRanges = [
 			
 			<div class="formula-box">
 				<div class="small">
-					<strong>Formula:</strong> Final Value = (Original Value + Offset) × Multiplier<br/>
-					<strong>Note:</strong> These settings are applied continuously every second to the latest reading display only.<br/>
-					<strong>Example:</strong> pH 7.0 + 1.0 offset × 0.8 multiplier = (7.0 + 1.0) × 0.8 = 6.4
+					<strong>How it works:</strong> When manipulation is running, random values are generated within your selected ranges every second.<br/>
+					<strong>Example:</strong> pH range 6-7 will generate random values like 6.23, 6.87, 6.45, etc.<br/>
+					<strong>Note:</strong> These random values replace the original sensor readings in the display only.
 				</div>
 			</div>
 		</form>
 		
 		<div style="margin-top: 20px; padding: 16px; background: #f8f9fa; border-radius: 8px;">
 			<h3>Manipulation Control</h3>
-			<p class="small">Start/stop the continuous manipulation process. When running, applies your settings to every new reading every second.</p>
+			<p class="small">Start/stop the continuous manipulation process. When running, generates random values within your ranges every second.</p>
 			<div class="row">
 				<button id="startManipulationBtn" type="button">Start Manipulation</button>
 				<button id="stopManipulationBtn" type="button" disabled>Stop Manipulation</button>
@@ -629,7 +640,7 @@ $tdsRanges = [
 		function startManipulation() {
 			if (manipulationTimerId !== null) return;
 			var el = document.getElementById('manipulation_status');
-			el.textContent = 'Manipulation started. Applying settings to every new reading...';
+			el.textContent = 'Manipulation started. Generating random values...';
 			
 			// Check if manipulation is enabled in the form
 			var manipulationEnabled = document.querySelector('input[name="manipulation_enabled"]').checked;
@@ -667,36 +678,33 @@ $tdsRanges = [
 			// Update the summary display
 			var el = document.getElementById('latest_data');
 			
-			// Get manipulation settings from the form
-			var phOffset = parseFloat(document.getElementById('ph_offset').value) || 0;
-			var phMultiplier = parseFloat(document.getElementById('ph_multiplier').value) || 1;
-			var turbidityOffset = parseFloat(document.getElementById('turbidity_offset').value) || 0;
-			var turbidityMultiplier = parseFloat(document.getElementById('turbidity_multiplier').value) || 1;
-			var tdsOffset = parseFloat(document.getElementById('tds_offset').value) || 0;
-			var tdsMultiplier = parseFloat(document.getElementById('tds_multiplier').value) || 1;
-			var temperatureOffset = parseFloat(document.getElementById('temperature_offset').value) || 0;
-			var temperatureMultiplier = parseFloat(document.getElementById('temperature_multiplier').value) || 1;
-			
 			// Check if manipulation is enabled AND manipulation timer is running
 			var manipulationEnabled = document.querySelector('input[name="manipulation_enabled"]').checked;
 			var manipulationRunning = manipulationTimerId !== null;
 			
-			// Apply manipulation if both enabled and running
+			// Generate random values if both enabled and running
 			var phDisplay = data.ph;
 			var turbidityDisplay = data.turbidity;
 			var tdsDisplay = data.tds;
 			var temperatureDisplay = data.temperature;
 			
 			if (manipulationEnabled && manipulationRunning) {
-				phDisplay = (data.ph + phOffset) * phMultiplier;
-				turbidityDisplay = (data.turbidity + turbidityOffset) * turbidityMultiplier;
-				tdsDisplay = (data.tds + tdsOffset) * tdsMultiplier;
-				temperatureDisplay = (data.temperature + temperatureOffset) * temperatureMultiplier;
+				// Get selected ranges
+				var phRange = document.getElementById('ph_range').value;
+				var turbidityRange = document.getElementById('turbidity_range').value;
+				var tdsRange = document.getElementById('tds_range').value;
+				var temperatureRange = document.getElementById('temperature_range').value;
+				
+				// Generate random values within ranges
+				phDisplay = randomInRange(parseRange(phRange)[0], parseRange(phRange)[1], 2);
+				turbidityDisplay = randomInRange(parseRange(turbidityRange)[0], parseRange(turbidityRange)[1], 2);
+				tdsDisplay = randomInRange(parseRange(tdsRange)[0], parseRange(tdsRange)[1], 2);
+				temperatureDisplay = randomInRange(parseRange(temperatureRange)[0], parseRange(temperatureRange)[1], 2);
 			}
 			
 			// Show manipulated values in the summary if both enabled and running
 			if (manipulationEnabled && manipulationRunning) {
-				el.innerHTML = '<strong>Latest Reading (Manipulated):</strong> pH: ' + phDisplay.toFixed(2) + 
+				el.innerHTML = '<strong>Latest Reading (Random Generated):</strong> pH: ' + phDisplay.toFixed(2) + 
 							  ', Turbidity: ' + turbidityDisplay.toFixed(2) + ' NTU' +
 							  ', TDS: ' + tdsDisplay.toFixed(2) + ' ppm' +
 							  ', Temperature: ' + temperatureDisplay.toFixed(2) + '°C' +
@@ -732,29 +740,25 @@ $tdsRanges = [
 
 			var data = window.latestOriginalData;
 			
-			// Get manipulation values from the main form
-			var phOffset = parseFloat(document.getElementById('ph_offset').value) || 0;
-			var phMultiplier = parseFloat(document.getElementById('ph_multiplier').value) || 1;
-			var turbidityOffset = parseFloat(document.getElementById('turbidity_offset').value) || 0;
-			var turbidityMultiplier = parseFloat(document.getElementById('turbidity_multiplier').value) || 1;
-			var tdsOffset = parseFloat(document.getElementById('tds_offset').value) || 0;
-			var tdsMultiplier = parseFloat(document.getElementById('tds_multiplier').value) || 1;
-			var temperatureOffset = parseFloat(document.getElementById('temperature_offset').value) || 0;
-			var temperatureMultiplier = parseFloat(document.getElementById('temperature_multiplier').value) || 1;
+			// Get selected ranges from the form
+			var phRange = document.getElementById('ph_range').value;
+			var turbidityRange = document.getElementById('turbidity_range').value;
+			var tdsRange = document.getElementById('tds_range').value;
+			var temperatureRange = document.getElementById('temperature_range').value;
+			
+			// Generate random values within ranges
+			var phRandom = randomInRange(parseRange(phRange)[0], parseRange(phRange)[1], 2);
+			var turbidityRandom = randomInRange(parseRange(turbidityRange)[0], parseRange(turbidityRange)[1], 2);
+			var tdsRandom = randomInRange(parseRange(tdsRange)[0], parseRange(tdsRange)[1], 2);
+			var temperatureRandom = randomInRange(parseRange(temperatureRange)[0], parseRange(temperatureRange)[1], 2);
 
-			// Apply manipulation formula: (value + offset) * multiplier
-			var phModified = (data.ph + phOffset) * phMultiplier;
-			var turbidityModified = (data.turbidity + turbidityOffset) * turbidityMultiplier;
-			var tdsModified = (data.tds + tdsOffset) * tdsMultiplier;
-			var temperatureModified = (data.temperature + temperatureOffset) * temperatureMultiplier;
-
-			// Update the latest data display with modified values if manipulation is running
+			// Update the latest data display with random values if manipulation is running
 			if (manipulationTimerId !== null && document.querySelector('input[name="manipulation_enabled"]').checked) {
 				var el = document.getElementById('latest_data');
-				el.innerHTML = '<strong>Latest Reading (Manipulated):</strong> pH: ' + phModified.toFixed(2) + 
-							  ', Turbidity: ' + turbidityModified.toFixed(2) + ' NTU' +
-							  ', TDS: ' + tdsModified.toFixed(2) + ' ppm' +
-							  ', Temperature: ' + temperatureModified.toFixed(2) + '°C' +
+				el.innerHTML = '<strong>Latest Reading (Random Generated):</strong> pH: ' + phRandom.toFixed(2) + 
+							  ', Turbidity: ' + turbidityRandom.toFixed(2) + ' NTU' +
+							  ', TDS: ' + tdsRandom.toFixed(2) + ' ppm' +
+							  ', Temperature: ' + temperatureRandom.toFixed(2) + '°C' +
 							  ', In: ' + (window.latestOriginalData.in || 0) +
 							  ' <br><small>Updated: ' + new Date().toLocaleTimeString() + ' | Manipulation: RUNNING</small>';
 			}
@@ -796,15 +800,12 @@ $tdsRanges = [
 
 		// Add event listeners for the main manipulation form inputs
 		var mainManipulationInputs = [
-			'ph_offset', 'ph_multiplier',
-			'turbidity_offset', 'turbidity_multiplier',
-			'tds_offset', 'tds_multiplier',
-			'temperature_offset', 'temperature_multiplier'
+			'ph_range', 'turbidity_range', 'tds_range', 'temperature_range'
 		];
 
 		mainManipulationInputs.forEach(function(inputId) {
-			document.getElementById(inputId).addEventListener('input', function() {
-				// Trigger immediate update of the display with new manipulation values
+			document.getElementById(inputId).addEventListener('change', function() {
+				// Trigger immediate update of the display with new range values
 				if (window.latestOriginalData) {
 					updateLatestDataDisplay({
 						ph: window.latestOriginalData.ph,
