@@ -213,6 +213,27 @@ try {
 			}
 		}
 
+		if ($action === 'test_manipulation') {
+			// Simple test to verify manipulation settings are working
+			$manipulationEnabled = getSetting($conn, 'manipulation_enabled', '0');
+			$manipulationRunning = getSetting($conn, 'manipulation_running', '0');
+			$manipulatePh = getSetting($conn, 'manipulate_ph', '0');
+			$phRange = getSetting($conn, 'ph_range', '6-7');
+			
+			header('Content-Type: application/json');
+			echo json_encode([
+				'success' => true,
+				'test_results' => [
+					'manipulation_enabled' => $manipulationEnabled,
+					'manipulation_running' => $manipulationRunning,
+					'manipulate_ph' => $manipulatePh,
+					'ph_range' => $phRange,
+					'timestamp' => date('Y-m-d H:i:s')
+				]
+			]);
+			exit;
+		}
+
 		if ($action === 'insert_reading_categories') {
 			$phCategory = isset($_POST['ph_category']) ? (string)$_POST['ph_category'] : '';
 			$turbidityCategory = isset($_POST['turbidity_category']) ? (string)$_POST['turbidity_category'] : '';
@@ -633,6 +654,10 @@ $tdsRanges = [
 					<strong>Manipulate TDS:</strong> <?php echo getSetting($conn, 'manipulate_tds', '0') === '1' ? 'YES' : 'NO'; ?> (Range: <?php echo getSetting($conn, 'tds_range', '0-50'); ?>)<br/>
 					<strong>Manipulate Temperature:</strong> <?php echo getSetting($conn, 'manipulate_temperature', '0') === '1' ? 'YES' : 'NO'; ?> (Range: <?php echo getSetting($conn, 'temperature_range', '20-25'); ?>)
 				</div>
+				<div style="margin-top: 12px;">
+					<button id="testManipulationBtn" type="button" style="background: #007bff; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">Test Manipulation Settings</button>
+					<div id="testResults" style="margin-top: 8px; font-size: 11px;"></div>
+				</div>
 			</div>
 		</div>
 	</section>
@@ -1005,6 +1030,32 @@ $tdsRanges = [
 
 		document.getElementById('startManipulationBtn').addEventListener('click', startManipulation);
 		document.getElementById('stopManipulationBtn').addEventListener('click', stopManipulation);
+
+		// Add test button event listener
+		document.getElementById('testManipulationBtn').addEventListener('click', function() {
+			var formData = new FormData();
+			formData.append('action', 'test_manipulation');
+			
+			fetch(window.location.href, {
+				method: 'POST',
+				body: formData,
+				credentials: 'same-origin'
+			}).then(function(r) { return r.json(); })
+			.then(function(json) {
+				if (json && json.success) {
+					var results = json.test_results;
+					var el = document.getElementById('testResults');
+					el.innerHTML = '<strong>Test Results:</strong><br/>' +
+						'Manipulation Enabled: ' + results.manipulation_enabled + '<br/>' +
+						'Manipulation Running: ' + results.manipulation_running + '<br/>' +
+						'Manipulate pH: ' + results.manipulate_ph + '<br/>' +
+						'pH Range: ' + results.ph_range + '<br/>' +
+						'Timestamp: ' + results.timestamp;
+				}
+			}).catch(function(err) {
+				document.getElementById('testResults').innerHTML = 'Test failed: ' + err;
+			});
+		});
 
 		// Add event listeners for the main manipulation form inputs
 		var mainManipulationInputs = [
