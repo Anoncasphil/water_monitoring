@@ -141,12 +141,21 @@ try {
 			$manipulationEnabled = isset($_POST['manipulation_enabled']) && $_POST['manipulation_enabled'] === '1' ? '1' : '0';
 			setSetting($conn, 'manipulation_enabled', $manipulationEnabled);
 			
+			// Debug: Log what we received
+			error_log("SAVE MANIPULATION SETTINGS - Received POST data:");
+			error_log("  manipulation_enabled: " . (isset($_POST['manipulation_enabled']) ? $_POST['manipulation_enabled'] : 'NOT SET'));
+			error_log("  manipulate_ph: " . (isset($_POST['manipulate_ph']) ? $_POST['manipulate_ph'] : 'NOT SET'));
+			error_log("  manipulate_turbidity: " . (isset($_POST['manipulate_turbidity']) ? $_POST['manipulate_turbidity'] : 'NOT SET'));
+			error_log("  manipulate_tds: " . (isset($_POST['manipulate_tds']) ? $_POST['manipulate_tds'] : 'NOT SET'));
+			error_log("  manipulate_temperature: " . (isset($_POST['manipulate_temperature']) ? $_POST['manipulate_temperature'] : 'NOT SET'));
+			
 			// Save the selected ranges
 			$ranges = ['ph_range', 'turbidity_range', 'tds_range', 'temperature_range'];
 			foreach ($ranges as $range) {
 				$value = isset($_POST[$range]) ? (string)$_POST[$range] : '';
 				if (!empty($value)) {
 					setSetting($conn, $range, $value);
+					error_log("  Saved $range: $value");
 				}
 			}
 			
@@ -155,8 +164,10 @@ try {
 			foreach ($sensors as $sensor) {
 				$value = isset($_POST[$sensor]) && $_POST[$sensor] === '1' ? '1' : '0';
 				setSetting($conn, $sensor, $value);
+				error_log("  Saved $sensor: $value");
 			}
 			
+			error_log("SAVE MANIPULATION SETTINGS - Completed");
 			$messages[] = 'Data manipulation settings saved successfully.';
 		}
 
