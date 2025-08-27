@@ -427,13 +427,13 @@ $tdsRanges = [
 
 	<section>
 		<h2>Data Manipulation Settings</h2>
-		<p class="small">Modify sensor readings in real-time. These settings affect ONLY the latest reading display every second.</p>
+		<p class="small">Control data manipulation with start/stop. When running, applies manipulation to every new reading every second.</p>
 		<form method="post">
 			<input type="hidden" name="action" value="save_manipulation_settings" />
 			<div class="row">
 				<label>
 					<input type="checkbox" name="manipulation_enabled" value="1" <?php echo $manipulationSettings['manipulation_enabled'] ? 'checked' : ''; ?> />
-					Enable continuous data manipulation
+					Enable data manipulation system
 				</label>
 			</div>
 			
@@ -494,11 +494,21 @@ $tdsRanges = [
 			<div class="formula-box">
 				<div class="small">
 					<strong>Formula:</strong> Final Value = (Original Value + Offset) × Multiplier<br/>
-					<strong>Note:</strong> This manipulation is applied continuously every second to the latest reading display only.<br/>
+					<strong>Note:</strong> These settings are applied continuously every second to the latest reading display only.<br/>
 					<strong>Example:</strong> pH 7.0 + 1.0 offset × 0.8 multiplier = (7.0 + 1.0) × 0.8 = 6.4
 				</div>
 			</div>
 		</form>
+		
+		<div style="margin-top: 20px; padding: 16px; background: #f8f9fa; border-radius: 8px;">
+			<h3>Manipulation Control</h3>
+			<p class="small">Start/stop the continuous manipulation process. When running, applies your settings to every new reading every second.</p>
+			<div class="row">
+				<button id="startManipulationBtn" type="button">Start Manipulation</button>
+				<button id="stopManipulationBtn" type="button" disabled>Stop Manipulation</button>
+			</div>
+			<div id="manipulation_status" class="small" style="margin-top: 8px;"></div>
+		</div>
 	</section>
 
 	<section>
@@ -641,6 +651,7 @@ $tdsRanges = [
 		var timerId = null;
 		var lastResponse = null;
 		var latestDataTimerId = null;
+		var manipulationTimerId = null; // New timer for continuous manipulation
 
 		function setRunning(running) {
 			document.getElementById('startBtn').disabled = running;
@@ -702,6 +713,43 @@ $tdsRanges = [
 			});
 		}
 
+		function startManipulation() {
+			if (manipulationTimerId !== null) return;
+			var el = document.getElementById('manipulation_status');
+			el.textContent = 'Manipulation started. Applying settings to every new reading...';
+			
+			// Check if manipulation is enabled in the form
+			var manipulationEnabled = document.querySelector('input[name="manipulation_enabled"]').checked;
+			if (!manipulationEnabled) {
+				el.textContent = 'Error: Please enable data manipulation system first.';
+				return;
+			}
+			
+			manipulationTimerId = setInterval(function() {
+				if (window.latestOriginalData) {
+					// Apply manipulation to the current display
+					applyLiveManipulation();
+					el.textContent = 'Manipulation applied. Updated: ' + new Date().toLocaleTimeString();
+				} else {
+					el.textContent = 'No data to manipulate. Please insert a reading first.';
+				}
+			}, 1000); // Apply every second
+			
+			document.getElementById('startManipulationBtn').disabled = true;
+			document.getElementById('stopManipulationBtn').disabled = false;
+		}
+
+		function stopManipulation() {
+			if (manipulationTimerId !== null) {
+				clearInterval(manipulationTimerId);
+				manipulationTimerId = null;
+				var el = document.getElementById('manipulation_status');
+				el.textContent = 'Manipulation stopped.';
+				document.getElementById('startManipulationBtn').disabled = false;
+				document.getElementById('stopManipulationBtn').disabled = true;
+			}
+		}
+
 		function updateLatestDataDisplay(data) {
 			// Update the summary display
 			var el = document.getElementById('latest_data');
@@ -716,37 +764,45 @@ $tdsRanges = [
 			var temperatureOffset = parseFloat(document.getElementById('temperature_offset').value) || 0;
 			var temperatureMultiplier = parseFloat(document.getElementById('temperature_multiplier').value) || 1;
 			
-			// Check if manipulation is enabled
+			// Check if manipulation is enabled AND manipulation timer is running
 			var manipulationEnabled = document.querySelector('input[name="manipulation_enabled"]').checked;
+			var manipulationRunning = manipulationTimerId !== null;
 			
-			// Apply manipulation if enabled
+			// Apply manipulation if both enabled and running
 			var phDisplay = data.ph;
 			var turbidityDisplay = data.turbidity;
 			var tdsDisplay = data.tds;
 			var temperatureDisplay = data.temperature;
 			
-			if (manipulationEnabled) {
+			if (manipulationEnabled && manipulationRunning) {
 				phDisplay = (data.ph + phOffset) * phMultiplier;
 				turbidityDisplay = (data.turbidity + turbidityOffset) * turbidityMultiplier;
 				tdsDisplay = (data.tds + tdsOffset) * tdsMultiplier;
 				temperatureDisplay = (data.temperature + temperatureOffset) * temperatureMultiplier;
 			}
 			
-			// Show manipulated values in the summary if enabled
-			if (manipulationEnabled) {
+			// Show manipulated values in the summary if both enabled and running
+			if (manipulationEnabled && manipulationRunning) {
 				el.innerHTML = '<strong>Latest Reading (Manipulated):</strong> pH: ' + phDisplay.toFixed(2) + 
 							  ', Turbidity: ' + turbidityDisplay.toFixed(2) + ' NTU' +
 							  ', TDS: ' + tdsDisplay.toFixed(2) + ' ppm' +
 							  ', Temperature: ' + temperatureDisplay.toFixed(2) + '°C' +
 							  ', In: ' + data.in +
-							  ' <br><small>Updated: ' + new Date().toLocaleTimeString() + ' | Manipulation: ON</small>';
+							  ' <br><small>Updated: ' + new Date().toLocaleTimeString() + ' | Manipulation: RUNNING</small>';
+			} else if (manipulationEnabled && !manipulationRunning) {
+				el.innerHTML = '<strong>Latest Reading (Original):</strong> pH: ' + data.ph + 
+							  ', Turbidity: ' + data.turbidity + ' NTU' +
+							  ', TDS: ' + data.tds + ' ppm' +
+							  ', Temperature: ' + data.temperature + '°C' +
+							  ', In: ' + data.in +
+							  ' <br><small>Updated: ' + new Date().toLocaleTimeString() + ' | Manipulation: STOPPED</small>';
 			} else {
 				el.innerHTML = '<strong>Latest Reading (Original):</strong> pH: ' + data.ph + 
 							  ', Turbidity: ' + data.turbidity + ' NTU' +
 							  ', TDS: ' + data.tds + ' ppm' +
 							  ', Temperature: ' + data.temperature + '°C' +
 							  ', In: ' + data.in +
-							  ' <br><small>Updated: ' + new Date().toLocaleTimeString() + ' | Manipulation: OFF</small>';
+							  ' <br><small>Updated: ' + new Date().toLocaleTimeString() + ' | Manipulation: DISABLED</small>';
 			}
 
 			// Store original values for manipulation
@@ -825,6 +881,9 @@ $tdsRanges = [
 				stopLatestDataMonitor(); // Stop monitoring when continuous insert stops
 			}
 		});
+
+		document.getElementById('startManipulationBtn').addEventListener('click', startManipulation);
+		document.getElementById('stopManipulationBtn').addEventListener('click', stopManipulation);
 
 		// Live manipulation event listeners
 		document.getElementById('applyLiveManipulation').addEventListener('click', function() {
