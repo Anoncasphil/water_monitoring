@@ -210,9 +210,10 @@ function checkAndTriggerAutomation($conn) {
     $analysis = analyzeSensorData($latest_reading, $conn);
     
     // Get current relay state for filter (relay 1)
-    $relay_result = $conn->query("SELECT state FROM relay_states WHERE relay_number = 1");
+    $relay_result = $conn->query("SELECT state, manual_override FROM relay_states WHERE relay_number = 1");
     $current_filter_state = $relay_result->fetch_assoc();
     $filter_currently_on = $current_filter_state && $current_filter_state['state'] == 1;
+    $filter_manually_controlled = $current_filter_state && $current_filter_state['manual_override'] == 1;
     
     // Check if automation is enabled
     $automation_result = $conn->query("SELECT enabled, filter_auto_enabled FROM automation_settings WHERE id = 1");
@@ -232,8 +233,8 @@ function checkAndTriggerAutomation($conn) {
     $new_filter_state = $filter_currently_on ? 1 : 0;
     
     if ($analysis['should_activate_filter'] && !$filter_currently_on) {
-        // Activate filter
-        $stmt = $conn->prepare("UPDATE relay_states SET state = 1 WHERE relay_number = 1");
+        // Activate filter and clear manual override (automation is now in control)
+        $stmt = $conn->prepare("UPDATE relay_states SET state = 1, manual_override = 0 WHERE relay_number = 1");
         $stmt->execute();
         $new_filter_state = 1;
         $action_taken = "filter_activated";
@@ -242,28 +243,43 @@ function checkAndTriggerAutomation($conn) {
         $stmt = $conn->prepare("INSERT INTO activity_logs (user_id, action_type, performed_by, message, details, timestamp) VALUES (?, ?, ?, ?, ?, NOW())");
         $system_user_id = null; // System user (NULL for foreign key constraint)
         $action_type = "automation_triggered";
-        $performed_by = "Automation System";
+        $performed_by = "Water Quality Control System";
         $message = "Filter activated due to water quality";
         $details = $analysis['reason'];
         $stmt->bind_param("issss", $system_user_id, $action_type, $performed_by, $message, $details);
         $stmt->execute();
         
     } elseif (!$analysis['should_activate_filter'] && $filter_currently_on) {
-        // Deactivate filter if conditions are now normal
-        $stmt = $conn->prepare("UPDATE relay_states SET state = 0 WHERE relay_number = 1");
-        $stmt->execute();
-        $new_filter_state = 0;
-        $action_taken = "filter_deactivated";
-        
-        // Log the automation action
-        $stmt = $conn->prepare("INSERT INTO activity_logs (user_id, action_type, performed_by, message, details, timestamp) VALUES (?, ?, ?, ?, ?, NOW())");
-        $system_user_id = null; // System user (NULL for foreign key constraint)
-        $action_type = "automation_triggered";
-        $performed_by = "Automation System";
-        $message = "Filter deactivated - water quality normal";
-        $details = "TDS: {$analysis['tds_value']} ppm ({$analysis['tds_status']}), Turbidity: {$analysis['turbidity_value']} NTU ({$analysis['turbidity_status']})";
-        $stmt->bind_param("issss", $system_user_id, $action_type, $performed_by, $message, $details);
-        $stmt->execute();
+        // Check if filter is under manual control - if so, DON'T turn it off automatically
+        if ($filter_manually_controlled) {
+            $action_taken = "filter_manual_override_protected";
+            
+            // Log that automation was blocked by manual override
+            $stmt = $conn->prepare("INSERT INTO activity_logs (user_id, action_type, performed_by, message, details, timestamp) VALUES (?, ?, ?, ?, ?, NOW())");
+            $system_user_id = null; // System user (NULL for foreign key constraint)
+            $action_type = "automation_blocked";
+            $performed_by = "Water Quality Control System";
+            $message = "Filter deactivation blocked - manual override active";
+            $details = "Water quality normal but filter remains ON due to manual control. TDS: {$analysis['tds_value']} ppm ({$analysis['tds_status']}), Turbidity: {$analysis['turbidity_value']} NTU ({$analysis['turbidity_status']})";
+            $stmt->bind_param("issss", $system_user_id, $action_type, $performed_by, $message, $details);
+            $stmt->execute();
+        } else {
+            // Deactivate filter if conditions are now normal AND it's not manually controlled
+            $stmt = $conn->prepare("UPDATE relay_states SET state = 0, manual_override = 0 WHERE relay_number = 1");
+            $stmt->execute();
+            $new_filter_state = 0;
+            $action_taken = "filter_deactivated";
+            
+            // Log the automation action
+            $stmt = $conn->prepare("INSERT INTO activity_logs (user_id, action_type, performed_by, message, details, timestamp) VALUES (?, ?, ?, ?, ?, NOW())");
+            $system_user_id = null; // System user (NULL for foreign key constraint)
+            $action_type = "automation_triggered";
+            $performed_by = "Water Quality Control System";
+            $message = "Filter deactivated - water quality normal";
+            $details = "TDS: {$analysis['tds_value']} ppm ({$analysis['tds_status']}), Turbidity: {$analysis['turbidity_value']} NTU ({$analysis['turbidity_status']})";
+            $stmt->bind_param("issss", $system_user_id, $action_type, $performed_by, $message, $details);
+            $stmt->execute();
+        }
     }
     
     // Update last check time

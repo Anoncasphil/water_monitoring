@@ -8,13 +8,14 @@ try {
 
     // Handle GET request for checking relay states
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-        $result = $conn->query("SELECT relay_number, state FROM relay_states ORDER BY relay_number");
+        $result = $conn->query("SELECT relay_number, state, manual_override FROM relay_states ORDER BY relay_number");
         $states = [];
         
         while ($row = $result->fetch_assoc()) {
             $states[] = [
                 "relay_number" => (int)$row['relay_number'],
-                "state" => (int)$row['state']
+                "state" => (int)$row['state'],
+                "manual_override" => (int)$row['manual_override']
             ];
         }
         
@@ -31,8 +32,8 @@ try {
             throw new Exception("Invalid relay or state value");
         }
 
-        // Update relay state in database
-        $stmt = $conn->prepare("UPDATE relay_states SET state = ? WHERE relay_number = ?");
+        // Update relay state in database and set manual override flag
+        $stmt = $conn->prepare("UPDATE relay_states SET state = ?, manual_override = 1 WHERE relay_number = ?");
         $stmt->bind_param("ii", $state, $relay);
         
         if (!$stmt->execute()) {
@@ -40,13 +41,14 @@ try {
         }
 
         // Get all relay states after update
-        $result = $conn->query("SELECT relay_number, state FROM relay_states ORDER BY relay_number");
+        $result = $conn->query("SELECT relay_number, state, manual_override FROM relay_states ORDER BY relay_number");
         $states = [];
         
         while ($row = $result->fetch_assoc()) {
             $states[] = [
                 "relay_number" => (int)$row['relay_number'],
-                "state" => (int)$row['state']
+                "state" => (int)$row['state'],
+                "manual_override" => (int)$row['manual_override']
             ];
         }
 
