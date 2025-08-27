@@ -98,6 +98,49 @@ try {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
         }
+        
+        /* Toast notification styles */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 400px;
+            padding: 16px;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .toast.show {
+            transform: translateX(0);
+        }
+        
+        .toast.success {
+            background: #10B981;
+            color: white;
+            border-left: 4px solid #059669;
+        }
+        
+        .toast.error {
+            background: #EF4444;
+            color: white;
+            border-left: 4px solid #DC2626;
+        }
+        
+        .toast.warning {
+            background: #F59E0B;
+            color: white;
+            border-left: 4px solid #D97706;
+        }
+        
+        .toast.info {
+            background: #3B82F6;
+            color: white;
+            border-left: 4px solid #2563EB;
+        }
         .switch {
             position: relative;
             display: inline-block;
@@ -462,11 +505,37 @@ try {
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
+            </div>
+</div>
 
-    <script>
+<!-- Toast Notification Container -->
+<div id="toastContainer"></div>
+
+<script>
         let activeRelays = 0;
+        
+        // Toast notification functions
+        function showToast(message, type = 'info', duration = 5000) {
+            const toastContainer = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            
+            toastContainer.appendChild(toast);
+            
+            // Trigger animation
+            setTimeout(() => toast.classList.add('show'), 100);
+            
+            // Auto-remove after duration
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.parentNode.removeChild(toast);
+                    }
+                }, 300);
+            }, duration);
+        }
         
         // Initialize uptime from localStorage or start new session
         function initializeUptime() {
@@ -620,6 +689,11 @@ try {
                 document.getElementById('masterAutomation').checked = data.automation_settings.enabled == 1;
                 document.getElementById('filterAutomation').checked = data.automation_settings.filter_auto_enabled == 1;
             }
+            
+            // Check if manual override is detected and show toast
+            if (data.manual_control_detected && data.automation_settings && data.automation_settings.enabled == 0) {
+                showToast('⚠️ Automation cannot be turned ON - Manual relay control is active', 'warning');
+            }
 
             // Update status displays
             if (data.automation_settings) {
@@ -684,11 +758,22 @@ try {
                 if (data.success) {
                     // Refresh automation data
                     fetchAutomationData();
+                    
+                    // Show success toast
+                    if (masterEnabled) {
+                        showToast('Master automation turned ON - Filter automation automatically enabled', 'success');
+                    } else {
+                        showToast('Master automation turned OFF - Filter automation automatically disabled', 'info');
+                    }
                 } else {
                     console.error('Error updating automation settings:', data.error);
+                    showToast('Failed to update automation settings', 'error');
                 }
             })
-            .catch(error => console.error('Error:', error));
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error updating automation settings', 'error');
+            });
         }
 
         function checkAutomationNow() {

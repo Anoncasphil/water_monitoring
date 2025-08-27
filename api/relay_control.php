@@ -33,6 +33,7 @@ try {
         }
 
         // Update relay state in database and set manual override flag
+        // Note: Arduino uses inverted logic (LOW=ON, HIGH=OFF) but database stores 1=ON, 0=OFF
         $stmt = $conn->prepare("UPDATE relay_states SET state = ?, manual_override = 1 WHERE relay_number = ?");
         $stmt->bind_param("ii", $state, $relay);
         
