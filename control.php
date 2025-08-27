@@ -427,13 +427,13 @@ $tdsRanges = [
 
 	<section>
 		<h2>Data Manipulation Settings</h2>
-		<p class="small">Modify sensor readings in real-time. These settings affect all data being uploaded.</p>
+		<p class="small">Modify sensor readings in real-time. These settings affect ONLY the latest reading display every second.</p>
 		<form method="post">
 			<input type="hidden" name="action" value="save_manipulation_settings" />
 			<div class="row">
 				<label>
 					<input type="checkbox" name="manipulation_enabled" value="1" <?php echo $manipulationSettings['manipulation_enabled'] ? 'checked' : ''; ?> />
-					Enable data manipulation
+					Enable continuous data manipulation
 				</label>
 			</div>
 			
@@ -494,6 +494,7 @@ $tdsRanges = [
 			<div class="formula-box">
 				<div class="small">
 					<strong>Formula:</strong> Final Value = (Original Value + Offset) × Multiplier<br/>
+					<strong>Note:</strong> This manipulation is applied continuously every second to the latest reading display only.<br/>
 					<strong>Example:</strong> pH 7.0 + 1.0 offset × 0.8 multiplier = (7.0 + 1.0) × 0.8 = 6.4
 				</div>
 			</div>
@@ -694,7 +695,7 @@ $tdsRanges = [
 			.then(function(json) {
 				if (json && json.success && json.data) {
 					updateLatestDataDisplay(json.data);
-					applyLiveManipulation();
+					// applyLiveManipulation(); // This is now handled by updateLatestDataDisplay
 				}
 			}).catch(function(err) {
 				console.error('Error fetching latest data:', err);
@@ -704,12 +705,49 @@ $tdsRanges = [
 		function updateLatestDataDisplay(data) {
 			// Update the summary display
 			var el = document.getElementById('latest_data');
-			el.innerHTML = '<strong>Latest Reading:</strong> pH: ' + data.ph + 
-						  ', Turbidity: ' + data.turbidity + ' NTU' +
-						  ', TDS: ' + data.tds + ' ppm' +
-						  ', Temperature: ' + data.temperature + '°C' +
-						  ', In: ' + data.in +
-						  ' <br><small>Updated: ' + new Date().toLocaleTimeString() + '</small>';
+			
+			// Get manipulation settings from the form
+			var phOffset = parseFloat(document.getElementById('ph_offset').value) || 0;
+			var phMultiplier = parseFloat(document.getElementById('ph_multiplier').value) || 1;
+			var turbidityOffset = parseFloat(document.getElementById('turbidity_offset').value) || 0;
+			var turbidityMultiplier = parseFloat(document.getElementById('turbidity_multiplier').value) || 1;
+			var tdsOffset = parseFloat(document.getElementById('tds_offset').value) || 0;
+			var tdsMultiplier = parseFloat(document.getElementById('tds_multiplier').value) || 1;
+			var temperatureOffset = parseFloat(document.getElementById('temperature_offset').value) || 0;
+			var temperatureMultiplier = parseFloat(document.getElementById('temperature_multiplier').value) || 1;
+			
+			// Check if manipulation is enabled
+			var manipulationEnabled = document.querySelector('input[name="manipulation_enabled"]').checked;
+			
+			// Apply manipulation if enabled
+			var phDisplay = data.ph;
+			var turbidityDisplay = data.turbidity;
+			var tdsDisplay = data.tds;
+			var temperatureDisplay = data.temperature;
+			
+			if (manipulationEnabled) {
+				phDisplay = (data.ph + phOffset) * phMultiplier;
+				turbidityDisplay = (data.turbidity + turbidityOffset) * turbidityMultiplier;
+				tdsDisplay = (data.tds + tdsOffset) * tdsMultiplier;
+				temperatureDisplay = (data.temperature + temperatureOffset) * temperatureMultiplier;
+			}
+			
+			// Show manipulated values in the summary if enabled
+			if (manipulationEnabled) {
+				el.innerHTML = '<strong>Latest Reading (Manipulated):</strong> pH: ' + phDisplay.toFixed(2) + 
+							  ', Turbidity: ' + turbidityDisplay.toFixed(2) + ' NTU' +
+							  ', TDS: ' + tdsDisplay.toFixed(2) + ' ppm' +
+							  ', Temperature: ' + temperatureDisplay.toFixed(2) + '°C' +
+							  ', In: ' + data.in +
+							  ' <br><small>Updated: ' + new Date().toLocaleTimeString() + ' | Manipulation: ON</small>';
+			} else {
+				el.innerHTML = '<strong>Latest Reading (Original):</strong> pH: ' + data.ph + 
+							  ', Turbidity: ' + data.turbidity + ' NTU' +
+							  ', TDS: ' + data.tds + ' ppm' +
+							  ', Temperature: ' + data.temperature + '°C' +
+							  ', In: ' + data.in +
+							  ' <br><small>Updated: ' + new Date().toLocaleTimeString() + ' | Manipulation: OFF</small>';
+			}
 
 			// Store original values for manipulation
 			window.latestOriginalData = {
@@ -724,6 +762,9 @@ $tdsRanges = [
 			document.getElementById('live_turbidity_original').textContent = data.turbidity;
 			document.getElementById('live_tds_original').textContent = data.tds;
 			document.getElementById('live_temperature_original').textContent = data.temperature;
+			
+			// Update modified value displays with current manipulation settings
+			applyLiveManipulation();
 		}
 
 		function applyLiveManipulation() {
@@ -817,6 +858,43 @@ $tdsRanges = [
 			document.getElementById(inputId).addEventListener('input', function() {
 				applyLiveManipulation();
 			});
+		});
+
+		// Add event listeners for the main manipulation form inputs
+		var mainManipulationInputs = [
+			'ph_offset', 'ph_multiplier',
+			'turbidity_offset', 'turbidity_multiplier',
+			'tds_offset', 'tds_multiplier',
+			'temperature_offset', 'temperature_multiplier'
+		];
+
+		mainManipulationInputs.forEach(function(inputId) {
+			document.getElementById(inputId).addEventListener('input', function() {
+				// Trigger immediate update of the display with new manipulation values
+				if (window.latestOriginalData) {
+					updateLatestDataDisplay({
+						ph: window.latestOriginalData.ph,
+						turbidity: window.latestOriginalData.turbidity,
+						tds: window.latestOriginalData.tds,
+						temperature: window.latestOriginalData.temperature,
+						in: 0
+					});
+				}
+			});
+		});
+
+		// Add event listener for the manipulation enabled checkbox
+		document.querySelector('input[name="manipulation_enabled"]').addEventListener('change', function() {
+			// Trigger immediate update when enabling/disabling manipulation
+			if (window.latestOriginalData) {
+				updateLatestDataDisplay({
+					ph: window.latestOriginalData.ph,
+					turbidity: window.latestOriginalData.turbidity,
+					tds: window.latestOriginalData.tds,
+					temperature: window.latestOriginalData.temperature,
+					in: 0
+				});
+			}
 		});
 
 		// Start monitoring latest data immediately when page loads
