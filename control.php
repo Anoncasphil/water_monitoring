@@ -742,6 +742,36 @@ $tdsRanges = [
 	</section>
 
 	<section>
+		<h2>Continuous Database Updates (New Approach)</h2>
+		<p>This approach updates the latest reading in the database every second instead of inserting new records.</p>
+		
+		<div style="margin-bottom: 16px;">
+			<button id="startDbUpdatesBtn" type="button" style="background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Start Database Updates</button>
+			<button id="stopDbUpdatesBtn" type="button" style="background: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-left: 8px;">Stop Database Updates</button>
+		</div>
+		
+		<div id="dbUpdateStatus" style="padding: 8px; border-radius: 4px; display: none;">
+			<strong>Status:</strong> <span id="dbUpdateStatusText">Stopped</span>
+		</div>
+		
+		<div id="dbUpdateResults" style="margin-top: 12px; padding: 8px; background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 4px; font-size: 12px; display: none;">
+			<strong>Last Update Results:</strong>
+			<div id="dbUpdateResultsContent"></div>
+		</div>
+		
+		<div style="margin-top: 16px; padding: 12px; background: #e7f3ff; border: 1px solid #b3d9ff; border-radius: 4px;">
+			<h4 style="margin: 0 0 8px 0; color: #0056b3;">How This Works:</h4>
+			<div class="small">
+				<strong>1.</strong> Start Database Updates when manipulation is enabled<br/>
+				<strong>2.</strong> The API will update the latest reading every second<br/>
+				<strong>3.</strong> Only the sensors you've enabled for manipulation will be updated<br/>
+				<strong>4.</strong> The database table will show the manipulated values<br/>
+				<strong>5.</strong> Use "Verify Database Contents" to see the changes
+			</div>
+		</div>
+	</section>
+
+	<section>
 		<h2>Continuous Insert (every second)</h2>
 		<p class="small">This will insert a new row in `water_readings` every second until you stop it.</p>
 		<div class="row">
@@ -1171,6 +1201,79 @@ $tdsRanges = [
 				document.getElementById('databaseResults').innerHTML = 'Database verification failed: ' + err;
 			});
 		});
+
+		// Database Update functionality
+		var dbUpdateInterval = null;
+		
+		document.getElementById('startDbUpdatesBtn').addEventListener('click', function() {
+			if (dbUpdateInterval) {
+				clearInterval(dbUpdateInterval);
+			}
+			
+			// Start continuous updates
+			dbUpdateInterval = setInterval(function() {
+				updateLatestReading();
+			}, 1000);
+			
+			// Update UI
+			document.getElementById('dbUpdateStatus').style.display = 'block';
+			document.getElementById('dbUpdateStatusText').textContent = 'Running (updating every second)';
+			document.getElementById('dbUpdateStatus').style.background = '#d4edda';
+			document.getElementById('dbUpdateStatus').style.border = '1px solid #c3e6cb';
+			document.getElementById('dbUpdateStatus').style.color = '#155724';
+			
+			document.getElementById('dbUpdateResults').style.display = 'block';
+		});
+		
+		document.getElementById('stopDbUpdatesBtn').addEventListener('click', function() {
+			if (dbUpdateInterval) {
+				clearInterval(dbUpdateInterval);
+				dbUpdateInterval = null;
+			}
+			
+			// Update UI
+			document.getElementById('dbUpdateStatusText').textContent = 'Stopped';
+			document.getElementById('dbUpdateStatus').style.background = '#f8d7da';
+			document.getElementById('dbUpdateStatus').style.border = '1px solid #f5c6cb';
+			document.getElementById('dbUpdateStatus').style.color = '#721c24';
+		});
+		
+		function updateLatestReading() {
+			fetch('api/update_latest_reading.php?action=update_latest')
+				.then(function(response) { return response.json(); })
+				.then(function(json) {
+					if (json && json.success) {
+						var data = json.data;
+						var el = document.getElementById('dbUpdateResultsContent');
+						
+						var html = '<div style="margin-bottom: 8px;">';
+						html += '<strong>Updated ID:</strong> ' + data.id + ' at ' + new Date().toLocaleTimeString() + '<br/>';
+						
+						if (data.manipulated_sensors.turbidity) {
+							html += '<strong>Turbidity:</strong> ' + data.original.turbidity + ' → ' + data.updated.turbidity + '<br/>';
+						}
+						if (data.manipulated_sensors.tds) {
+							html += '<strong>TDS:</strong> ' + data.original.tds + ' → ' + data.updated.tds + '<br/>';
+						}
+						if (data.manipulated_sensors.ph) {
+							html += '<strong>pH:</strong> ' + data.original.ph + ' → ' + data.updated.ph + '<br/>';
+						}
+						if (data.manipulated_sensors.temperature) {
+							html += '<strong>Temperature:</strong> ' + data.original.temperature + ' → ' + data.updated.temperature + '<br/>';
+						}
+						
+						html += '</div>';
+						el.innerHTML = html;
+					} else {
+						document.getElementById('dbUpdateResultsContent').innerHTML = 
+							'<div style="color: #721c24;">Error: ' + (json.message || 'Unknown error') + '</div>';
+					}
+				})
+				.catch(function(err) {
+					document.getElementById('dbUpdateResultsContent').innerHTML = 
+						'<div style="color: #721c24;">Failed to update: ' + err.message + '</div>';
+				});
+		}
 
 		// Add event listeners for the main manipulation form inputs
 		var mainManipulationInputs = [
