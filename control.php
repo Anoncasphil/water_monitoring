@@ -645,26 +645,6 @@ $tdsRanges = [
 			});
 		}
 
-		function fetchLatestData() {
-			var formData = new FormData();
-			formData.append('action', 'get_latest_reading');
-			formData.append('ajax', '1');
-
-			fetch(window.location.href, {
-				method: 'POST',
-				body: formData,
-				credentials: 'same-origin'
-			}).then(function(r) { return r.json(); })
-			.then(function(json) {
-				if (json && json.success && json.data) {
-					updateLatestDataDisplay(json.data);
-					// applyLiveManipulation(); // This is now handled by updateLatestDataDisplay
-				}
-			}).catch(function(err) {
-				console.error('Error fetching latest data:', err);
-			});
-		}
-
 		function startManipulation() {
 			if (manipulationTimerId !== null) return;
 			var el = document.getElementById('manipulation_status');
@@ -689,14 +669,21 @@ $tdsRanges = [
 			}).then(function() {
 				// Start the manipulation timer
 				manipulationTimerId = setInterval(function() {
-					if (window.latestOriginalData) {
-						// Apply manipulation to the current display
-						applyLiveManipulation();
-						el.textContent = 'Manipulation applied. Updated: ' + new Date().toLocaleTimeString();
-					} else {
-						el.textContent = 'No data to manipulate. Please insert a reading first.';
-					}
-				}, 1000); // Apply every second
+					// Generate random values even without existing data
+					var phRange = document.getElementById('ph_range').value;
+					var turbidityRange = document.getElementById('turbidity_range').value;
+					var tdsRange = document.getElementById('tds_range').value;
+					var temperatureRange = document.getElementById('temperature_range').value;
+					
+					// Generate random values within ranges
+					var phRandom = randomInRange(parseRange(phRange)[0], parseRange(phRange)[1], 2);
+					var turbidityRandom = randomInRange(parseRange(turbidityRange)[0], parseRange(turbidityRange)[1], 2);
+					var tdsRandom = randomInRange(parseRange(tdsRange)[0], parseRange(tdsRange)[1], 2);
+					var temperatureRandom = randomInRange(parseRange(temperatureRange)[0], parseRange(temperatureRange)[1], 2);
+					
+					// Update status with generated values
+					el.textContent = 'Generated: pH ' + phRandom + ', Turbidity ' + turbidityRandom + ' NTU, TDS ' + tdsRandom + ' ppm, Temp ' + temperatureRandom + '°C - ' + new Date().toLocaleTimeString();
+				}, 1000); // Generate every second
 				
 				document.getElementById('startManipulationBtn').disabled = true;
 				document.getElementById('stopManipulationBtn').disabled = false;
@@ -818,8 +805,42 @@ $tdsRanges = [
 
 		function startLatestDataMonitor() {
 			if (latestDataTimerId !== null) return;
-			fetchLatestData(); // Fetch immediately
+			
+			// Try to fetch data immediately, but don't fail if none exists
+			fetchLatestData();
+			
+			// Then set up the interval for continuous monitoring
 			latestDataTimerId = setInterval(fetchLatestData, 1000); // Then every second
+		}
+
+		function fetchLatestData() {
+			var formData = new FormData();
+			formData.append('action', 'get_latest_reading');
+			formData.append('ajax', '1');
+
+			fetch(window.location.href, {
+				method: 'POST',
+				body: formData,
+				credentials: 'same-origin'
+			}).then(function(r) { return r.json(); })
+			.then(function(json) {
+				if (json && json.success && json.data) {
+					updateLatestDataDisplay(json.data);
+				} else {
+					// No data exists yet, show a message
+					var el = document.getElementById('latest_data');
+					if (el) {
+						el.innerHTML = '<em>No readings found yet. Start continuous insert to generate data.</em>';
+					}
+				}
+			}).catch(function(err) {
+				console.error('Error fetching latest data:', err);
+				// Show error message in the display
+				var el = document.getElementById('latest_data');
+				if (el) {
+					el.innerHTML = '<em>Error loading data. Please check the connection.</em>';
+				}
+			});
 		}
 
 		function stopLatestDataMonitor() {
@@ -856,8 +877,28 @@ $tdsRanges = [
 		];
 
 		mainManipulationInputs.forEach(function(inputId) {
-			document.getElementById(inputId).addEventListener('change', function() {
-				// Trigger immediate update of the display with new range values
+			var element = document.getElementById(inputId);
+			if (element) {
+				element.addEventListener('change', function() {
+					// Trigger immediate update of the display with new range values
+					if (window.latestOriginalData) {
+						updateLatestDataDisplay({
+							ph: window.latestOriginalData.ph,
+							turbidity: window.latestOriginalData.turbidity,
+							tds: window.latestOriginalData.tds,
+							temperature: window.latestOriginalData.temperature,
+							in: 0
+						});
+					}
+				});
+			}
+		});
+
+		// Add event listener for the manipulation enabled checkbox
+		var manipulationCheckbox = document.querySelector('input[name="manipulation_enabled"]');
+		if (manipulationCheckbox) {
+			manipulationCheckbox.addEventListener('change', function() {
+				// Trigger immediate update when enabling/disabling manipulation
 				if (window.latestOriginalData) {
 					updateLatestDataDisplay({
 						ph: window.latestOriginalData.ph,
@@ -868,27 +909,16 @@ $tdsRanges = [
 					});
 				}
 			});
-		});
-
-		// Add event listener for the manipulation enabled checkbox
-		document.querySelector('input[name="manipulation_enabled"]').addEventListener('change', function() {
-			// Trigger immediate update when enabling/disabling manipulation
-			if (window.latestOriginalData) {
-				updateLatestDataDisplay({
-					ph: window.latestOriginalData.ph,
-					turbidity: window.latestOriginalData.turbidity,
-					tds: window.latestOriginalData.tds,
-					temperature: window.latestOriginalData.temperature,
-					in: 0
-				});
-			}
-		});
+		}
 
 		// Add form submission handler to save ranges
-		document.querySelector('form[action*="save_manipulation_settings"]').addEventListener('submit', function(e) {
-			// Form will submit normally to save the ranges
-			// The manipulation will use these saved ranges
-		});
+		var manipulationForm = document.querySelector('form[action*="save_manipulation_settings"]');
+		if (manipulationForm) {
+			manipulationForm.addEventListener('submit', function(e) {
+				// Form will submit normally to save the ranges
+				// The manipulation will use these saved ranges
+			});
+		}
 
 		// Start monitoring latest data immediately when page loads
 		startLatestDataMonitor();
