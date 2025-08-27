@@ -973,11 +973,11 @@ $tdsRanges = [
 			}).then(function() {
 						// Start the manipulation timer - much faster for real-time updates
 		manipulationTimerId = setInterval(function() {
-			// Generate random values even without existing data
-			var phRange = document.getElementById('ph_range').value;
-			var turbidityRange = document.getElementById('turbidity_range').value;
-			var tdsRange = document.getElementById('tds_range').value;
-			var temperatureRange = document.getElementById('temperature_range').value;
+			// Generate random values using the manipulation range elements
+			var phRange = document.getElementById('manipulate_ph_range') ? document.getElementById('manipulate_ph_range').value : '6-7';
+			var turbidityRange = document.getElementById('manipulate_turbidity_range') ? document.getElementById('manipulate_turbidity_range').value : '1-2';
+			var tdsRange = document.getElementById('manipulate_tds_range') ? document.getElementById('manipulate_tds_range').value : '0-50';
+			var temperatureRange = document.getElementById('manipulate_temperature_range') ? document.getElementById('manipulate_temperature_range').value : '20-25';
 			
 			// Generate random values within ranges
 			var phRandom = randomInRange(parseRange(phRange)[0], parseRange(phRange)[1], 2);
