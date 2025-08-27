@@ -234,6 +234,10 @@ try {
 			$manipulationEnabled = getSetting($conn, 'manipulation_enabled', '0') === '1';
 			$manipulationRunning = getSetting($conn, 'manipulation_running', '0') === '1';
 			
+			// Debug: Log the manipulation status
+			error_log("Manipulation enabled: " . ($manipulationEnabled ? 'YES' : 'NO'));
+			error_log("Manipulation running: " . ($manipulationRunning ? 'YES' : 'NO'));
+			
 			if ($manipulationEnabled && $manipulationRunning) {
 				// Get individual manipulation settings for each sensor
 				$manipulatePh = getSetting($conn, 'manipulate_ph', '1') === '1';
@@ -241,31 +245,44 @@ try {
 				$manipulateTds = getSetting($conn, 'manipulate_tds', '1') === '1';
 				$manipulateTemperature = getSetting($conn, 'manipulate_temperature', '1') === '1';
 				
+				// Debug: Log individual sensor settings
+				error_log("Manipulate pH: " . ($manipulatePh ? 'YES' : 'NO'));
+				error_log("Manipulate Turbidity: " . ($manipulateTurbidity ? 'YES' : 'NO'));
+				error_log("Manipulate TDS: " . ($manipulateTds ? 'YES' : 'NO'));
+				error_log("Manipulate Temperature: " . ($manipulateTemperature ? 'YES' : 'NO'));
+				
 				// Override with manipulated random values for enabled sensors
 				if ($manipulatePh) {
 					$phRange = getSetting($conn, 'ph_range', '6-7');
 					[$phMin, $phMax] = parseRange($phRange);
 					$ph = randomInRange($phMin, $phMax, 2);
+					error_log("pH manipulated from range $phRange to: $ph");
 				}
 				
 				if ($manipulateTurbidity) {
 					$turbidityRange = getSetting($conn, 'turbidity_range', '1-2');
 					[$turMin, $turMax] = parseRange($turbidityRange);
 					$turbidity = randomInRange($turMin, $turMax, 2);
+					error_log("Turbidity manipulated from range $turbidityRange to: $turbidity");
 				}
 				
 				if ($manipulateTds) {
 					$tdsRange = getSetting($conn, 'tds_range', '0-50');
 					[$tdsMin, $tdsMax] = parseRange($tdsRange);
 					$tds = randomInRange($tdsMin, $tdsMax, 2);
+					error_log("TDS manipulated from range $tdsRange to: $tds");
 				}
 				
 				if ($manipulateTemperature) {
 					$temperatureRange = getSetting($conn, 'temperature_range', '20-25');
 					[$tempMin, $tempMax] = parseRange($temperatureRange);
 					$temperature = randomInRange($tempMin, $tempMax, 2);
+					error_log("Temperature manipulated from range $temperatureRange to: $temperature");
 				}
 			}
+
+			// Debug: Log final values being inserted
+			error_log("Final values to insert - pH: $ph, Turbidity: $turbidity, TDS: $tds, Temperature: $temperature");
 
 			$stmt = $conn->prepare("INSERT INTO water_readings (turbidity, tds, ph, temperature, `in`) VALUES (?, ?, ?, ?, ?)");
 			$stmt->bind_param('ddddd', $turbidity, $tds, $ph, $temperature, $inValue);
@@ -604,6 +621,19 @@ $tdsRanges = [
 				<button id="stopManipulationBtn" type="button" disabled>Stop Manipulation</button>
 			</div>
 			<div id="manipulation_status" class="small" style="margin-top: 8px;"></div>
+			
+			<!-- Debug section to show current settings -->
+			<div style="margin-top: 16px; padding: 12px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px;">
+				<h4 style="margin: 0 0 8px 0; color: #856404;">Debug: Current Settings</h4>
+				<div class="small">
+					<strong>Manipulation Enabled:</strong> <?php echo getSetting($conn, 'manipulation_enabled', '0') === '1' ? 'YES' : 'NO'; ?><br/>
+					<strong>Manipulation Running:</strong> <?php echo getSetting($conn, 'manipulation_running', '0') === '1' ? 'YES' : 'NO'; ?><br/>
+					<strong>Manipulate pH:</strong> <?php echo getSetting($conn, 'manipulate_ph', '0') === '1' ? 'YES' : 'NO'; ?> (Range: <?php echo getSetting($conn, 'ph_range', '6-7'); ?>)<br/>
+					<strong>Manipulate Turbidity:</strong> <?php echo getSetting($conn, 'manipulate_turbidity', '0') === '1' ? 'YES' : 'NO'; ?> (Range: <?php echo getSetting($conn, 'turbidity_range', '1-2'); ?>)<br/>
+					<strong>Manipulate TDS:</strong> <?php echo getSetting($conn, 'manipulate_tds', '0') === '1' ? 'YES' : 'NO'; ?> (Range: <?php echo getSetting($conn, 'tds_range', '0-50'); ?>)<br/>
+					<strong>Manipulate Temperature:</strong> <?php echo getSetting($conn, 'manipulate_temperature', '0') === '1' ? 'YES' : 'NO'; ?> (Range: <?php echo getSetting($conn, 'temperature_range', '20-25'); ?>)
+				</div>
+			</div>
 		</div>
 	</section>
 
