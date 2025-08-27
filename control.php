@@ -150,6 +150,13 @@ try {
 				}
 			}
 			
+			// Save individual manipulation settings for each sensor
+			$sensors = ['manipulate_ph', 'manipulate_turbidity', 'manipulate_tds', 'manipulate_temperature'];
+			foreach ($sensors as $sensor) {
+				$value = isset($_POST[$sensor]) && $_POST[$sensor] === '1' ? '1' : '0';
+				setSetting($conn, $sensor, $value);
+			}
+			
 			$messages[] = 'Data manipulation settings saved successfully.';
 		}
 
@@ -228,22 +235,36 @@ try {
 			$manipulationRunning = getSetting($conn, 'manipulation_running', '0') === '1';
 			
 			if ($manipulationEnabled && $manipulationRunning) {
-				// Get manipulation ranges and generate random values
-				$phRange = getSetting($conn, 'ph_range', '6-7');
-				$turbidityRange = getSetting($conn, 'turbidity_range', '1-2');
-				$tdsRange = getSetting($conn, 'tds_range', '0-50');
-				$temperatureRange = getSetting($conn, 'temperature_range', '20-25');
+				// Get individual manipulation settings for each sensor
+				$manipulatePh = getSetting($conn, 'manipulate_ph', '1') === '1';
+				$manipulateTurbidity = getSetting($conn, 'manipulate_turbidity', '1') === '1';
+				$manipulateTds = getSetting($conn, 'manipulate_tds', '1') === '1';
+				$manipulateTemperature = getSetting($conn, 'manipulate_temperature', '1') === '1';
 				
-				[$phMin, $phMax] = parseRange($phRange);
-				[$turMin, $turMax] = parseRange($turbidityRange);
-				[$tdsMin, $tdsMax] = parseRange($tdsRange);
-				[$tempMin, $tempMax] = parseRange($temperatureRange);
+				// Override with manipulated random values for enabled sensors
+				if ($manipulatePh) {
+					$phRange = getSetting($conn, 'ph_range', '6-7');
+					[$phMin, $phMax] = parseRange($phRange);
+					$ph = randomInRange($phMin, $phMax, 2);
+				}
 				
-				// Override with manipulated random values
-				$ph = randomInRange($phMin, $phMax, 2);
-				$turbidity = randomInRange($turMin, $turMax, 2);
-				$tds = randomInRange($tdsMin, $tdsMax, 2);
-				$temperature = randomInRange($tempMin, $tempMax, 2);
+				if ($manipulateTurbidity) {
+					$turbidityRange = getSetting($conn, 'turbidity_range', '1-2');
+					[$turMin, $turMax] = parseRange($turbidityRange);
+					$turbidity = randomInRange($turMin, $turMax, 2);
+				}
+				
+				if ($manipulateTds) {
+					$tdsRange = getSetting($conn, 'tds_range', '0-50');
+					[$tdsMin, $tdsMax] = parseRange($tdsRange);
+					$tds = randomInRange($tdsMin, $tdsMax, 2);
+				}
+				
+				if ($manipulateTemperature) {
+					$temperatureRange = getSetting($conn, 'temperature_range', '20-25');
+					[$tempMin, $tempMax] = parseRange($temperatureRange);
+					$temperature = randomInRange($tempMin, $tempMax, 2);
+				}
 			}
 
 			$stmt = $conn->prepare("INSERT INTO water_readings (turbidity, tds, ph, temperature, `in`) VALUES (?, ?, ?, ?, ?)");
@@ -330,6 +351,18 @@ try {
 
 	$currentUploadsDisabled = getSetting($conn, 'uploads_disabled', '0') === '1';
 	$manipulationSettings = getDataManipulationSettings($conn);
+	
+	// Load current manipulation settings
+	$currentManipulationSettings = [
+		'manipulate_ph' => getSetting($conn, 'manipulate_ph', '1'),
+		'manipulate_turbidity' => getSetting($conn, 'manipulate_turbidity', '1'),
+		'manipulate_tds' => getSetting($conn, 'manipulate_tds', '1'),
+		'manipulate_temperature' => getSetting($conn, 'manipulate_temperature', '1'),
+		'ph_range' => getSetting($conn, 'ph_range', '6-7'),
+		'turbidity_range' => getSetting($conn, 'turbidity_range', '1-2'),
+		'tds_range' => getSetting($conn, 'tds_range', '0-50'),
+		'temperature_range' => getSetting($conn, 'temperature_range', '20-25')
+	];
 } catch (Exception $e) {
 	$errors[] = 'Error: ' . $e->getMessage();
 }
@@ -469,15 +502,21 @@ $tdsRanges = [
 				<div>
 					<h3>pH Sensor</h3>
 					<div class="row">
+						<label>
+							<input type="checkbox" name="manipulate_ph" value="1" <?php echo $currentManipulationSettings['manipulate_ph'] === '1' ? 'checked' : ''; ?> />
+							Manipulate pH
+						</label>
+					</div>
+					<div class="row">
 						<label for="ph_range">pH Range:</label>
 						<select id="ph_range" name="ph_range">
-							<option value="3-4">3 - 4 (Very Acidic)</option>
-							<option value="4-5">4 - 5 (Acidic)</option>
-							<option value="5-6">5 - 6 (Slightly Acidic)</option>
-							<option value="6-7" selected>6 - 7 (Neutral)</option>
-							<option value="7-8">7 - 8 (Slightly Alkaline)</option>
-							<option value="8-9">8 - 9 (Alkaline)</option>
-							<option value="9-10">9 - 10 (Very Alkaline)</option>
+							<option value="3-4" <?php echo $currentManipulationSettings['ph_range'] === '3-4' ? 'selected' : ''; ?>>3 - 4 (Very Acidic)</option>
+							<option value="4-5" <?php echo $currentManipulationSettings['ph_range'] === '4-5' ? 'selected' : ''; ?>>4 - 5 (Acidic)</option>
+							<option value="5-6" <?php echo $currentManipulationSettings['ph_range'] === '5-6' ? 'selected' : ''; ?>>5 - 6 (Slightly Acidic)</option>
+							<option value="6-7" <?php echo $currentManipulationSettings['ph_range'] === '6-7' ? 'selected' : ''; ?>>6 - 7 (Neutral)</option>
+							<option value="7-8" <?php echo $currentManipulationSettings['ph_range'] === '7-8' ? 'selected' : ''; ?>>7 - 8 (Slightly Alkaline)</option>
+							<option value="8-9" <?php echo $currentManipulationSettings['ph_range'] === '8-9' ? 'selected' : ''; ?>>8 - 9 (Alkaline)</option>
+							<option value="9-10" <?php echo $currentManipulationSettings['ph_range'] === '9-10' ? 'selected' : ''; ?>>9 - 10 (Very Alkaline)</option>
 						</select>
 					</div>
 				</div>
@@ -485,14 +524,20 @@ $tdsRanges = [
 				<div>
 					<h3>Turbidity Sensor</h3>
 					<div class="row">
+						<label>
+							<input type="checkbox" name="manipulate_turbidity" value="1" <?php echo $currentManipulationSettings['manipulate_turbidity'] === '1' ? 'checked' : ''; ?> />
+							Manipulate Turbidity
+						</label>
+					</div>
+					<div class="row">
 						<label for="turbidity_range">Turbidity Range (NTU):</label>
 						<select id="turbidity_range" name="turbidity_range">
-							<option value="1-2">1 - 2 (Very Clear)</option>
-							<option value="2-5">2 - 5 (Clear)</option>
-							<option value="5-10">5 - 10 (Slightly Turbid)</option>
-							<option value="10-20">10 - 20 (Turbid)</option>
-							<option value="20-50">20 - 50 (Very Turbid)</option>
-							<option value="50-100">50 - 100 (Extremely Turbid)</option>
+							<option value="1-2" <?php echo $currentManipulationSettings['turbidity_range'] === '1-2' ? 'selected' : ''; ?>>1 - 2 (Very Clear)</option>
+							<option value="2-5" <?php echo $currentManipulationSettings['turbidity_range'] === '2-5' ? 'selected' : ''; ?>>2 - 5 (Clear)</option>
+							<option value="5-10" <?php echo $currentManipulationSettings['turbidity_range'] === '5-10' ? 'selected' : ''; ?>>5 - 10 (Slightly Turbid)</option>
+							<option value="10-20" <?php echo $currentManipulationSettings['turbidity_range'] === '10-20' ? 'selected' : ''; ?>>10 - 20 (Turbid)</option>
+							<option value="20-50" <?php echo $currentManipulationSettings['turbidity_range'] === '20-50' ? 'selected' : ''; ?>>20 - 50 (Very Turbid)</option>
+							<option value="50-100" <?php echo $currentManipulationSettings['turbidity_range'] === '50-100' ? 'selected' : ''; ?>>50 - 100 (Extremely Turbid)</option>
 						</select>
 					</div>
 				</div>
@@ -500,13 +545,19 @@ $tdsRanges = [
 				<div>
 					<h3>TDS Sensor</h3>
 					<div class="row">
+						<label>
+							<input type="checkbox" name="manipulate_tds" value="1" <?php echo $currentManipulationSettings['manipulate_tds'] === '1' ? 'checked' : ''; ?> />
+							Manipulate TDS
+						</label>
+					</div>
+					<div class="row">
 						<label for="tds_range">TDS Range (ppm):</label>
 						<select id="tds_range" name="tds_range">
-							<option value="0-50">0 - 50 (Very Low)</option>
-							<option value="50-150">50 - 150 (Low)</option>
-							<option value="150-300">150 - 300 (Medium)</option>
-							<option value="300-500">300 - 500 (High)</option>
-							<option value="500-1000">500 - 1000 (Very High)</option>
+							<option value="0-50" <?php echo $currentManipulationSettings['tds_range'] === '0-50' ? 'selected' : ''; ?>>0 - 50 (Very Low)</option>
+							<option value="50-150" <?php echo $currentManipulationSettings['tds_range'] === '50-150' ? 'selected' : ''; ?>>50 - 150 (Low)</option>
+							<option value="150-300" <?php echo $currentManipulationSettings['tds_range'] === '150-300' ? 'selected' : ''; ?>>150 - 300 (Medium)</option>
+							<option value="300-500" <?php echo $currentManipulationSettings['tds_range'] === '300-500' ? 'selected' : ''; ?>>300 - 500 (High)</option>
+							<option value="500-1000" <?php echo $currentManipulationSettings['tds_range'] === '500-1000' ? 'selected' : ''; ?>>500 - 1000 (Very High)</option>
 						</select>
 					</div>
 				</div>
@@ -514,13 +565,19 @@ $tdsRanges = [
 				<div>
 					<h3>Temperature Sensor</h3>
 					<div class="row">
+						<label>
+							<input type="checkbox" name="manipulate_temperature" value="1" <?php echo $currentManipulationSettings['manipulate_temperature'] === '1' ? 'checked' : ''; ?> />
+							Manipulate Temperature
+						</label>
+					</div>
+					<div class="row">
 						<label for="temperature_range">Temperature Range (°C):</label>
 						<select id="temperature_range" name="temperature_range">
-							<option value="15-20">15 - 20 (Cool)</option>
-							<option value="20-25" selected>20 - 25 (Room Temp)</option>
-							<option value="25-30">25 - 30 (Warm)</option>
-							<option value="30-35">30 - 35 (Hot)</option>
-							<option value="35-40">35 - 40 (Very Hot)</option>
+							<option value="15-20" <?php echo $currentManipulationSettings['temperature_range'] === '15-20' ? 'selected' : ''; ?>>15 - 20 (Cool)</option>
+							<option value="20-25" <?php echo $currentManipulationSettings['temperature_range'] === '20-25' ? 'selected' : ''; ?>>20 - 25 (Room Temp)</option>
+							<option value="25-30" <?php echo $currentManipulationSettings['temperature_range'] === '25-30' ? 'selected' : ''; ?>>25 - 30 (Warm)</option>
+							<option value="30-35" <?php echo $currentManipulationSettings['temperature_range'] === '30-35' ? 'selected' : ''; ?>>30 - 35 (Hot)</option>
+							<option value="35-40" <?php echo $currentManipulationSettings['temperature_range'] === '35-40' ? 'selected' : ''; ?>>35 - 40 (Very Hot)</option>
 						</select>
 					</div>
 				</div>
@@ -658,9 +715,19 @@ $tdsRanges = [
 				lastResponse = json;
 				var el = document.getElementById('cont_status');
 				if (json && json.success) {
-					el.textContent = 'Inserted: pH ' + json.data.ph + ', Turbidity ' + json.data.turbidity + ', TDS ' + json.data.tds + ' at ' + (new Date()).toLocaleTimeString();
+					var statusText = 'Inserted: pH ' + json.data.ph + ', Turbidity ' + json.data.turbidity + ', TDS ' + json.data.tds + ' at ' + new Date().toLocaleTimeString();
+					
+					// Check if manipulation is running and show it in the status
+					var manipulationEnabled = document.querySelector('input[name="manipulation_enabled"]').checked;
+					var manipulationRunning = manipulationTimerId !== null;
+					
+					if (manipulationEnabled && manipulationRunning) {
+						statusText += ' [MANIPULATED]';
+					}
+					
+					el.textContent = statusText;
 				} else {
-					el.textContent = 'Insert failed at ' + (new Date()).toLocaleTimeString();
+					el.textContent = 'Insert failed at ' + new Date().toLocaleTimeString();
 				}
 			}).catch(function(err) {
 				var el = document.getElementById('cont_status');
@@ -751,22 +818,37 @@ $tdsRanges = [
 			var temperatureDisplay = data.temperature;
 			
 			if (manipulationEnabled && manipulationRunning) {
-				// Get selected ranges
-				var phRange = document.getElementById('ph_range').value;
-				var turbidityRange = document.getElementById('turbidity_range').value;
-				var tdsRange = document.getElementById('tds_range').value;
-				var temperatureRange = document.getElementById('temperature_range').value;
+				// Check individual manipulation settings
+				var manipulatePh = document.querySelector('input[name="manipulate_ph"]').checked;
+				var manipulateTurbidity = document.querySelector('input[name="manipulate_turbidity"]').checked;
+				var manipulateTds = document.querySelector('input[name="manipulate_tds"]').checked;
+				var manipulateTemperature = document.querySelector('input[name="manipulate_temperature"]').checked;
 				
-				// Generate random values within ranges
-				phDisplay = randomInRange(parseRange(phRange)[0], parseRange(phRange)[1], 2);
-				turbidityDisplay = randomInRange(parseRange(turbidityRange)[0], parseRange(turbidityRange)[1], 2);
-				tdsDisplay = randomInRange(parseRange(tdsRange)[0], parseRange(tdsRange)[1], 2);
-				temperatureDisplay = randomInRange(parseRange(temperatureRange)[0], parseRange(temperatureRange)[1], 2);
+				// Only manipulate sensors that are enabled
+				if (manipulatePh) {
+					var phRange = document.getElementById('ph_range').value;
+					phDisplay = randomInRange(parseRange(phRange)[0], parseRange(phRange)[1], 2);
+				}
+				
+				if (manipulateTurbidity) {
+					var turbidityRange = document.getElementById('turbidity_range').value;
+					turbidityDisplay = randomInRange(parseRange(turbidityRange)[0], parseRange(turbidityRange)[1], 2);
+				}
+				
+				if (manipulateTds) {
+					var tdsRange = document.getElementById('tds_range').value;
+					tdsDisplay = randomInRange(parseRange(tdsRange)[0], parseRange(tdsRange)[1], 2);
+				}
+				
+				if (manipulateTemperature) {
+					var temperatureRange = document.getElementById('temperature_range').value;
+					temperatureDisplay = randomInRange(parseRange(temperatureRange)[0], parseRange(temperatureRange)[1], 2);
+				}
 			}
 			
 			// Show manipulated values in the summary if both enabled and running
 			if (manipulationEnabled && manipulationRunning) {
-				el.innerHTML = '<strong>Latest Reading (Random Generated):</strong> pH: ' + phDisplay.toFixed(2) + 
+				el.innerHTML = '<strong>Latest Reading (Selectively Manipulated):</strong> pH: ' + phDisplay.toFixed(2) + 
 							  ', Turbidity: ' + turbidityDisplay.toFixed(2) + ' NTU' +
 							  ', TDS: ' + tdsDisplay.toFixed(2) + ' ppm' +
 							  ', Temperature: ' + temperatureDisplay.toFixed(2) + '°C' +
@@ -943,8 +1025,17 @@ $tdsRanges = [
 			});
 		}
 
+		// Load current manipulation settings when page loads
+		function loadManipulationSettings() {
+			// This will be called after the page loads to set the correct checkbox states
+			// The PHP will handle setting the initial values
+		}
+
 		// Start monitoring latest data immediately when page loads
 		startLatestDataMonitor();
+		
+		// Load manipulation settings after a short delay to ensure DOM is ready
+		setTimeout(loadManipulationSettings, 100);
 	})();
 	</script>
 
