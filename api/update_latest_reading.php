@@ -78,35 +78,89 @@ try {
         $manipulateTds = getSetting($conn, 'manipulate_tds', '0') === '1';
         $manipulateTemperature = getSetting($conn, 'manipulate_temperature', '0') === '1';
         
-        // Prepare values for update
-        $newTurbidity = $latestReading['turbidity'];
-        $newTds = $latestReading['tds'];
-        $newPh = $latestReading['ph'];
-        $newTemperature = $latestReading['temperature'];
+        // Prepare values for update - only change what's actually enabled for manipulation
+        $newTurbidity = $latestReading['turbidity']; // Keep original if not manipulated
+        $newTds = $latestReading['tds']; // Keep original if not manipulated
+        $newPh = $latestReading['ph']; // Keep original if not manipulated
+        $newTemperature = $latestReading['temperature']; // Keep original if not manipulated
         
-        // Apply manipulation if enabled for each sensor
+        // Track which sensors were actually manipulated
+        $manipulatedSensors = [];
+        
+        // Apply manipulation ONLY for sensors that are checked/enabled
         if ($manipulateTurbidity) {
             $turbidityRange = getSetting($conn, 'turbidity_range', '1-2');
             [$turMin, $turMax] = parseRange($turbidityRange);
             $newTurbidity = randomInRange($turMin, $turMax, 2);
+            $manipulatedSensors[] = 'turbidity';
+            error_log("Turbidity manipulated from {$latestReading['turbidity']} to $newTurbidity (range: $turbidityRange)");
         }
         
         if ($manipulateTds) {
             $tdsRange = getSetting($conn, 'tds_range', '0-50');
             [$tdsMin, $tdsMax] = parseRange($tdsRange);
             $newTds = randomInRange($tdsMin, $tdsMax, 2);
+            $manipulatedSensors[] = 'tds';
+            error_log("TDS manipulated from {$latestReading['tds']} to $newTds (range: $tdsRange)");
         }
         
         if ($manipulatePh) {
             $phRange = getSetting($conn, 'ph_range', '6-7');
             [$phMin, $phMax] = parseRange($phRange);
             $newPh = randomInRange($phMin, $phMax, 2);
+            $manipulatedSensors[] = 'ph';
+            error_log("pH manipulated from {$latestReading['ph']} to $newPh (range: $phRange)");
         }
         
         if ($manipulateTemperature) {
             $temperatureRange = getSetting($conn, 'temperature_range', '20-25');
             [$tempMin, $tempMax] = parseRange($temperatureRange);
             $newTemperature = randomInRange($tempMin, $tempMax, 2);
+            $manipulatedSensors[] = 'temperature';
+            error_log("Temperature manipulated from {$latestReading['temperature']} to $newTemperature (range: $temperatureRange)");
+        }
+        
+        // Log which sensors were actually manipulated
+        if (empty($manipulatedSensors)) {
+            error_log("No sensors were manipulated - all manipulation checkboxes are unchecked");
+        } else {
+            error_log("Manipulated sensors: " . implode(', ', $manipulatedSensors));
+        }
+        
+        // Only update if there are actual changes to make
+        $hasChanges = ($newTurbidity != $latestReading['turbidity']) || 
+                     ($newTds != $latestReading['tds']) || 
+                     ($newPh != $latestReading['ph']) || 
+                     ($newTemperature != $latestReading['temperature']);
+        
+        if (!$hasChanges) {
+            echo json_encode([
+                'success' => true,
+                'message' => 'No changes needed - all values are already as expected',
+                'data' => [
+                    'id' => $latestReading['id'],
+                    'original' => [
+                        'turbidity' => $latestReading['turbidity'],
+                        'tds' => $latestReading['tds'],
+                        'ph' => $latestReading['ph'],
+                        'temperature' => $latestReading['temperature']
+                    ],
+                    'updated' => [
+                        'turbidity' => $newTurbidity,
+                        'tds' => $newTds,
+                        'ph' => $newPh,
+                        'temperature' => $newTemperature
+                    ],
+                    'manipulated_sensors' => [
+                        'turbidity' => $manipulateTurbidity,
+                        'tds' => $manipulateTds,
+                        'ph' => $manipulatePh,
+                        'temperature' => $manipulateTemperature
+                    ],
+                    'changes_made' => false
+                ]
+            ]);
+            exit;
         }
         
         // Update the latest reading
@@ -143,7 +197,9 @@ try {
                         'tds' => $manipulateTds,
                         'ph' => $manipulatePh,
                         'temperature' => $manipulateTemperature
-                    ]
+                    ],
+                    'changes_made' => true,
+                    'manipulated_sensors_list' => $manipulatedSensors
                 ]
             ]);
         } else {
