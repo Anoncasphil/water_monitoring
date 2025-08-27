@@ -134,7 +134,7 @@ if (isset($_SESSION['user_id'])) {
 <div id="sidebarOverlay" class="fixed inset-0 z-40 bg-black bg-opacity-50 lg:hidden hidden"></div>
 
 <!-- Sidebar Toggle Button (for mobile) -->
-<button id="sidebarToggle" class="fixed top-4 left-4 z-50 lg:hidden p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+<button id="sidebarToggle" class="fixed top-4 right-4 z-50 lg:hidden p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
     <i class="fas fa-bars"></i>
 </button>
 
