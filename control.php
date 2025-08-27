@@ -79,14 +79,26 @@ function randomInRange(float $min, float $max, int $decimals = 2): float {
 function getRangesFromCategories(string $phCategory, string $turbidityCategory, string $tdsCategory): array {
 	// Map categories to numeric ranges
 	switch ($phCategory) {
+		case 'very_low':
+			$phRange = '3-4';
+			break;
 		case 'low':
-			$phRange = '3-6';
+			$phRange = '4-5';
+			break;
+		case 'low_medium':
+			$phRange = '5-6';
 			break;
 		case 'neutral':
 			$phRange = '6-7';
 			break;
+		case 'high_medium':
+			$phRange = '7-8';
+			break;
 		case 'high':
-			$phRange = '7-9';
+			$phRange = '8-9';
+			break;
+		case 'very_high':
+			$phRange = '9-10';
 			break;
 		default:
 			$phRange = '6-7';
@@ -94,13 +106,13 @@ function getRangesFromCategories(string $phCategory, string $turbidityCategory, 
 
 	switch ($turbidityCategory) {
 		case 'clean':
-			$turbidityRange = '1-2';
+			$turbidityRange = '1-5';
 			break;
 		case 'turbid':
 			$turbidityRange = '30-100';
 			break;
 		default:
-			$turbidityRange = '2-10';
+			$turbidityRange = '5-15';
 	}
 
 	switch ($tdsCategory) {
@@ -789,15 +801,19 @@ $tdsRanges = [
 		<div class="row">
 			<label for="ph_category">pH category</label>
 			<select id="ph_category">
-				<option value="low">Low (3 - 6)</option>
+				<option value="very_low">Very Low (3 - 4)</option>
+				<option value="low">Low (4 - 5)</option>
+				<option value="low_medium">Low-Medium (5 - 6)</option>
 				<option value="neutral" selected>Neutral (6 - 7)</option>
-				<option value="high">High (7 - 9)</option>
+				<option value="high_medium">High-Medium (7 - 8)</option>
+				<option value="high">High (8 - 9)</option>
+				<option value="very_high">Very High (9 - 10)</option>
 			</select>
 		</div>
 		<div class="row">
 			<label for="turbidity_category">Turbidity</label>
 			<select id="turbidity_category">
-				<option value="clean" selected>Clean (1 - 2)</option>
+				<option value="clean" selected>Clean (1 - 5)</option>
 				<option value="turbid">Turbid (30 - 100)</option>
 			</select>
 		</div>
