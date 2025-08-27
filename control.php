@@ -599,34 +599,34 @@ $tdsRanges = [
 	</section>
 
 	<script>
+	// Global functions that need to be accessible everywhere
+	function parseRange(range) {
+		// Expecting formats like "3-4", "10-20"
+		var parts = range.split('-').map(function(part) { return parseFloat(part.trim()); });
+		var min = parts[0] || 0;
+		var max = parts[1] || min;
+		if (max < min) {
+			var temp = min;
+			min = max;
+			max = temp;
+		}
+		return [min, max];
+	}
+
+	function randomInRange(min, max, decimals) {
+		decimals = decimals || 2;
+		if (max <= min) {
+			return parseFloat(min.toFixed(decimals));
+		}
+		var rand = min + (Math.random() * (max - min));
+		return parseFloat(rand.toFixed(decimals));
+	}
+
 	(function() {
 		var timerId = null;
 		var lastResponse = null;
 		var latestDataTimerId = null;
 		var manipulationTimerId = null; // New timer for continuous manipulation
-
-		// JavaScript versions of the PHP functions
-		function parseRange(range) {
-			// Expecting formats like "3-4", "10-20"
-			var parts = range.split('-').map(function(part) { return parseFloat(part.trim()); });
-			var min = parts[0] || 0;
-			var max = parts[1] || min;
-			if (max < min) {
-				var temp = min;
-				min = max;
-				max = temp;
-			}
-			return [min, max];
-		}
-
-		function randomInRange(min, max, decimals) {
-			decimals = decimals || 2;
-			if (max <= min) {
-				return parseFloat(min.toFixed(decimals));
-			}
-			var rand = min + (Math.random() * (max - min));
-			return parseFloat(rand.toFixed(decimals));
-		}
 
 		function setRunning(running) {
 			document.getElementById('startBtn').disabled = running;
