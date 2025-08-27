@@ -17,22 +17,22 @@ try {
     $db = Database::getInstance();
     $conn = $db->getConnection();
 
-    // Get latest reading
-    $latestQuery = "SELECT * FROM water_readings ORDER BY reading_time DESC LIMIT 1";
+    // Get second-to-last reading (skip the latest one)
+    $latestQuery = "SELECT * FROM water_readings ORDER BY reading_time DESC LIMIT 1 OFFSET 1";
     $latestResult = $conn->query($latestQuery);
     $latest = $latestResult->fetch_assoc();
     $latest = $latest ? map_reading($latest) : null;
 
-    // Get recent readings (last 10)
-    $recentQuery = "SELECT * FROM water_readings ORDER BY reading_time DESC LIMIT 10";
+    // Get recent readings (last 10, excluding the latest one)
+    $recentQuery = "SELECT * FROM water_readings ORDER BY reading_time DESC LIMIT 10 OFFSET 1";
     $recentResult = $conn->query($recentQuery);
     $recent = [];
     while ($row = $recentResult->fetch_assoc()) {
         $recent[] = map_reading($row);
     }
 
-    // Get historical data (last 24 readings)
-    $historicalQuery = "SELECT * FROM water_readings ORDER BY reading_time DESC LIMIT 24";
+    // Get historical data (last 24 readings, excluding the latest one)
+    $historicalQuery = "SELECT * FROM water_readings ORDER BY reading_time DESC LIMIT 24 OFFSET 1";
     $historicalResult = $conn->query($historicalQuery);
     $historical = [];
     while ($row = $historicalResult->fetch_assoc()) {

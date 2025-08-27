@@ -9,11 +9,11 @@ if (!isset($_SESSION['user_id'])) {
 
 require_once '../../config/database.php';
 
-// Get latest readings
+// Get second-to-last readings (skip the latest one)
 try {
     $db = Database::getInstance();
     $conn = $db->getConnection();
-    $result = $conn->query("SELECT * FROM water_readings ORDER BY reading_time DESC LIMIT 10");
+    $result = $conn->query("SELECT * FROM water_readings ORDER BY reading_time DESC LIMIT 10 OFFSET 1");
     $readings = $result->fetch_all(MYSQLI_ASSOC);
 } catch (Exception $e) {
     $readings = [];

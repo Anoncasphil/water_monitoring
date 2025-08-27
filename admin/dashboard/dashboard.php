@@ -34,20 +34,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Get latest readings
-try {
-    $db = Database::getInstance();
-    $conn = $db->getConnection();
-    $result = $conn->query("SELECT * FROM water_readings ORDER BY reading_time DESC LIMIT 10");
-    $readings = $result->fetch_all(MYSQLI_ASSOC);
-    
-    // Get data for charts
-    $chartResult = $conn->query("SELECT reading_time, turbidity, tds FROM water_readings ORDER BY reading_time DESC LIMIT 24");
-    $chartData = $chartResult->fetch_all(MYSQLI_ASSOC);
-} catch (Exception $e) {
-    $readings = [];
-    $chartData = [];
-}
+    // Get second-to-last readings (skip the latest one)
+    try {
+        $db = Database::getInstance();
+        $conn = $db->getConnection();
+        $result = $conn->query("SELECT * FROM water_readings ORDER BY reading_time DESC LIMIT 1 OFFSET 1");
+        $readings = $result->fetch_all(MYSQLI_ASSOC);
+        
+        // Get data for charts (excluding the latest reading)
+        $chartResult = $conn->query("SELECT reading_time, turbidity, tds FROM water_readings ORDER BY reading_time DESC LIMIT 1 OFFSET 1, 24");
+        $chartData = $chartResult->fetch_all(MYSQLI_ASSOC);
+    } catch (Exception $e) {
+        $readings = [];
+        $chartData = [];
+    }
 ?>
 <!DOCTYPE html>
 <html lang="en" class="light">
