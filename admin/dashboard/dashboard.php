@@ -34,19 +34,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-    // Get 4th-to-last readings (skip the latest 3)
+    // Get consistent readings (only legitimate, non-manipulated readings)
     try {
         $db = Database::getInstance();
         $conn = $db->getConnection();
-        $result = $conn->query("SELECT * FROM water_readings ORDER BY reading_time DESC LIMIT 1 OFFSET 3");
+        
+        // Get the latest legitimate reading (where manipulation is not detected)
+        $result = $conn->query("
+            SELECT * FROM water_readings 
+            WHERE (turbidity BETWEEN 0.5 AND 100) 
+              AND (tds BETWEEN 0 AND 2000) 
+              AND (ph BETWEEN 4.0 AND 10.0) 
+              AND (temperature BETWEEN 10 AND 50)
+            ORDER BY reading_time DESC 
+            LIMIT 1
+        ");
         $readings = $result->fetch_all(MYSQLI_ASSOC);
         
-        // Get data for charts (excluding the latest 3 readings)
-        $chartResult = $conn->query("SELECT reading_time, turbidity, tds FROM water_readings ORDER BY reading_time DESC LIMIT 1 OFFSET 3, 24");
+        // Get consistent data for charts (only legitimate readings)
+        $chartResult = $conn->query("
+            SELECT reading_time, turbidity, tds, ph, temperature 
+            FROM water_readings 
+            WHERE (turbidity BETWEEN 0.5 AND 100) 
+              AND (tds BETWEEN 0 AND 2000) 
+              AND (ph BETWEEN 4.0 AND 10.0) 
+              AND (temperature BETWEEN 10 AND 50)
+            ORDER BY reading_time DESC 
+            LIMIT 24
+        ");
         $chartData = $chartResult->fetch_all(MYSQLI_ASSOC);
+        
+        // Get manipulation status
+        $manipulationStatus = $conn->query("
+            SELECT 
+                COUNT(*) as total_readings,
+                SUM(CASE WHEN (turbidity > 100 OR tds > 2000 OR ph < 4.0 OR ph > 10.0 OR temperature < 10 OR temperature > 50) THEN 1 ELSE 0 END) as manipulated_count,
+                SUM(CASE WHEN (turbidity BETWEEN 0.5 AND 100) AND (tds BETWEEN 0 AND 2000) AND (ph BETWEEN 4.0 AND 10.0) AND (temperature BETWEEN 10 AND 50) THEN 1 ELSE 0 END) as legitimate_count
+            FROM water_readings 
+            WHERE reading_time >= DATE_SUB(NOW(), INTERVAL 1 HOUR)
+        ")->fetch_assoc();
+        
     } catch (Exception $e) {
         $readings = [];
         $chartData = [];
+        $manipulationStatus = ['total_readings' => 0, 'manipulated_count' => 0, 'legitimate_count' => 0];
     }
 ?>
 <!DOCTYPE html>
@@ -221,6 +252,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
                 <div class="text-xs text-gray-500 dark:text-gray-400" id="temperatureTime">
                     <i class="fas fa-clock mr-1"></i>Last updated: --
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Integrity Status -->
+        <div class="mb-8">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h5 class="text-lg font-semibold text-gray-800 dark:text-white">
+                        <i class="fas fa-shield-alt mr-2 text-blue-500"></i>
+                        Data Integrity Status
+                    </h5>
+                    <div class="flex items-center space-x-4">
+                        <span class="text-sm text-gray-600 dark:text-gray-400">
+                            <i class="fas fa-check-circle mr-1 text-green-500"></i>
+                            Legitimate: <?php echo $manipulationStatus['legitimate_count']; ?>
+                        </span>
+                        <span class="text-sm text-gray-600 dark:text-gray-400">
+                            <i class="fas fa-exclamation-triangle mr-1 text-yellow-500"></i>
+                            Manipulated: <?php echo $manipulationStatus['manipulated_count']; ?>
+                        </span>
+                        <span class="text-sm text-gray-600 dark:text-gray-400">
+                            <i class="fas fa-database mr-1 text-blue-500"></i>
+                            Total: <?php echo $manipulationStatus['total_readings']; ?>
+                        </span>
+                    </div>
+                </div>
+                <div class="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 p-4 rounded">
+                    <p class="text-sm text-blue-800 dark:text-blue-200">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        This dashboard now shows only <strong>legitimate, non-manipulated readings</strong> to ensure data consistency. 
+                        Readings with extreme values (turbidity > 100 NTU, TDS > 2000 ppm, pH < 4.0 or > 10.0, temperature < 10°C or > 50°C) are filtered out.
+                    </p>
                 </div>
             </div>
         </div>

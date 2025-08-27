@@ -9,14 +9,36 @@ if (!isset($_SESSION['user_id'])) {
 
 require_once '../../config/database.php';
 
-// Get 4th-to-last readings (skip the latest 3)
+// Get consistent readings (only legitimate, non-manipulated readings)
 try {
     $db = Database::getInstance();
     $conn = $db->getConnection();
-    $result = $conn->query("SELECT * FROM water_readings ORDER BY reading_time DESC LIMIT 10 OFFSET 3");
+    
+    // Get legitimate readings for alerts (where manipulation is not detected)
+    $result = $conn->query("
+        SELECT * FROM water_readings 
+        WHERE (turbidity BETWEEN 0.5 AND 100) 
+          AND (tds BETWEEN 0 AND 2000) 
+          AND (ph BETWEEN 4.0 AND 10.0) 
+          AND (temperature BETWEEN 10 AND 50)
+        ORDER BY reading_time DESC 
+        LIMIT 10
+    ");
     $readings = $result->fetch_all(MYSQLI_ASSOC);
+    
+    // Get manipulation status for the last hour
+    $manipulationStatus = $conn->query("
+        SELECT 
+            COUNT(*) as total_readings,
+            SUM(CASE WHEN (turbidity > 100 OR tds > 2000 OR ph < 4.0 OR ph > 10.0 OR temperature < 10 OR temperature > 50) THEN 1 ELSE 0 END) as manipulated_count,
+            SUM(CASE WHEN (turbidity BETWEEN 0.5 AND 100) AND (tds BETWEEN 0 AND 2000) AND (ph BETWEEN 4.0 AND 10.0) AND (temperature BETWEEN 10 AND 50) THEN 1 ELSE 0 END) as legitimate_count
+        FROM water_readings 
+        WHERE reading_time >= DATE_SUB(NOW(), INTERVAL 1 HOUR)
+    ")->fetch_assoc();
+    
 } catch (Exception $e) {
     $readings = [];
+    $manipulationStatus = ['total_readings' => 0, 'manipulated_count' => 0, 'legitimate_count' => 0];
 }
 ?>
 <!DOCTYPE html>
@@ -161,10 +183,101 @@ try {
                             <span class="text-lg font-semibold text-green-600 dark:text-green-400">Monitoring</span>
                         </div>
                     </div>
+                    <div class="flex items-center space-x-4">
+                        <div class="text-center">
+                            <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">Data Integrity</div>
+                            <div class="flex items-center space-x-2">
+                                <div class="w-3 h-3 <?php echo $manipulationStatus['manipulated_count'] > 0 ? 'bg-yellow-500' : 'bg-green-500'; ?> rounded-full pulse-animation"></div>
+                                <span class="text-sm font-medium <?php echo $manipulationStatus['manipulated_count'] > 0 ? 'text-yellow-600 dark:text-yellow-400' : 'text-green-600 dark:text-green-400'; ?>">
+                                    <?php echo $manipulationStatus['manipulated_count'] > 0 ? 'Mixed Data' : 'Clean Data'; ?>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">Legitimate/Total</div>
+                            <div class="text-sm font-semibold text-gray-900 dark:text-white">
+                                <?php echo $manipulationStatus['legitimate_count']; ?>/<?php echo $manipulationStatus['total_readings']; ?>
+                            </div>
+                        </div>
+                    </div>
                     <button id="themeToggle" class="p-3 rounded-xl bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition-all duration-200">
                         <i class="fas fa-sun text-yellow-500 dark:hidden text-lg"></i>
                         <i class="fas fa-moon text-blue-300 hidden dark:block text-lg"></i>
                     </button>
+                </div>
+            </div>
+
+            <!-- Data Integrity Overview -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 mb-8">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                            <i class="fas fa-shield-alt text-blue-500 mr-3"></i>
+                            Data Integrity Overview
+                        </h2>
+                        <p class="text-gray-600 dark:text-gray-400">Data quality and manipulation detection status</p>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <div class="text-center">
+                            <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">Data Status</div>
+                            <div class="text-lg font-semibold <?php echo $manipulationStatus['manipulated_count'] > 0 ? 'text-yellow-600 dark:text-yellow-400' : 'text-green-600 dark:text-green-400'; ?>">
+                                <?php echo $manipulationStatus['manipulated_count'] > 0 ? 'Mixed Data Detected' : 'Clean Data Only'; ?>
+                            </div>
+                        </div>
+                        <button id="refreshReadings" class="px-4 py-2 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors">
+                            <i class="fas fa-sync-alt mr-2"></i>Refresh
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <div class="alert-card bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-xl p-6 border-l-4 border-green-500">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-lg font-semibold text-green-800 dark:text-green-200">Legitimate Readings</h3>
+                                <p class="text-3xl font-bold text-green-600 dark:text-green-400"><?php echo $manipulationStatus['legitimate_count']; ?></p>
+                                <p class="text-sm text-green-600 dark:text-green-300">Clean, non-manipulated data</p>
+                            </div>
+                            <div class="w-12 h-12 rounded-xl bg-green-200 dark:bg-green-800 flex items-center justify-center">
+                                <i class="fas fa-check-circle text-green-600 dark:text-green-300 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert-card bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20 rounded-xl p-6 border-l-4 border-yellow-500">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-lg font-semibold text-yellow-800 dark:text-yellow-200">Manipulated Readings</h3>
+                                <p class="text-3xl font-bold text-yellow-600 dark:text-yellow-400"><?php echo $manipulationStatus['manipulated_count']; ?></p>
+                                <p class="text-sm text-yellow-600 dark:text-yellow-300">Extreme values detected</p>
+                            </div>
+                            <div class="w-12 h-12 rounded-xl bg-yellow-200 dark:bg-yellow-800 flex items-center justify-center">
+                                <i class="fas fa-exclamation-triangle text-yellow-600 dark:text-yellow-300 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert-card bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-xl p-6 border-l-4 border-blue-500">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-lg font-semibold text-blue-800 dark:text-blue-200">Total Readings</h3>
+                                <p class="text-3xl font-bold text-blue-600 dark:text-blue-400"><?php echo $manipulationStatus['total_readings']; ?></p>
+                                <p class="text-sm text-blue-600 dark:text-blue-300">Last hour total</p>
+                            </div>
+                            <div class="w-12 h-12 rounded-xl bg-blue-200 dark:bg-blue-800 flex items-center justify-center">
+                                <i class="fas fa-database text-blue-600 dark:text-blue-300 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 p-4 rounded">
+                    <p class="text-sm text-blue-800 dark:text-blue-200">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        <strong>Data Filtering:</strong> This system now automatically filters out readings with extreme values that indicate manipulation:
+                        <strong>Turbidity > 100 NTU</strong>, <strong>TDS > 2000 ppm</strong>, <strong>pH < 4.0 or > 10.0</strong>, <strong>Temperature < 10°C or > 50°C</strong>.
+                        Only legitimate, consistent readings are displayed to ensure data reliability.
+                    </p>
                 </div>
             </div>
 

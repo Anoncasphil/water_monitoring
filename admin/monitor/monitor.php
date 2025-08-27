@@ -9,14 +9,36 @@ if (!isset($_SESSION['user_id'])) {
 
 require_once '../../config/database.php';
 
-// Get 4th-to-last readings (skip the latest 3)
+// Get consistent readings (only legitimate, non-manipulated readings)
 try {
     $db = Database::getInstance();
     $conn = $db->getConnection();
-    $result = $conn->query("SELECT * FROM water_readings ORDER BY reading_time DESC LIMIT 1 OFFSET 3");
+    
+    // Get the latest legitimate reading (where manipulation is not detected)
+    $result = $conn->query("
+        SELECT * FROM water_readings 
+        WHERE (turbidity BETWEEN 0.5 AND 100) 
+          AND (tds BETWEEN 0 AND 2000) 
+          AND (ph BETWEEN 4.0 AND 10.0) 
+          AND (temperature BETWEEN 10 AND 50)
+        ORDER BY reading_time DESC 
+        LIMIT 1
+    ");
     $latest = $result->fetch_assoc();
+    
+    // Get manipulation status for the last hour
+    $manipulationStatus = $conn->query("
+        SELECT 
+            COUNT(*) as total_readings,
+            SUM(CASE WHEN (turbidity > 100 OR tds > 2000 OR ph < 4.0 OR ph > 10.0 OR temperature < 10 OR temperature > 50) THEN 1 ELSE 0 END) as manipulated_count,
+            SUM(CASE WHEN (turbidity BETWEEN 0.5 AND 100) AND (tds BETWEEN 0 AND 2000) AND (ph BETWEEN 4.0 AND 10.0) AND (temperature BETWEEN 10 AND 50) THEN 1 ELSE 0 END) as legitimate_count
+        FROM water_readings 
+        WHERE reading_time >= DATE_SUB(NOW(), INTERVAL 1 HOUR)
+    ")->fetch_assoc();
+    
 } catch (Exception $e) {
     $latest = null;
+    $manipulationStatus = ['total_readings' => 0, 'manipulated_count' => 0, 'legitimate_count' => 0];
 }
 ?>
 <!DOCTYPE html>
@@ -132,6 +154,23 @@ try {
                     <div class="text-center">
                         <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">Last Updated</div>
                         <div class="text-lg font-semibold text-gray-900 dark:text-white" id="lastUpdate">--:--:--</div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <div class="text-center">
+                            <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">Data Integrity</div>
+                            <div class="flex items-center space-x-2">
+                                <div class="status-indicator <?php echo $manipulationStatus['manipulated_count'] > 0 ? 'bg-yellow-500' : 'bg-green-500'; ?>"></div>
+                                <span class="text-sm font-medium <?php echo $manipulationStatus['manipulated_count'] > 0 ? 'text-yellow-600 dark:text-yellow-400' : 'text-green-600 dark:text-green-400'; ?>">
+                                    <?php echo $manipulationStatus['manipulated_count'] > 0 ? 'Mixed Data' : 'Clean Data'; ?>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">Legitimate/Total</div>
+                            <div class="text-sm font-semibold text-gray-900 dark:text-white">
+                                <?php echo $manipulationStatus['legitimate_count']; ?>/<?php echo $manipulationStatus['total_readings']; ?>
+                            </div>
+                        </div>
                     </div>
                     <div class="flex items-center space-x-2">
                         <div class="status-indicator bg-green-500"></div>
