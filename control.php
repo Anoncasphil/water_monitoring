@@ -268,6 +268,36 @@ try {
 				$errors[] = 'Failed to insert reading.';
 			}
 		}
+
+		if ($action === 'get_latest_reading') {
+			$stmt = $conn->prepare("SELECT turbidity, tds, ph, temperature, `in`, reading_time FROM water_readings ORDER BY reading_time DESC LIMIT 1");
+			$stmt->execute();
+			$result = $stmt->get_result();
+			$row = $result ? $result->fetch_assoc() : null;
+			$stmt->close();
+
+			if ($row) {
+				header('Content-Type: application/json');
+				echo json_encode([
+					'success' => true,
+					'data' => [
+						'ph' => (float)$row['ph'],
+						'turbidity' => (float)$row['turbidity'],
+						'tds' => (float)$row['tds'],
+						'temperature' => (float)$row['temperature'],
+						'in' => (float)$row['in'],
+						'reading_time' => $row['reading_time']
+					]
+				]);
+			} else {
+				header('Content-Type: application/json');
+				echo json_encode([
+					'success' => false,
+					'error' => 'No readings found'
+				]);
+			}
+			exit;
+		}
 	}
 
 	$currentUploadsDisabled = getSetting($conn, 'uploads_disabled', '0') === '1';
@@ -510,10 +540,106 @@ $tdsRanges = [
 		<div id="cont_status" class="small"></div>
 	</section>
 
+	<section>
+		<h2>Latest Data Monitor & Manipulation</h2>
+		<p class="small">Shows the most recent water reading and updates every second. You can manipulate these values in real-time.</p>
+		<div id="latest_data" class="small" style="background: #f8f9fa; padding: 12px; border-radius: 4px; margin-bottom: 16px;">
+			Loading latest data...
+		</div>
+		
+		<div class="manipulation-grid">
+			<div>
+				<h3>pH Sensor</h3>
+				<div class="row">
+					<label for="live_ph_offset">Offset:</label>
+					<input id="live_ph_offset" type="number" step="0.01" value="0" />
+				</div>
+				<div class="row">
+					<label for="live_ph_multiplier">Multiplier:</label>
+					<input id="live_ph_multiplier" type="number" step="0.01" value="1" />
+				</div>
+				<div class="row">
+					<label>Original:</label>
+					<span id="live_ph_original">-</span>
+				</div>
+				<div class="row">
+					<label>Modified:</label>
+					<span id="live_ph_modified">-</span>
+				</div>
+			</div>
+			
+			<div>
+				<h3>Turbidity Sensor</h3>
+				<div class="row">
+					<label for="live_turbidity_offset">Offset:</label>
+					<input id="live_turbidity_offset" type="number" step="0.01" value="0" />
+				</div>
+				<div class="row">
+					<label for="live_turbidity_multiplier">Multiplier:</label>
+					<input id="live_turbidity_multiplier" type="number" step="0.01" value="1" />
+				</div>
+				<div class="row">
+					<label>Original:</label>
+					<span id="live_turbidity_original">-</span>
+				</div>
+				<div class="row">
+					<label>Modified:</label>
+					<span id="live_turbidity_modified">-</span>
+				</div>
+			</div>
+			
+			<div>
+				<h3>TDS Sensor</h3>
+				<div class="row">
+					<label for="live_tds_offset">Offset:</label>
+					<input id="live_tds_offset" type="number" step="0.01" value="0" />
+				</div>
+				<div class="row">
+					<label for="live_tds_multiplier">Multiplier:</label>
+					<input id="live_tds_multiplier" type="number" step="0.01" value="1" />
+				</div>
+				<div class="row">
+					<label>Original:</label>
+					<span id="live_tds_original">-</span>
+				</div>
+				<div class="row">
+					<label>Modified:</label>
+					<span id="live_tds_modified">-</span>
+				</div>
+			</div>
+			
+			<div>
+				<h3>Temperature Sensor</h3>
+				<div class="row">
+					<label for="live_temperature_offset">Offset:</label>
+					<input id="live_temperature_offset" type="number" step="0.01" value="0" />
+				</div>
+				<div class="row">
+					<label for="live_temperature_multiplier">Multiplier:</label>
+					<input id="live_temperature_multiplier" type="number" step="0.01" value="1" />
+				</div>
+				<div class="row">
+					<label>Original:</label>
+					<span id="live_temperature_original">-</span>
+				</div>
+				<div class="row">
+					<label>Modified:</label>
+					<span id="live_temperature_modified">-</span>
+				</div>
+			</div>
+		</div>
+		
+		<div class="row" style="margin-top: 16px;">
+			<button id="applyLiveManipulation" type="button">Apply Live Manipulation</button>
+			<button id="resetLiveManipulation" type="button">Reset to Defaults</button>
+		</div>
+	</section>
+
 	<script>
 	(function() {
 		var timerId = null;
 		var lastResponse = null;
+		var latestDataTimerId = null;
 
 		function setRunning(running) {
 			document.getElementById('startBtn').disabled = running;
@@ -555,11 +681,99 @@ $tdsRanges = [
 			});
 		}
 
+		function fetchLatestData() {
+			var formData = new FormData();
+			formData.append('action', 'get_latest_reading');
+			formData.append('ajax', '1');
+
+			fetch(window.location.href, {
+				method: 'POST',
+				body: formData,
+				credentials: 'same-origin'
+			}).then(function(r) { return r.json(); })
+			.then(function(json) {
+				if (json && json.success && json.data) {
+					updateLatestDataDisplay(json.data);
+					applyLiveManipulation();
+				}
+			}).catch(function(err) {
+				console.error('Error fetching latest data:', err);
+			});
+		}
+
+		function updateLatestDataDisplay(data) {
+			// Update the summary display
+			var el = document.getElementById('latest_data');
+			el.innerHTML = '<strong>Latest Reading:</strong> pH: ' + data.ph + 
+						  ', Turbidity: ' + data.turbidity + ' NTU' +
+						  ', TDS: ' + data.tds + ' ppm' +
+						  ', Temperature: ' + data.temperature + '°C' +
+						  ', In: ' + data.in +
+						  ' <br><small>Updated: ' + new Date().toLocaleTimeString() + '</small>';
+
+			// Store original values for manipulation
+			window.latestOriginalData = {
+				ph: parseFloat(data.ph),
+				turbidity: parseFloat(data.turbidity),
+				tds: parseFloat(data.tds),
+				temperature: parseFloat(data.temperature)
+			};
+
+			// Update original value displays
+			document.getElementById('live_ph_original').textContent = data.ph;
+			document.getElementById('live_turbidity_original').textContent = data.turbidity;
+			document.getElementById('live_tds_original').textContent = data.tds;
+			document.getElementById('live_temperature_original').textContent = data.temperature;
+		}
+
+		function applyLiveManipulation() {
+			if (!window.latestOriginalData) return;
+
+			var data = window.latestOriginalData;
+			
+			// Get manipulation values
+			var phOffset = parseFloat(document.getElementById('live_ph_offset').value) || 0;
+			var phMultiplier = parseFloat(document.getElementById('live_ph_multiplier').value) || 1;
+			var turbidityOffset = parseFloat(document.getElementById('live_turbidity_offset').value) || 0;
+			var turbidityMultiplier = parseFloat(document.getElementById('live_turbidity_multiplier').value) || 1;
+			var tdsOffset = parseFloat(document.getElementById('live_tds_offset').value) || 0;
+			var tdsMultiplier = parseFloat(document.getElementById('live_tds_multiplier').value) || 1;
+			var temperatureOffset = parseFloat(document.getElementById('live_temperature_offset').value) || 0;
+			var temperatureMultiplier = parseFloat(document.getElementById('live_temperature_multiplier').value) || 1;
+
+			// Apply manipulation formula: (value + offset) * multiplier
+			var phModified = (data.ph + phOffset) * phMultiplier;
+			var turbidityModified = (data.turbidity + turbidityOffset) * turbidityMultiplier;
+			var tdsModified = (data.tds + tdsOffset) * tdsMultiplier;
+			var temperatureModified = (data.temperature + temperatureOffset) * temperatureMultiplier;
+
+			// Update modified value displays
+			document.getElementById('live_ph_modified').textContent = phModified.toFixed(2);
+			document.getElementById('live_turbidity_modified').textContent = turbidityModified.toFixed(2);
+			document.getElementById('live_tds_modified').textContent = tdsModified.toFixed(2);
+			document.getElementById('live_temperature_modified').textContent = temperatureModified.toFixed(2);
+		}
+
+		function startLatestDataMonitor() {
+			if (latestDataTimerId !== null) return;
+			fetchLatestData(); // Fetch immediately
+			latestDataTimerId = setInterval(fetchLatestData, 1000); // Then every second
+		}
+
+		function stopLatestDataMonitor() {
+			if (latestDataTimerId !== null) {
+				clearInterval(latestDataTimerId);
+				latestDataTimerId = null;
+			}
+		}
+
+		// Event listeners
 		document.getElementById('startBtn').addEventListener('click', function() {
 			if (timerId !== null) return;
 			setRunning(true);
 			insertOnce();
 			timerId = setInterval(insertOnce, 1000);
+			startLatestDataMonitor(); // Start monitoring when continuous insert starts
 		});
 
 		document.getElementById('stopBtn').addEventListener('click', function() {
@@ -567,8 +781,46 @@ $tdsRanges = [
 				clearInterval(timerId);
 				timerId = null;
 				setRunning(false);
+				stopLatestDataMonitor(); // Stop monitoring when continuous insert stops
 			}
 		});
+
+		// Live manipulation event listeners
+		document.getElementById('applyLiveManipulation').addEventListener('click', function() {
+			applyLiveManipulation();
+		});
+
+		document.getElementById('resetLiveManipulation').addEventListener('click', function() {
+			// Reset all manipulation inputs to defaults
+			document.getElementById('live_ph_offset').value = '0';
+			document.getElementById('live_ph_multiplier').value = '1';
+			document.getElementById('live_turbidity_offset').value = '0';
+			document.getElementById('live_turbidity_multiplier').value = '1';
+			document.getElementById('live_tds_offset').value = '0';
+			document.getElementById('live_tds_multiplier').value = '1';
+			document.getElementById('live_temperature_offset').value = '0';
+			document.getElementById('live_temperature_multiplier').value = '1';
+			
+			// Apply the reset values
+			applyLiveManipulation();
+		});
+
+		// Add event listeners for real-time manipulation updates
+		var manipulationInputs = [
+			'live_ph_offset', 'live_ph_multiplier',
+			'live_turbidity_offset', 'live_turbidity_multiplier',
+			'live_tds_offset', 'live_tds_multiplier',
+			'live_temperature_offset', 'live_temperature_multiplier'
+		];
+
+		manipulationInputs.forEach(function(inputId) {
+			document.getElementById(inputId).addEventListener('input', function() {
+				applyLiveManipulation();
+			});
+		});
+
+		// Start monitoring latest data immediately when page loads
+		startLatestDataMonitor();
 	})();
 	</script>
 
