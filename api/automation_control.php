@@ -23,14 +23,19 @@ try {
         $result = $conn->query("SELECT turbidity, tds, ph, temperature, reading_time FROM water_readings ORDER BY reading_time DESC LIMIT 1");
         $latest_reading = $result->fetch_assoc();
         
-        // Get current relay states
-        $relay_result = $conn->query("SELECT relay_number, state FROM relay_states ORDER BY relay_number");
+        // Get current relay states with manual override status
+        $relay_result = $conn->query("SELECT relay_number, state, manual_override FROM relay_states ORDER BY relay_number");
         $relay_states = [];
+        $any_manual_control = false;
         while ($row = $relay_result->fetch_assoc()) {
             $relay_states[] = [
                 "relay_number" => (int)$row['relay_number'],
-                "state" => (int)$row['state']
+                "state" => (int)$row['state'],
+                "manual_override" => (int)$row['manual_override']
             ];
+            if ($row['manual_override'] == 1) {
+                $any_manual_control = true;
+            }
         }
         
         // Get automation settings
@@ -47,6 +52,23 @@ try {
             ];
         }
         
+        // If any relay is under manual control, automatically disable automation
+        if ($any_manual_control && $automation_settings['enabled'] == 1) {
+            $conn->query("UPDATE automation_settings SET enabled = 0, filter_auto_enabled = 0, updated_at = NOW() WHERE id = 1");
+            $automation_settings['enabled'] = 0;
+            $automation_settings['filter_auto_enabled'] = 0;
+            
+            // Log that automation was auto-disabled
+            $log_stmt = $conn->prepare("INSERT INTO activity_logs (user_id, action_type, performed_by, message, details, timestamp) VALUES (?, ?, ?, ?, ?, NOW())");
+            $system_user_id = null;
+            $action_type = "automation_auto_disabled";
+            $performed_by = "Water Quality Control System";
+            $message = "Automation automatically disabled due to manual relay control";
+            $details = "System detected manual relay control - automation disabled for safety";
+            $log_stmt->bind_param("issss", $system_user_id, $action_type, $performed_by, $message, $details);
+            $log_stmt->execute();
+        }
+        
         // Analyze sensor data for automation triggers
         $analysis = analyzeSensorData($latest_reading, $conn);
         
@@ -55,7 +77,8 @@ try {
             "sensor_data" => $latest_reading,
             "relay_states" => $relay_states,
             "automation_settings" => $automation_settings,
-            "analysis" => $analysis
+            "analysis" => $analysis,
+            "manual_control_detected" => $any_manual_control
         ]);
         exit;
     }
@@ -68,6 +91,14 @@ try {
             $enabled = isset($_POST['enabled']) ? (int)$_POST['enabled'] : 0;
             $filter_auto_enabled = isset($_POST['filter_auto_enabled']) ? (int)$_POST['filter_auto_enabled'] : 0;
             
+            // Master automation logic: when master is ON, filter automation also turns ON
+            // When master is OFF, filter automation also turns OFF
+            if ($enabled == 1) {
+                $filter_auto_enabled = 1; // Force filter automation ON when master is ON
+            } else {
+                $filter_auto_enabled = 0; // Force filter automation OFF when master is OFF
+            }
+            
             // Update automation settings
             $stmt = $conn->prepare("UPDATE automation_settings SET enabled = ?, filter_auto_enabled = ?, updated_at = NOW() WHERE id = 1");
             $stmt->bind_param("ii", $enabled, $filter_auto_enabled);
@@ -76,9 +107,21 @@ try {
                 throw new Exception("Failed to update automation settings");
             }
             
+            // Log the automation change
+            $log_stmt = $conn->prepare("INSERT INTO activity_logs (user_id, action_type, performed_by, message, details, timestamp) VALUES (?, ?, ?, ?, ?, NOW())");
+            $system_user_id = null;
+            $action_type = "automation_settings_updated";
+            $performed_by = "Water Quality Control System";
+            $message = "Automation settings updated";
+            $details = "Master automation: " . ($enabled ? 'ON' : 'OFF') . ", Filter automation: " . ($filter_auto_enabled ? 'ON' : 'OFF');
+            $log_stmt->bind_param("issss", $system_user_id, $action_type, $performed_by, $message, $details);
+            $log_stmt->execute();
+            
             echo json_encode([
                 "success" => true,
-                "message" => "Automation settings updated successfully"
+                "message" => "Automation settings updated successfully",
+                "master_automation" => $enabled,
+                "filter_automation" => $filter_auto_enabled
             ]);
         } elseif ($action === 'check_and_trigger') {
             // Manual trigger to check sensors and apply automation
