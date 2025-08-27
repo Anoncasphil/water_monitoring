@@ -552,97 +552,10 @@ $tdsRanges = [
 	</section>
 
 	<section>
-		<h2>Latest Data Monitor & Manipulation</h2>
-		<p class="small">Shows the most recent water reading and updates every second. You can manipulate these values in real-time.</p>
+		<h2>Latest Data Monitor</h2>
+		<p class="small">Shows the most recent water reading and updates every second. Manipulation is controlled in the Data Manipulation Settings above.</p>
 		<div id="latest_data" class="small" style="background: #f8f9fa; padding: 12px; border-radius: 4px; margin-bottom: 16px;">
 			Loading latest data...
-		</div>
-		
-		<div class="manipulation-grid">
-			<div>
-				<h3>pH Sensor</h3>
-				<div class="row">
-					<label for="live_ph_offset">Offset:</label>
-					<input id="live_ph_offset" type="number" step="0.01" value="0" />
-				</div>
-				<div class="row">
-					<label for="live_ph_multiplier">Multiplier:</label>
-					<input id="live_ph_multiplier" type="number" step="0.01" value="1" />
-				</div>
-				<div class="row">
-					<label>Original:</label>
-					<span id="live_ph_original">-</span>
-				</div>
-				<div class="row">
-					<label>Modified:</label>
-					<span id="live_ph_modified">-</span>
-				</div>
-			</div>
-			
-			<div>
-				<h3>Turbidity Sensor</h3>
-				<div class="row">
-					<label for="live_turbidity_offset">Offset:</label>
-					<input id="live_turbidity_offset" type="number" step="0.01" value="0" />
-				</div>
-				<div class="row">
-					<label for="live_turbidity_multiplier">Multiplier:</label>
-					<input id="live_turbidity_multiplier" type="number" step="0.01" value="1" />
-				</div>
-				<div class="row">
-					<label>Original:</label>
-					<span id="live_turbidity_original">-</span>
-				</div>
-				<div class="row">
-					<label>Modified:</label>
-					<span id="live_turbidity_modified">-</span>
-				</div>
-			</div>
-			
-			<div>
-				<h3>TDS Sensor</h3>
-				<div class="row">
-					<label for="live_tds_offset">Offset:</label>
-					<input id="live_tds_offset" type="number" step="0.01" value="0" />
-				</div>
-				<div class="row">
-					<label for="live_tds_multiplier">Multiplier:</label>
-					<input id="live_tds_multiplier" type="number" step="0.01" value="1" />
-				</div>
-				<div class="row">
-					<label>Original:</label>
-					<span id="live_tds_original">-</span>
-				</div>
-				<div class="row">
-					<label>Modified:</label>
-					<span id="live_tds_modified">-</span>
-				</div>
-			</div>
-			
-			<div>
-				<h3>Temperature Sensor</h3>
-				<div class="row">
-					<label for="live_temperature_offset">Offset:</label>
-					<input id="live_temperature_offset" type="number" step="0.01" value="0" />
-				</div>
-				<div class="row">
-					<label for="live_temperature_multiplier">Multiplier:</label>
-					<input id="live_temperature_multiplier" type="number" step="0.01" value="1" />
-				</div>
-				<div class="row">
-					<label>Original:</label>
-					<span id="live_temperature_original">-</span>
-				</div>
-				<div class="row">
-					<label>Modified:</label>
-					<span id="live_temperature_modified">-</span>
-				</div>
-			</div>
-		</div>
-		
-		<div class="row" style="margin-top: 16px;">
-			<button id="applyLiveManipulation" type="button">Apply Live Manipulation</button>
-			<button id="resetLiveManipulation" type="button">Reset to Defaults</button>
 		</div>
 	</section>
 
@@ -812,15 +725,6 @@ $tdsRanges = [
 				tds: parseFloat(data.tds),
 				temperature: parseFloat(data.temperature)
 			};
-
-			// Update original value displays
-			document.getElementById('live_ph_original').textContent = data.ph;
-			document.getElementById('live_turbidity_original').textContent = data.turbidity;
-			document.getElementById('live_tds_original').textContent = data.tds;
-			document.getElementById('live_temperature_original').textContent = data.temperature;
-			
-			// Update modified value displays with current manipulation settings
-			applyLiveManipulation();
 		}
 
 		function applyLiveManipulation() {
@@ -828,15 +732,15 @@ $tdsRanges = [
 
 			var data = window.latestOriginalData;
 			
-			// Get manipulation values
-			var phOffset = parseFloat(document.getElementById('live_ph_offset').value) || 0;
-			var phMultiplier = parseFloat(document.getElementById('live_ph_multiplier').value) || 1;
-			var turbidityOffset = parseFloat(document.getElementById('live_turbidity_offset').value) || 0;
-			var turbidityMultiplier = parseFloat(document.getElementById('live_turbidity_multiplier').value) || 1;
-			var tdsOffset = parseFloat(document.getElementById('live_tds_offset').value) || 0;
-			var tdsMultiplier = parseFloat(document.getElementById('live_tds_multiplier').value) || 1;
-			var temperatureOffset = parseFloat(document.getElementById('live_temperature_offset').value) || 0;
-			var temperatureMultiplier = parseFloat(document.getElementById('live_temperature_multiplier').value) || 1;
+			// Get manipulation values from the main form
+			var phOffset = parseFloat(document.getElementById('ph_offset').value) || 0;
+			var phMultiplier = parseFloat(document.getElementById('ph_multiplier').value) || 1;
+			var turbidityOffset = parseFloat(document.getElementById('turbidity_offset').value) || 0;
+			var turbidityMultiplier = parseFloat(document.getElementById('turbidity_multiplier').value) || 1;
+			var tdsOffset = parseFloat(document.getElementById('tds_offset').value) || 0;
+			var tdsMultiplier = parseFloat(document.getElementById('tds_multiplier').value) || 1;
+			var temperatureOffset = parseFloat(document.getElementById('temperature_offset').value) || 0;
+			var temperatureMultiplier = parseFloat(document.getElementById('temperature_multiplier').value) || 1;
 
 			// Apply manipulation formula: (value + offset) * multiplier
 			var phModified = (data.ph + phOffset) * phMultiplier;
@@ -844,11 +748,16 @@ $tdsRanges = [
 			var tdsModified = (data.tds + tdsOffset) * tdsMultiplier;
 			var temperatureModified = (data.temperature + temperatureOffset) * temperatureMultiplier;
 
-			// Update modified value displays
-			document.getElementById('live_ph_modified').textContent = phModified.toFixed(2);
-			document.getElementById('live_turbidity_modified').textContent = turbidityModified.toFixed(2);
-			document.getElementById('live_tds_modified').textContent = tdsModified.toFixed(2);
-			document.getElementById('live_temperature_modified').textContent = temperatureModified.toFixed(2);
+			// Update the latest data display with modified values if manipulation is running
+			if (manipulationTimerId !== null && document.querySelector('input[name="manipulation_enabled"]').checked) {
+				var el = document.getElementById('latest_data');
+				el.innerHTML = '<strong>Latest Reading (Manipulated):</strong> pH: ' + phModified.toFixed(2) + 
+							  ', Turbidity: ' + turbidityModified.toFixed(2) + ' NTU' +
+							  ', TDS: ' + tdsModified.toFixed(2) + ' ppm' +
+							  ', Temperature: ' + temperatureModified.toFixed(2) + '°C' +
+							  ', In: ' + (window.latestOriginalData.in || 0) +
+							  ' <br><small>Updated: ' + new Date().toLocaleTimeString() + ' | Manipulation: RUNNING</small>';
+			}
 		}
 
 		function startLatestDataMonitor() {
@@ -884,40 +793,6 @@ $tdsRanges = [
 
 		document.getElementById('startManipulationBtn').addEventListener('click', startManipulation);
 		document.getElementById('stopManipulationBtn').addEventListener('click', stopManipulation);
-
-		// Live manipulation event listeners
-		document.getElementById('applyLiveManipulation').addEventListener('click', function() {
-			applyLiveManipulation();
-		});
-
-		document.getElementById('resetLiveManipulation').addEventListener('click', function() {
-			// Reset all manipulation inputs to defaults
-			document.getElementById('live_ph_offset').value = '0';
-			document.getElementById('live_ph_multiplier').value = '1';
-			document.getElementById('live_turbidity_offset').value = '0';
-			document.getElementById('live_turbidity_multiplier').value = '1';
-			document.getElementById('live_tds_offset').value = '0';
-			document.getElementById('live_tds_multiplier').value = '1';
-			document.getElementById('live_temperature_offset').value = '0';
-			document.getElementById('live_temperature_multiplier').value = '1';
-			
-			// Apply the reset values
-			applyLiveManipulation();
-		});
-
-		// Add event listeners for real-time manipulation updates
-		var manipulationInputs = [
-			'live_ph_offset', 'live_ph_multiplier',
-			'live_turbidity_offset', 'live_turbidity_multiplier',
-			'live_tds_offset', 'live_tds_multiplier',
-			'live_temperature_offset', 'live_temperature_multiplier'
-		];
-
-		manipulationInputs.forEach(function(inputId) {
-			document.getElementById(inputId).addEventListener('input', function() {
-				applyLiveManipulation();
-			});
-		});
 
 		// Add event listeners for the main manipulation form inputs
 		var mainManipulationInputs = [
