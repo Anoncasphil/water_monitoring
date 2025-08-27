@@ -34,26 +34,53 @@ try {
 
         // Update relay state in database and set manual override flag
         // Note: Arduino uses inverted logic (LOW=ON, HIGH=OFF) but database stores 1=ON, 0=OFF
-        $stmt = $conn->prepare("UPDATE relay_states SET state = ?, manual_override = 1 WHERE relay_number = ?");
-        $stmt->bind_param("ii", $state, $relay);
+        // manual_override = 1 when relay is manually turned ON, 0 when manually turned OFF
+        $manual_override = $state; // 1 for ON (manual control), 0 for OFF (automation control)
+        $stmt = $conn->prepare("UPDATE relay_states SET state = ?, manual_override = ? WHERE relay_number = ?");
+        $stmt->bind_param("iii", $state, $manual_override, $relay);
         
         if (!$stmt->execute()) {
             throw new Exception("Failed to update relay state");
         }
 
-        // When any relay is manually controlled, turn OFF all automation
-        $automation_stmt = $conn->prepare("UPDATE automation_settings SET enabled = 0, filter_auto_enabled = 0, updated_at = NOW() WHERE id = 1");
-        $automation_stmt->execute();
-        
-        // Log that automation was disabled due to manual control
-        $log_stmt = $conn->prepare("INSERT INTO activity_logs (user_id, action_type, performed_by, message, details, timestamp) VALUES (?, ?, ?, ?, ?, NOW())");
-        $system_user_id = null;
-        $action_type = "automation_disabled";
-        $performed_by = "Manual Relay Control";
-        $message = "All automation disabled due to manual relay control";
-        $details = "Relay {$relay} manually set to " . ($state ? 'ON' : 'OFF') . " - automation system disabled for safety";
-        $log_stmt->bind_param("issss", $system_user_id, $action_type, $performed_by, $message, $details);
-        $log_stmt->execute();
+        // Only disable automation when relay is manually turned ON (manual_override = 1)
+        if ($state == 1) {
+            // When relay is manually turned ON, turn OFF all automation
+            $automation_stmt = $conn->prepare("UPDATE automation_settings SET enabled = 0, filter_auto_enabled = 0, updated_at = NOW() WHERE id = 1");
+            $automation_stmt->execute();
+            
+            // Log that automation was disabled due to manual control
+            $log_stmt = $conn->prepare("INSERT INTO activity_logs (user_id, action_type, performed_by, message, details, timestamp) VALUES (?, ?, ?, ?, ?, NOW())");
+            $system_user_id = null;
+            $action_type = "automation_disabled";
+            $performed_by = "Manual Relay Control";
+            $message = "All automation disabled due to manual relay control";
+            $details = "Relay {$relay} manually turned ON - automation system disabled for safety";
+            $log_stmt->bind_param("issss", $system_user_id, $action_type, $performed_by, $message, $details);
+            $log_stmt->execute();
+        } else {
+            // When relay is manually turned OFF, check if any other relays are still manually controlled
+            $check_stmt = $conn->prepare("SELECT COUNT(*) as manual_count FROM relay_states WHERE manual_override = 1");
+            $check_stmt->execute();
+            $result = $check_stmt->get_result();
+            $manual_count = $result->fetch_assoc()['manual_count'];
+            
+            // If no relays are manually controlled, re-enable automation
+            if ($manual_count == 0) {
+                $automation_stmt = $conn->prepare("UPDATE automation_settings SET enabled = 1, filter_auto_enabled = 1, updated_at = NOW() WHERE id = 1");
+                $automation_stmt->execute();
+                
+                // Log that automation was re-enabled
+                $log_stmt = $conn->prepare("INSERT INTO activity_logs (user_id, action_type, performed_by, message, details, timestamp) VALUES (?, ?, ?, ?, ?, NOW())");
+                $system_user_id = null;
+                $action_type = "automation_enabled";
+                $performed_by = "Manual Relay Control";
+                $message = "Automation re-enabled";
+                $details = "Relay {$relay} manually turned OFF - no manual control active, automation re-enabled";
+                $log_stmt->bind_param("issss", $system_user_id, $action_type, $performed_by, $message, $details);
+                $log_stmt->execute();
+            }
+        }
 
         // Get all relay states after update
         $result = $conn->query("SELECT relay_number, state, manual_override FROM relay_states ORDER BY relay_number");
