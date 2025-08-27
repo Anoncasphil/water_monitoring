@@ -141,17 +141,13 @@ try {
 			$manipulationEnabled = isset($_POST['manipulation_enabled']) && $_POST['manipulation_enabled'] === '1' ? '1' : '0';
 			setSetting($conn, 'manipulation_enabled', $manipulationEnabled);
 			
-			$settings = [
-				'ph_offset', 'ph_multiplier', 'turbidity_offset', 'turbidity_multiplier',
-				'tds_offset', 'tds_multiplier', 'temperature_offset', 'temperature_multiplier'
-			];
-			
-			foreach ($settings as $setting) {
-				$value = isset($_POST[$setting]) && $_POST[$setting] !== '' ? (string)$_POST[$setting] : '0.0';
-				if ($setting === 'multiplier') {
-					$value = isset($_POST[$setting]) && $_POST[$setting] !== '' ? (string)$_POST[$setting] : '1.0';
+			// Save the selected ranges
+			$ranges = ['ph_range', 'turbidity_range', 'tds_range', 'temperature_range'];
+			foreach ($ranges as $range) {
+				$value = isset($_POST[$range]) ? (string)$_POST[$range] : '';
+				if (!empty($value)) {
+					setSetting($conn, $range, $value);
 				}
-				setSetting($conn, $setting, $value);
 			}
 			
 			$messages[] = 'Data manipulation settings saved successfully.';
@@ -211,9 +207,9 @@ try {
 		}
 
 		if ($action === 'insert_reading_categories') {
-			$phCategory = isset($_POST['ph_category']) ? (string)$_POST['ph_category'] : 'neutral';
-			$turbidityCategory = isset($_POST['turbidity_category']) ? (string)$_POST['turbidity_category'] : 'clean';
-			$tdsCategory = isset($_POST['tds_category']) ? (string)$_POST['tds_category'] : 'low';
+			$phCategory = isset($_POST['ph_category']) ? (string)$_POST['ph_category'] : '';
+			$turbidityCategory = isset($_POST['turbidity_category']) ? (string)$_POST['turbidity_category'] : '';
+			$tdsCategory = isset($_POST['tds_category']) ? (string)$_POST['tds_category'] : '';
 			$temperature = isset($_POST['temperature']) && $_POST['temperature'] !== '' ? (float)$_POST['temperature'] : 25.0;
 			$inValue = isset($_POST['in_value']) && $_POST['in_value'] !== '' ? (float)$_POST['in_value'] : 0.0;
 
@@ -227,13 +223,27 @@ try {
 			$turbidity = randomInRange($turMin, $turMax, 2);
 			$tds = randomInRange($tdsMin, $tdsMax, 2);
 
-			// Apply data manipulation if enabled
-			$manipulationSettings = getDataManipulationSettings($conn);
-			if ($manipulationSettings['manipulation_enabled']) {
-				$ph = applyDataManipulation($ph, $manipulationSettings['ph_offset'], $manipulationSettings['ph_multiplier']);
-				$turbidity = applyDataManipulation($turbidity, $manipulationSettings['turbidity_offset'], $manipulationSettings['turbidity_multiplier']);
-				$tds = applyDataManipulation($tds, $manipulationSettings['tds_offset'], $manipulationSettings['tds_multiplier']);
-				$temperature = applyDataManipulation($temperature, $manipulationSettings['temperature_offset'], $manipulationSettings['temperature_multiplier']);
+			// Check if manipulation is enabled and running
+			$manipulationEnabled = getSetting($conn, 'manipulation_enabled', '0') === '1';
+			$manipulationRunning = getSetting($conn, 'manipulation_running', '0') === '1';
+			
+			if ($manipulationEnabled && $manipulationRunning) {
+				// Get manipulation ranges and generate random values
+				$phRange = getSetting($conn, 'ph_range', '6-7');
+				$turbidityRange = getSetting($conn, 'turbidity_range', '1-2');
+				$tdsRange = getSetting($conn, 'tds_range', '0-50');
+				$temperatureRange = getSetting($conn, 'temperature_range', '20-25');
+				
+				[$phMin, $phMax] = parseRange($phRange);
+				[$turMin, $turMax] = parseRange($turbidityRange);
+				[$tdsMin, $tdsMax] = parseRange($tdsRange);
+				[$tempMin, $tempMax] = parseRange($temperatureRange);
+				
+				// Override with manipulated random values
+				$ph = randomInRange($phMin, $phMax, 2);
+				$turbidity = randomInRange($turMin, $turMax, 2);
+				$tds = randomInRange($tdsMin, $tdsMax, 2);
+				$temperature = randomInRange($tempMin, $tempMax, 2);
 			}
 
 			$stmt = $conn->prepare("INSERT INTO water_readings (turbidity, tds, ph, temperature, `in`) VALUES (?, ?, ?, ?, ?)");
@@ -256,7 +266,8 @@ try {
 							'ph' => $phCategory,
 							'turbidity' => $turbidityCategory,
 							'tds' => $tdsCategory,
-						]
+						],
+						'manipulated' => ($manipulationEnabled && $manipulationRunning)
 					]
 				]);
 				exit;
@@ -297,6 +308,23 @@ try {
 				]);
 			}
 			exit;
+		}
+
+		if ($action === 'set_manipulation_running') {
+			$manipulationRunning = isset($_POST['manipulation_running']) && $_POST['manipulation_running'] === '1' ? '1' : '0';
+			setSetting($conn, 'manipulation_running', $manipulationRunning);
+			
+			// Return JSON response for AJAX calls
+			if (isset($_POST['ajax']) && $_POST['ajax'] === '1') {
+				header('Content-Type: application/json');
+				echo json_encode([
+					'success' => true,
+					'manipulation_running' => $manipulationRunning
+				]);
+				exit;
+			}
+			
+			$messages[] = $manipulationRunning === '1' ? 'Manipulation system started.' : 'Manipulation system stopped.';
 		}
 	}
 
@@ -649,28 +677,52 @@ $tdsRanges = [
 				return;
 			}
 			
-			manipulationTimerId = setInterval(function() {
-				if (window.latestOriginalData) {
-					// Apply manipulation to the current display
-					applyLiveManipulation();
-					el.textContent = 'Manipulation applied. Updated: ' + new Date().toLocaleTimeString();
-				} else {
-					el.textContent = 'No data to manipulate. Please insert a reading first.';
-				}
-			}, 1000); // Apply every second
+			// Save manipulation running state to database
+			var formData = new FormData();
+			formData.append('action', 'set_manipulation_running');
+			formData.append('manipulation_running', '1');
 			
-			document.getElementById('startManipulationBtn').disabled = true;
-			document.getElementById('stopManipulationBtn').disabled = false;
+			fetch(window.location.href, {
+				method: 'POST',
+				body: formData,
+				credentials: 'same-origin'
+			}).then(function() {
+				// Start the manipulation timer
+				manipulationTimerId = setInterval(function() {
+					if (window.latestOriginalData) {
+						// Apply manipulation to the current display
+						applyLiveManipulation();
+						el.textContent = 'Manipulation applied. Updated: ' + new Date().toLocaleTimeString();
+					} else {
+						el.textContent = 'No data to manipulate. Please insert a reading first.';
+					}
+				}, 1000); // Apply every second
+				
+				document.getElementById('startManipulationBtn').disabled = true;
+				document.getElementById('stopManipulationBtn').disabled = false;
+			});
 		}
 
 		function stopManipulation() {
 			if (manipulationTimerId !== null) {
 				clearInterval(manipulationTimerId);
 				manipulationTimerId = null;
-				var el = document.getElementById('manipulation_status');
-				el.textContent = 'Manipulation stopped.';
-				document.getElementById('startManipulationBtn').disabled = false;
-				document.getElementById('stopManipulationBtn').disabled = true;
+				
+				// Save manipulation stopped state to database
+				var formData = new FormData();
+				formData.append('action', 'set_manipulation_running');
+				formData.append('manipulation_running', '0');
+				
+				fetch(window.location.href, {
+					method: 'POST',
+					body: formData,
+					credentials: 'same-origin'
+				}).then(function() {
+					var el = document.getElementById('manipulation_status');
+					el.textContent = 'Manipulation stopped.';
+					document.getElementById('startManipulationBtn').disabled = false;
+					document.getElementById('stopManipulationBtn').disabled = true;
+				});
 			}
 		}
 
@@ -830,6 +882,12 @@ $tdsRanges = [
 					in: 0
 				});
 			}
+		});
+
+		// Add form submission handler to save ranges
+		document.querySelector('form[action*="save_manipulation_settings"]').addEventListener('submit', function(e) {
+			// Form will submit normally to save the ranges
+			// The manipulation will use these saved ranges
 		});
 
 		// Start monitoring latest data immediately when page loads
