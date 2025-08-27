@@ -291,23 +291,35 @@ try {
 			$temperature = isset($_POST['temperature']) && $_POST['temperature'] !== '' ? (float)$_POST['temperature'] : 25.0;
 			$inValue = isset($_POST['in_value']) && $_POST['in_value'] !== '' ? (float)$_POST['in_value'] : 0.0;
 
+			// Check for override values first (these take priority)
+			$phOverride = isset($_POST['ph_override']) && $_POST['ph_override'] !== '' ? (float)$_POST['ph_override'] : null;
+			$turbidityOverride = isset($_POST['turbidity_override']) && $_POST['turbidity_override'] !== '' ? (float)$_POST['turbidity_override'] : null;
+			$tdsOverride = isset($_POST['tds_override']) && $_POST['tds_override'] !== '' ? (float)$_POST['tds_override'] : null;
+			$temperatureOverride = isset($_POST['temperature_override']) && $_POST['temperature_override'] !== '' ? (float)$_POST['temperature_override'] : null;
+
 			[$phRangeStr, $turbidityRangeStr, $tdsRangeStr] = getRangesFromCategories($phCategory, $turbidityCategory, $tdsCategory);
 
 			[$phMin, $phMax] = parseRange($phRangeStr);
 			[$turMin, $turMax] = parseRange($turbidityRangeStr);
 			[$tdsMin, $tdsMax] = parseRange($tdsRangeStr);
 
-			$ph = randomInRange($phMin, $phMax, 2);
-			$turbidity = randomInRange($turMin, $turMax, 2);
-			$tds = randomInRange($tdsMin, $tdsMax, 2);
+			// Use override values if provided, otherwise generate random values
+			$ph = $phOverride !== null ? $phOverride : randomInRange($phMin, $phMax, 2);
+			$turbidity = $turbidityOverride !== null ? $turbidityOverride : randomInRange($turMin, $turMax, 2);
+			$tds = $tdsOverride !== null ? $tdsOverride : randomInRange($tdsMin, $tdsMax, 2);
 
 			// Check if manipulation is enabled and running
 			$manipulationEnabled = getSetting($conn, 'manipulation_enabled', '0') === '1';
 			$manipulationRunning = getSetting($conn, 'manipulation_running', '0') === '1';
 			
-			// Debug: Log the manipulation status
+			// Debug: Log the manipulation status and override values
 			error_log("Manipulation enabled: " . ($manipulationEnabled ? 'YES' : 'NO'));
 			error_log("Manipulation running: " . ($manipulationRunning ? 'YES' : 'NO'));
+			error_log("Override values received:");
+			error_log("  pH override: " . ($phOverride !== null ? $phOverride : 'NOT SET'));
+			error_log("  Turbidity override: " . ($turbidityOverride !== null ? $turbidityOverride : 'NOT SET'));
+			error_log("  TDS override: " . ($tdsOverride !== null ? $tdsOverride : 'NOT SET'));
+			error_log("  Temperature override: " . ($temperatureOverride !== null ? $temperatureOverride : 'NOT SET'));
 			
 			if ($manipulationEnabled && $manipulationRunning) {
 				// Get individual manipulation settings for each sensor
@@ -349,6 +361,24 @@ try {
 					[$tempMin, $tempMax] = parseRange($temperatureRange);
 					$temperature = randomInRange($tempMin, $tempMax, 2);
 					error_log("Temperature manipulated from range $temperatureRange to: $temperature");
+				}
+				
+				// Apply override values if they were provided (these take highest priority)
+				if ($phOverride !== null) {
+					$ph = $phOverride;
+					error_log("pH overridden to: $ph");
+				}
+				if ($turbidityOverride !== null) {
+					$turbidity = $turbidityOverride;
+					error_log("Turbidity overridden to: $turbidity");
+				}
+				if ($tdsOverride !== null) {
+					$tds = $tdsOverride;
+					error_log("TDS overridden to: $tds");
+				}
+				if ($temperatureOverride !== null) {
+					$temperature = $temperatureOverride;
+					error_log("Temperature overridden to: $temperature");
 				}
 			}
 
