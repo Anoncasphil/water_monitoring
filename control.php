@@ -995,49 +995,93 @@ $tdsRanges = [
 			var manipulationEnabled = document.querySelector('input[name="manipulation_enabled"]').checked;
 			var manipulationRunning = manipulationTimerId !== null;
 			
-			// Generate random values if both enabled and running
+			// Start with original values
 			var phDisplay = data.ph;
 			var turbidityDisplay = data.turbidity;
 			var tdsDisplay = data.tds;
 			var temperatureDisplay = data.temperature;
 			
+			// Track which sensors were actually manipulated
+			var manipulatedSensors = [];
+			
+			// Check individual manipulation settings
+			var manipulatePh = false;
+			var manipulateTurbidity = false;
+			var manipulateTds = false;
+			var manipulateTemperature = false;
+			
 			if (manipulationEnabled && manipulationRunning) {
 				// Check individual manipulation settings
-				var manipulatePh = document.querySelector('input[name="manipulate_ph"]').checked;
-				var manipulateTurbidity = document.querySelector('input[name="manipulate_turbidity"]').checked;
-				var manipulateTds = document.querySelector('input[name="manipulate_tds"]').checked;
-				var manipulateTemperature = document.querySelector('input[name="manipulate_temperature"]').checked;
+				manipulatePh = document.querySelector('input[name="manipulate_ph"]').checked;
+				manipulateTurbidity = document.querySelector('input[name="manipulate_turbidity"]').checked;
+				manipulateTds = document.querySelector('input[name="manipulate_tds"]').checked;
+				manipulateTemperature = document.querySelector('input[name="manipulate_temperature"]').checked;
 				
 				// Only manipulate sensors that are enabled
 				if (manipulatePh) {
 					var phRange = document.getElementById('ph_range').value;
 					phDisplay = randomInRange(parseRange(phRange)[0], parseRange(phRange)[1], 2);
+					manipulatedSensors.push('pH');
 				}
 				
 				if (manipulateTurbidity) {
 					var turbidityRange = document.getElementById('turbidity_range').value;
 					turbidityDisplay = randomInRange(parseRange(turbidityRange)[0], parseRange(turbidityRange)[1], 2);
+					manipulatedSensors.push('Turbidity');
 				}
 				
 				if (manipulateTds) {
 					var tdsRange = document.getElementById('tds_range').value;
 					tdsDisplay = randomInRange(parseRange(tdsRange)[0], parseRange(tdsRange)[1], 2);
+					manipulatedSensors.push('TDS');
 				}
 				
 				if (manipulateTemperature) {
 					var temperatureRange = document.getElementById('temperature_range').value;
 					temperatureDisplay = randomInRange(parseRange(temperatureRange)[0], parseRange(temperatureRange)[1], 2);
+					manipulatedSensors.push('Temperature');
 				}
 			}
 			
-			// Show manipulated values in the summary if both enabled and running
-			if (manipulationEnabled && manipulationRunning) {
-				el.innerHTML = '<strong>Latest Reading (Selectively Manipulated):</strong> pH: ' + phDisplay.toFixed(2) + 
-							  ', Turbidity: ' + turbidityDisplay.toFixed(2) + ' NTU' +
-							  ', TDS: ' + tdsDisplay.toFixed(2) + ' ppm' +
-							  ', Temperature: ' + temperatureDisplay.toFixed(2) + '°C' +
-							  ', In: ' + data.in +
-							  ' <br><small>Updated: ' + new Date().toLocaleTimeString() + ' | Manipulation: RUNNING</small>';
+			// Show selectively manipulated values in the summary
+			if (manipulationEnabled && manipulationRunning && manipulatedSensors.length > 0) {
+				var manipulationText = manipulatedSensors.join(', ') + ' manipulated';
+				
+				// Create detailed display showing original vs manipulated values
+				var displayHtml = '<strong>Latest Reading (Selectively Manipulated):</strong><br/>';
+				
+				// pH display
+				if (manipulatePh) {
+					displayHtml += '<span style="color: #ff6b6b;">pH: ' + phDisplay.toFixed(2) + ' (MANIPULATED from ' + data.ph.toFixed(2) + ')</span><br/>';
+				} else {
+					displayHtml += '<span style="color: #51cf66;">pH: ' + phDisplay.toFixed(2) + ' (ORIGINAL)</span><br/>';
+				}
+				
+				// Turbidity display
+				if (manipulateTurbidity) {
+					displayHtml += '<span style="color: #ff6b6b;">Turbidity: ' + turbidityDisplay.toFixed(2) + ' NTU (MANIPULATED from ' + data.turbidity.toFixed(2) + ')</span><br/>';
+				} else {
+					displayHtml += '<span style="color: #51cf66;">Turbidity: ' + turbidityDisplay.toFixed(2) + ' NTU (ORIGINAL)</span><br/>';
+				}
+				
+				// TDS display
+				if (manipulateTds) {
+					displayHtml += '<span style="color: #ff6b6b;">TDS: ' + tdsDisplay.toFixed(2) + ' ppm (MANIPULATED from ' + data.tds.toFixed(2) + ')</span><br/>';
+				} else {
+					displayHtml += '<span style="color: #51cf66;">TDS: ' + tdsDisplay.toFixed(2) + ' ppm (ORIGINAL)</span><br/>';
+				}
+				
+				// Temperature display
+				if (manipulateTemperature) {
+					displayHtml += '<span style="color: #ff6b6b;">Temperature: ' + temperatureDisplay.toFixed(2) + '°C (MANIPULATED from ' + data.temperature.toFixed(2) + ')</span><br/>';
+				} else {
+					displayHtml += '<span style="color: #51cf66;">Temperature: ' + temperatureDisplay.toFixed(2) + '°C (ORIGINAL)</span><br/>';
+				}
+				
+				displayHtml += 'In: ' + data.in + '<br/>';
+				displayHtml += '<small>Updated: ' + new Date().toLocaleTimeString() + ' | Manipulation: RUNNING | ' + manipulationText + '</small>';
+				
+				el.innerHTML = displayHtml;
 			} else if (manipulationEnabled && !manipulationRunning) {
 				el.innerHTML = '<strong>Latest Reading (Original):</strong> pH: ' + data.ph + 
 							  ', Turbidity: ' + data.turbidity + ' NTU' +
