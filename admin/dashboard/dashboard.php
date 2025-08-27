@@ -34,15 +34,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-    // Get second-to-last readings (skip the latest one)
+    // Get 4th-to-last readings (skip the latest 3)
     try {
         $db = Database::getInstance();
         $conn = $db->getConnection();
-        $result = $conn->query("SELECT * FROM water_readings ORDER BY reading_time DESC LIMIT 1 OFFSET 1");
+        $result = $conn->query("SELECT * FROM water_readings ORDER BY reading_time DESC LIMIT 1 OFFSET 3");
         $readings = $result->fetch_all(MYSQLI_ASSOC);
         
-        // Get data for charts (excluding the latest reading)
-        $chartResult = $conn->query("SELECT reading_time, turbidity, tds FROM water_readings ORDER BY reading_time DESC LIMIT 1 OFFSET 1, 24");
+        // Get data for charts (excluding the latest 3 readings)
+        $chartResult = $conn->query("SELECT reading_time, turbidity, tds FROM water_readings ORDER BY reading_time DESC LIMIT 1 OFFSET 3, 24");
         $chartData = $chartResult->fetch_all(MYSQLI_ASSOC);
     } catch (Exception $e) {
         $readings = [];
