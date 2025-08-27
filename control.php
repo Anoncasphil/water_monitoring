@@ -760,13 +760,15 @@ $tdsRanges = [
 		</div>
 		
 		<div style="margin-top: 16px; padding: 12px; background: #e7f3ff; border: 1px solid #b3d9ff; border-radius: 4px;">
-			<h4 style="margin: 0 0 8px 0; color: #0056b3;">How This Works:</h4>
+			<h4 style="margin: 0 0 8px 0; color: #0056b3;">How This Works (OPTIMIZED FOR SPEED):</h4>
 			<div class="small">
 				<strong>1.</strong> Start Database Updates when manipulation is enabled<br/>
-				<strong>2.</strong> The API will update the latest reading every second<br/>
-				<strong>3.</strong> Only the sensors you've enabled for manipulation will be updated<br/>
-				<strong>4.</strong> The database table will show the manipulated values<br/>
-				<strong>5.</strong> Use "Verify Database Contents" to see the changes
+				<strong>2.</strong> The API will update the latest reading every 100ms (10x faster!)<br/>
+				<strong>3.</strong> Aggressive manipulation runs every 50ms (20x faster!) for real-time updates<br/>
+				<strong>4.</strong> Only the sensors you've enabled for manipulation will be updated<br/>
+				<strong>5.</strong> The database table will show the manipulated values immediately<br/>
+				<strong>6.</strong> Use "Verify Database Contents" to see the changes<br/>
+				<strong>⚠️ NEW:</strong> Much faster update intervals to catch new readings before they're displayed!
 			</div>
 		</div>
 	</section>
@@ -921,23 +923,23 @@ $tdsRanges = [
 				body: formData,
 				credentials: 'same-origin'
 			}).then(function() {
-				// Start the manipulation timer
-				manipulationTimerId = setInterval(function() {
-					// Generate random values even without existing data
-					var phRange = document.getElementById('ph_range').value;
-					var turbidityRange = document.getElementById('turbidity_range').value;
-					var tdsRange = document.getElementById('tds_range').value;
-					var temperatureRange = document.getElementById('temperature_range').value;
-					
-					// Generate random values within ranges
-					var phRandom = randomInRange(parseRange(phRange)[0], parseRange(phRange)[1], 2);
-					var turbidityRandom = randomInRange(parseRange(turbidityRange)[0], parseRange(turbidityRange)[1], 2);
-					var tdsRandom = randomInRange(parseRange(tdsRange)[0], parseRange(tdsRange)[1], 2);
-					var temperatureRandom = randomInRange(parseRange(temperatureRange)[0], parseRange(temperatureRange)[1], 2);
-					
-					// Update status with generated values
-					el.textContent = 'Generated: pH ' + phRandom + ', Turbidity ' + turbidityRandom + ' NTU, TDS ' + tdsRandom + ' ppm, Temp ' + temperatureRandom + '°C - ' + new Date().toLocaleTimeString();
-				}, 1000); // Generate every second
+						// Start the manipulation timer - much faster for real-time updates
+		manipulationTimerId = setInterval(function() {
+			// Generate random values even without existing data
+			var phRange = document.getElementById('ph_range').value;
+			var turbidityRange = document.getElementById('turbidity_range').value;
+			var tdsRange = document.getElementById('tds_range').value;
+			var temperatureRange = document.getElementById('temperature_range').value;
+			
+			// Generate random values within ranges
+			var phRandom = randomInRange(parseRange(phRange)[0], parseRange(phRange)[1], 2);
+			var turbidityRandom = randomInRange(parseRange(turbidityRange)[0], parseRange(turbidityRange)[1], 2);
+			var tdsRandom = randomInRange(parseRange(tdsRange)[0], parseRange(tdsRange)[1], 2);
+			var temperatureRandom = randomInRange(parseRange(temperatureRange)[0], parseRange(temperatureRange)[1], 2);
+			
+			// Update status with generated values
+			el.textContent = 'Generated: pH ' + phRandom + ', Turbidity ' + turbidityRandom + ' NTU, TDS ' + tdsRandom + ' ppm, Temp ' + temperatureRandom + '°C - ' + new Date().toLocaleTimeString();
+		}, 100); // Generate every 100ms (10 times per second) for faster manipulation
 				
 				document.getElementById('startManipulationBtn').disabled = true;
 				document.getElementById('stopManipulationBtn').disabled = false;
@@ -1078,8 +1080,8 @@ $tdsRanges = [
 			// Try to fetch data immediately, but don't fail if none exists
 			fetchLatestData();
 			
-			// Then set up the interval for continuous monitoring
-			latestDataTimerId = setInterval(fetchLatestData, 1000); // Then every second
+					// Then set up the interval for continuous monitoring - faster for real-time manipulation
+		latestDataTimerId = setInterval(fetchLatestData, 100); // Update every 100ms (10 times per second) for faster manipulation
 		}
 
 		function fetchLatestData() {
@@ -1202,22 +1204,31 @@ $tdsRanges = [
 			});
 		});
 
-		// Database Update functionality
+		// Database Update functionality - Optimized for real-time manipulation
 		var dbUpdateInterval = null;
+		var aggressiveManipulationInterval = null; // New: More aggressive manipulation
 		
-		document.getElementById('startDbUpdatesBtn').addEventListener('click', function() {
+				document.getElementById('startDbUpdatesBtn').addEventListener('click', function() {
 			if (dbUpdateInterval) {
 				clearInterval(dbUpdateInterval);
 			}
+			if (aggressiveManipulationInterval) {
+				clearInterval(aggressiveManipulationInterval);
+			}
 			
-			// Start continuous updates
+			// Start continuous updates - much faster for real-time manipulation
 			dbUpdateInterval = setInterval(function() {
 				updateLatestReading();
-			}, 1000);
+			}, 100); // Update every 100ms (10 times per second) instead of 1000ms
+			
+			// Start aggressive manipulation - directly manipulate readings as they come in
+			aggressiveManipulationInterval = setInterval(function() {
+				aggressiveManipulateReadings();
+			}, 50); // Even faster: every 50ms (20 times per second)
 			
 			// Update UI
 			document.getElementById('dbUpdateStatus').style.display = 'block';
-			document.getElementById('dbUpdateStatusText').textContent = 'Running (updating every second)';
+			document.getElementById('dbUpdateStatusText').textContent = 'Running (updating every 100ms + aggressive manipulation every 50ms)';
 			document.getElementById('dbUpdateStatus').style.background = '#d4edda';
 			document.getElementById('dbUpdateStatus').style.border = '1px solid #c3e6cb';
 			document.getElementById('dbUpdateStatus').style.color = '#155724';
@@ -1229,6 +1240,10 @@ $tdsRanges = [
 			if (dbUpdateInterval) {
 				clearInterval(dbUpdateInterval);
 				dbUpdateInterval = null;
+			}
+			if (aggressiveManipulationInterval) {
+				clearInterval(aggressiveManipulationInterval);
+				aggressiveManipulationInterval = null;
 			}
 			
 			// Update UI
@@ -1273,6 +1288,86 @@ $tdsRanges = [
 					document.getElementById('dbUpdateResultsContent').innerHTML = 
 						'<div style="color: #721c24;">Failed to update: ' + err.message + '</div>';
 				});
+		}
+		
+		// New: Aggressive manipulation function that directly manipulates readings
+		function aggressiveManipulateReadings() {
+			// Check if manipulation is enabled and running
+			var manipulationEnabled = document.querySelector('input[name="manipulation_enabled"]').checked;
+			if (!manipulationEnabled) return;
+			
+			// Get current manipulation settings
+			var manipulatePh = document.querySelector('input[name="manipulate_ph"]').checked;
+			var manipulateTurbidity = document.querySelector('input[name="manipulate_turbidity"]').checked;
+			var manipulateTds = document.querySelector('input[name="manipulate_tds"]').checked;
+			var manipulateTemperature = document.querySelector('input[name="manipulate_temperature"]').checked;
+			
+			// Get selected ranges
+			var phRange = document.getElementById('ph_range').value;
+			var turbidityRange = document.getElementById('turbidity_range').value;
+			var tdsRange = document.getElementById('tds_range').value;
+			var temperatureRange = document.getElementById('temperature_range').value;
+			
+			// Generate new manipulated values
+			var newValues = {};
+			if (manipulatePh) {
+				var [phMin, phMax] = parseRange(phRange);
+				newValues.ph = randomInRange(phMin, phMax, 2);
+			}
+			if (manipulateTurbidity) {
+				var [turMin, turMax] = parseRange(turbidityRange);
+				newValues.turbidity = randomInRange(turMin, turMax, 2);
+			}
+			if (manipulateTds) {
+				var [tdsMin, tdsMax] = parseRange(tdsRange);
+				newValues.tds = randomInRange(tdsMin, tdsMax, 2);
+			}
+			if (manipulateTemperature) {
+				var [tempMin, tempMax] = parseRange(temperatureRange);
+				newValues.temperature = randomInRange(tempMin, tempMax, 2);
+			}
+			
+			// If we have new values, immediately update the latest reading
+			if (Object.keys(newValues).length > 0) {
+				// Create form data for immediate manipulation
+				var formData = new FormData();
+				formData.append('action', 'insert_reading_categories');
+				formData.append('ajax', '1');
+				formData.append('temperature', newValues.temperature || 25);
+				formData.append('in_value', '0');
+				formData.append('ph_category', 'neutral'); // Default category
+				formData.append('turbidity_category', 'clean'); // Default category
+				formData.append('tds_category', 'low'); // Default category
+				
+				// Add manipulated values
+				if (newValues.ph) formData.append('ph_override', newValues.ph);
+				if (newValues.turbidity) formData.append('turbidity_override', newValues.turbidity);
+				if (newValues.tds) formData.append('tds_override', newValues.tds);
+				if (newValues.temperature) formData.append('temperature_override', newValues.temperature);
+				
+				// Send manipulation request
+				fetch(window.location.href, {
+					method: 'POST',
+					body: formData,
+					credentials: 'same-origin'
+				}).then(function(r) { return r.json(); })
+				.then(function(json) {
+					if (json && json.success) {
+						// Update the display immediately
+						var el = document.getElementById('dbUpdateResultsContent');
+						var html = '<div style="margin-bottom: 8px; color: #155724;">';
+						html += '<strong>AGGRESSIVE MANIPULATION:</strong> ' + new Date().toLocaleTimeString() + '<br/>';
+						if (newValues.ph) html += 'pH: ' + newValues.ph + '<br/>';
+						if (newValues.turbidity) html += 'Turbidity: ' + newValues.turbidity + ' NTU<br/>';
+						if (newValues.tds) html += 'TDS: ' + newValues.tds + ' ppm<br/>';
+						if (newValues.temperature) html += 'Temperature: ' + newValues.temperature + '°C<br/>';
+						html += '</div>';
+						el.innerHTML = html + el.innerHTML;
+					}
+				}).catch(function(err) {
+					console.log('Aggressive manipulation error:', err);
+				});
+			}
 		}
 
 		// Add event listeners for the main manipulation form inputs
