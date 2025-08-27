@@ -1461,10 +1461,33 @@ $tdsRanges = [
 			
 			// If we have new values, immediately update the latest reading
 			if (Object.keys(newValues).length > 0) {
+				// Create form data with override values
+				var formData = new FormData();
+				formData.append('action', 'update_latest');
+				
+				// Add override values for sensors that are being manipulated
+				if (manipulatePh && newValues.ph) {
+					formData.append('ph_override', newValues.ph);
+					console.log('Adding pH override:', newValues.ph);
+				}
+				if (manipulateTurbidity && newValues.turbidity) {
+					formData.append('turbidity_override', newValues.turbidity);
+					console.log('Adding turbidity override:', newValues.turbidity);
+				}
+				if (manipulateTds && newValues.tds) {
+					formData.append('tds_override', newValues.tds);
+					console.log('Adding TDS override:', newValues.tds);
+				}
+				if (manipulateTemperature && newValues.temperature) {
+					formData.append('temperature_override', newValues.temperature);
+					console.log('Adding temperature override:', newValues.temperature);
+				}
+				
 				// Call the update_latest_reading API to modify existing readings
 				// This will only update the sensors that are checked for manipulation
 				fetch('api/update_latest_reading.php?action=update_latest', {
-					method: 'GET',
+					method: 'POST',
+					body: formData,
 					credentials: 'same-origin'
 				}).then(function(r) { return r.json(); })
 				.then(function(json) {

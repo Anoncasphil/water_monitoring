@@ -41,7 +41,7 @@ try {
         return round(($min + ($max - $min) * (mt_rand() / mt_getrandmax())) * $multiplier) / $multiplier;
     }
     
-    $action = $_GET['action'] ?? '';
+    $action = $_GET['action'] ?? $_POST['action'] ?? '';
     
     if ($action === 'update_latest') {
         // Check if manipulation is enabled and running
@@ -78,6 +78,19 @@ try {
         $manipulateTds = getSetting($conn, 'manipulate_tds', '0') === '1';
         $manipulateTemperature = getSetting($conn, 'manipulate_temperature', '0') === '1';
         
+        // Check for override values from JavaScript (these take priority)
+        $phOverride = isset($_POST['ph_override']) && $_POST['ph_override'] !== '' ? (float)$_POST['ph_override'] : null;
+        $turbidityOverride = isset($_POST['turbidity_override']) && $_POST['turbidity_override'] !== '' ? (float)$_POST['turbidity_override'] : null;
+        $tdsOverride = isset($_POST['tds_override']) && $_POST['tds_override'] !== '' ? (float)$_POST['tds_override'] : null;
+        $temperatureOverride = isset($_POST['temperature_override']) && $_POST['temperature_override'] !== '' ? (float)$_POST['temperature_override'] : null;
+        
+        // Debug: Log override values received
+        error_log("OVERRIDE VALUES RECEIVED:");
+        error_log("  pH override: " . ($phOverride !== null ? $phOverride : 'NOT SET'));
+        error_log("  Turbidity override: " . ($turbidityOverride !== null ? $turbidityOverride : 'NOT SET'));
+        error_log("  TDS override: " . ($tdsOverride !== null ? $tdsOverride : 'NOT SET'));
+        error_log("  Temperature override: " . ($temperatureOverride !== null ? $temperatureOverride : 'NOT SET'));
+        
         // Prepare values for update - only change what's actually enabled for manipulation
         $newTurbidity = $latestReading['turbidity']; // Keep original if not manipulated
         $newTds = $latestReading['tds']; // Keep original if not manipulated
@@ -88,36 +101,56 @@ try {
         $manipulatedSensors = [];
         
         // Apply manipulation ONLY for sensors that are checked/enabled
+        // Use override values if provided, otherwise generate random values
         if ($manipulateTurbidity) {
-            $turbidityRange = getSetting($conn, 'turbidity_range', '1-2');
-            [$turMin, $turMax] = parseRange($turbidityRange);
-            $newTurbidity = randomInRange($turMin, $turMax, 2);
+            if ($turbidityOverride !== null) {
+                $newTurbidity = $turbidityOverride;
+                error_log("Turbidity overridden to: $newTurbidity");
+            } else {
+                $turbidityRange = getSetting($conn, 'turbidity_range', '1-2');
+                [$turMin, $turMax] = parseRange($turbidityRange);
+                $newTurbidity = randomInRange($turMin, $turMax, 2);
+                error_log("Turbidity randomly generated from range $turbidityRange to: $newTurbidity");
+            }
             $manipulatedSensors[] = 'turbidity';
-            error_log("Turbidity manipulated from {$latestReading['turbidity']} to $newTurbidity (range: $turbidityRange)");
         }
         
         if ($manipulateTds) {
-            $tdsRange = getSetting($conn, 'tds_range', '0-50');
-            [$tdsMin, $tdsMax] = parseRange($tdsRange);
-            $newTds = randomInRange($tdsMin, $tdsMax, 2);
+            if ($tdsOverride !== null) {
+                $newTds = $tdsOverride;
+                error_log("TDS overridden to: $newTds");
+            } else {
+                $tdsRange = getSetting($conn, 'tds_range', '0-50');
+                [$tdsMin, $tdsMax] = parseRange($tdsRange);
+                $newTds = randomInRange($tdsMin, $tdsMax, 2);
+                error_log("TDS randomly generated from range $tdsRange to: $newTds");
+            }
             $manipulatedSensors[] = 'tds';
-            error_log("TDS manipulated from {$latestReading['tds']} to $newTds (range: $tdsRange)");
         }
         
         if ($manipulatePh) {
-            $phRange = getSetting($conn, 'ph_range', '6-7');
-            [$phMin, $phMax] = parseRange($phRange);
-            $newPh = randomInRange($phMin, $phMax, 2);
+            if ($phOverride !== null) {
+                $newPh = $phOverride;
+                error_log("pH overridden to: $newPh");
+            } else {
+                $phRange = getSetting($conn, 'ph_range', '6-7');
+                [$phMin, $phMax] = parseRange($phRange);
+                $newPh = randomInRange($phMin, $phMax, 2);
+                error_log("pH randomly generated from range $phRange to: $newPh");
+            }
             $manipulatedSensors[] = 'ph';
-            error_log("pH manipulated from {$latestReading['ph']} to $newPh (range: $phRange)");
         }
         
         if ($manipulateTemperature) {
-            $temperatureRange = getSetting($conn, 'temperature_range', '20-25');
-            [$tempMin, $tempMax] = parseRange($temperatureRange);
-            $newTemperature = randomInRange($tempMin, $tempMax, 2);
+            if ($temperatureOverride !== null) {
+                $newTemperature = $temperatureOverride;
+                error_log("Temperature overridden to: $newTemperature");
+            } else {
+                $temperatureRange = getSetting($conn, 'temperature_range', '20-25');
+                [$tempMin, $tempMax] = parseRange($temperatureRange);
+                $newTemperature = randomInRange($tempMin, $tempMax, 2);
+            }
             $manipulatedSensors[] = 'temperature';
-            error_log("Temperature manipulated from {$latestReading['temperature']} to $newTemperature (range: $temperatureRange)");
         }
         
         // Log which sensors were actually manipulated
