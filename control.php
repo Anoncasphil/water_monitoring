@@ -734,8 +734,10 @@ $tdsRanges = [
 				<div style="margin-top: 12px;">
 					<button id="testManipulationBtn" type="button" style="background: #007bff; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">Test Manipulation Settings</button>
 					<button id="verifyDatabaseBtn" type="button" style="background: #28a745; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-left: 8px;">Verify Database Contents</button>
+					<button id="checkManipulationStatusBtn" type="button" style="background: #ffc107; color: black; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-left: 8px;">Check Manipulation Status</button>
 					<div id="testResults" style="margin-top: 8px; font-size: 11px;"></div>
 					<div id="databaseResults" style="margin-top: 8px; font-size: 11px;"></div>
+					<div id="manipulationStatusResults" style="margin-top: 8px; font-size: 11px;"></div>
 				</div>
 			</div>
 		</div>
@@ -1194,7 +1196,7 @@ $tdsRanges = [
 					
 					html += '<strong>Latest 5 Records:</strong><br/>';
 					records.forEach(function(record) {
-						html += 'ID: ' + record.id + ' | T: ' + record.turbidity + ' | TDS: ' + record.tds + ' | pH: ' + record.ph + ' | Temp: ' + record.temperature + ' | Time: ' + record.reading_time + '<br/>';
+						html += 'ID: ' + record.id + ' | T: ' + record.turbidity + ' | TDS: ' + record.tds + ' | pH: ' + record.ph + ' | Temp: ' + record.ph + ' | Time: ' + record.reading_time + '<br/>';
 					});
 					
 					el.innerHTML = html;
@@ -1202,6 +1204,22 @@ $tdsRanges = [
 			}).catch(function(err) {
 				document.getElementById('databaseResults').innerHTML = 'Database verification failed: ' + err;
 			});
+		});
+		
+		// Add manipulation status check button event listener
+		document.getElementById('checkManipulationStatusBtn').addEventListener('click', function() {
+			var status = checkManipulationStatus();
+			var el = document.getElementById('manipulationStatusResults');
+			
+			var html = '<strong>Current Manipulation Status:</strong><br/>';
+			html += '- Overall Enabled: ' + (status.enabled ? 'YES' : 'NO') + '<br/>';
+			html += '- pH Manipulation: ' + (status.ph ? 'YES' : 'NO') + '<br/>';
+			html += '- Turbidity Manipulation: ' + (status.turbidity ? 'YES' : 'NO') + '<br/>';
+			html += '- TDS Manipulation: ' + (status.tds ? 'YES' : 'NO') + '<br/>';
+			html += '- Temperature Manipulation: ' + (status.temperature ? 'YES' : 'NO') + '<br/>';
+			html += '<br/><strong>Timestamp:</strong> ' + new Date().toLocaleTimeString();
+			
+			el.innerHTML = html;
 		});
 
 		// Database Update functionality - Optimized for real-time manipulation
@@ -1294,7 +1312,10 @@ $tdsRanges = [
 		function aggressiveManipulateReadings() {
 			// Check if manipulation is enabled and running
 			var manipulationEnabled = document.querySelector('input[name="manipulation_enabled"]').checked;
-			if (!manipulationEnabled) return;
+			if (!manipulationEnabled) {
+				console.log('Manipulation disabled, skipping...');
+				return;
+			}
 			
 			// Get current manipulation settings - only manipulate what's actually checked
 			var manipulatePh = document.querySelector('input[name="manipulate_ph"]').checked;
@@ -1302,8 +1323,16 @@ $tdsRanges = [
 			var manipulateTds = document.querySelector('input[name="manipulate_tds"]').checked;
 			var manipulateTemperature = document.querySelector('input[name="manipulate_temperature"]').checked;
 			
+			console.log('Manipulation settings:', {
+				ph: manipulatePh,
+				turbidity: manipulateTurbidity,
+				tds: manipulateTds,
+				temperature: manipulateTemperature
+			});
+			
 			// Only proceed if at least one sensor is selected for manipulation
 			if (!manipulatePh && !manipulateTurbidity && !manipulateTds && !manipulateTemperature) {
+				console.log('No sensors selected for manipulation, skipping...');
 				return; // No sensors selected, don't manipulate anything
 			}
 			
@@ -1314,25 +1343,31 @@ $tdsRanges = [
 				var phRange = document.getElementById('ph_range').value;
 				var [phMin, phMax] = parseRange(phRange);
 				newValues.ph = randomInRange(phMin, phMax, 2);
+				console.log('pH manipulation enabled, range:', phRange, 'new value:', newValues.ph);
 			}
 			
 			if (manipulateTurbidity) {
 				var turbidityRange = document.getElementById('turbidity_range').value;
 				var [turMin, turMax] = parseRange(turbidityRange);
 				newValues.turbidity = randomInRange(turMin, turMax, 2);
+				console.log('Turbidity manipulation enabled, range:', turbidityRange, 'new value:', newValues.turbidity);
 			}
 			
 			if (manipulateTds) {
 				var tdsRange = document.getElementById('tds_range').value;
 				var [tdsMin, tdsMax] = parseRange(tdsRange);
 				newValues.tds = randomInRange(tdsMin, tdsMax, 2);
+				console.log('TDS manipulation enabled, range:', tdsRange, 'new value:', newValues.tds);
 			}
 			
 			if (manipulateTemperature) {
 				var temperatureRange = document.getElementById('temperature_range').value;
 				var [tempMin, tempMax] = parseRange(temperatureRange);
 				newValues.temperature = randomInRange(tempMin, tempMax, 2);
+				console.log('Temperature manipulation enabled, range:', temperatureRange, 'new value:', newValues.temperature);
 			}
+			
+			console.log('Final manipulation values:', newValues);
 			
 			// If we have new values, immediately update the latest reading
 			if (Object.keys(newValues).length > 0) {
@@ -1341,31 +1376,29 @@ $tdsRanges = [
 				formData.append('action', 'insert_reading_categories');
 				formData.append('ajax', '1');
 				
-				// Only set values for sensors that are actually being manipulated
-				// Use original values for sensors that are NOT being manipulated
-				if (manipulateTemperature) {
-					formData.append('temperature', newValues.temperature);
-				} else {
-					formData.append('temperature', '25'); // Default if not manipulating
-				}
-				
+				// Set default values for all sensors first
+				formData.append('temperature', '25');
 				formData.append('in_value', '0');
-				formData.append('ph_category', 'neutral'); // Default category
-				formData.append('turbidity_category', 'clean'); // Default category
-				formData.append('tds_category', 'low'); // Default category
+				formData.append('ph_category', 'neutral');
+				formData.append('turbidity_category', 'clean');
+				formData.append('tds_category', 'low');
 				
-				// Add manipulated values only for sensors that are checked
+				// Override only the sensors that are actually being manipulated
 				if (manipulatePh && newValues.ph) {
 					formData.append('ph_override', newValues.ph);
+					console.log('Adding pH override:', newValues.ph);
 				}
 				if (manipulateTurbidity && newValues.turbidity) {
 					formData.append('turbidity_override', newValues.turbidity);
+					console.log('Adding turbidity override:', newValues.turbidity);
 				}
 				if (manipulateTds && newValues.tds) {
 					formData.append('tds_override', newValues.tds);
+					console.log('Adding TDS override:', newValues.tds);
 				}
 				if (manipulateTemperature && newValues.temperature) {
 					formData.append('temperature_override', newValues.temperature);
+					console.log('Adding temperature override:', newValues.temperature);
 				}
 				
 				// Send manipulation request
@@ -1376,6 +1409,7 @@ $tdsRanges = [
 				}).then(function(r) { return r.json(); })
 				.then(function(json) {
 					if (json && json.success) {
+						console.log('Manipulation successful:', json);
 						// Update the display immediately
 						var el = document.getElementById('dbUpdateResultsContent');
 						var html = '<div style="margin-bottom: 8px; color: #155724;">';
@@ -1386,10 +1420,14 @@ $tdsRanges = [
 						if (newValues.temperature) html += 'Temperature: ' + newValues.temperature + '°C<br/>';
 						html += '</div>';
 						el.innerHTML = html + el.innerHTML;
+					} else {
+						console.error('Manipulation failed:', json);
 					}
 				}).catch(function(err) {
-					console.log('Aggressive manipulation error:', err);
+					console.error('Aggressive manipulation error:', err);
 				});
+			} else {
+				console.log('No values to manipulate');
 			}
 		}
 
@@ -1415,6 +1453,39 @@ $tdsRanges = [
 				});
 			}
 		});
+		
+		// Add event listeners for manipulation checkboxes to ensure real-time updates
+		var manipulationCheckboxes = [
+			'manipulate_ph', 'manipulate_turbidity', 'manipulate_tds', 'manipulate_temperature'
+		];
+		
+		manipulationCheckboxes.forEach(function(checkboxName) {
+			var checkbox = document.querySelector('input[name="' + checkboxName + '"]');
+			if (checkbox) {
+				checkbox.addEventListener('change', function() {
+					console.log('Manipulation checkbox changed:', checkboxName, 'checked:', this.checked);
+					// Force immediate update of manipulation status
+					if (aggressiveManipulationInterval) {
+						clearInterval(aggressiveManipulationInterval);
+						aggressiveManipulationInterval = setInterval(aggressiveManipulateReadings, 50);
+					}
+				});
+			}
+		});
+		
+		// Function to check current manipulation status
+		function checkManipulationStatus() {
+			var status = {
+				enabled: document.querySelector('input[name="manipulation_enabled"]').checked,
+				ph: document.querySelector('input[name="manipulate_ph"]').checked,
+				turbidity: document.querySelector('input[name="manipulate_turbidity"]').checked,
+				tds: document.querySelector('input[name="manipulate_tds"]').checked,
+				temperature: document.querySelector('input[name="manipulate_temperature"]').checked
+			};
+			
+			console.log('Current manipulation status:', status);
+			return status;
+		}
 
 		// Add event listener for the manipulation enabled checkbox
 		var manipulationCheckbox = document.querySelector('input[name="manipulation_enabled"]');
