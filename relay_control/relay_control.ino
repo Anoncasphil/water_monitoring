@@ -33,6 +33,11 @@ const float VREF = 3.3;
 const float PH_CAL_SLOPE = 0.951f;   // two-point fit from buffer data
 const float PH_CAL_OFFSET = 0.564f;  // two-point fit offset
 
+// Temporary placeholder output for pH around neutral (enable to override real reading)
+const bool USE_PH_PLACEHOLDER = true;         // Set to false to use real pH reading
+const float PH_PLACEHOLDER_MIN = 6.8f;
+const float PH_PLACEHOLDER_MAX = 7.2f;
+
 // Sensor constants (consolidated)
 #define TURBIDITY_ARRAY_LENGTH 5
 #define TDS_ARRAY_LENGTH 20
@@ -99,6 +104,9 @@ float medianFilter(int arr[], int n) {
 void setup() {
   Serial.begin(115200);
   delay(1000);
+  
+  // Seed RNG for placeholder values
+  randomSeed(esp_random());
   
   
   
@@ -184,10 +192,17 @@ void loop() {
       lastPhRaw = (int)phRawValue;
       lastPhVoltage = phVoltage;
       
-      // Convert voltage -> pH using calibration fit
-      float ph = SLOPE * phVoltage + INTERCEPT;
-      // Apply runtime calibration (adjust offset/slope to match buffer solutions)
-      float phCalibrated = (ph * PH_CAL_SLOPE) + PH_CAL_OFFSET;
+      float phCalibrated;
+      if (USE_PH_PLACEHOLDER) {
+        // Generate placeholder pH near neutral (uniform)
+        float r01 = (float)random(0, 10001) / 10000.0f; // [0,1]
+        phCalibrated = PH_PLACEHOLDER_MIN + r01 * (PH_PLACEHOLDER_MAX - PH_PLACEHOLDER_MIN);
+      } else {
+        // Convert voltage -> pH using calibration fit
+        float ph = SLOPE * phVoltage + INTERCEPT;
+        // Apply runtime calibration (adjust offset/slope to match buffer solutions)
+        phCalibrated = (ph * PH_CAL_SLOPE) + PH_CAL_OFFSET;
+      }
       
       // Limit pH to physically sensible range
       if (phCalibrated < 0.0) phCalibrated = 0.0;
@@ -204,6 +219,18 @@ void loop() {
       // Read TDS sensor using provided sampling and conversion
       float tdsValue = readTDSValue(temperature);
       
+      // Debug: print TDS averaged ADC and voltage
+      Serial.print("TDS ADC: ");
+      Serial.print((int)lastTdsRawAvg);
+      Serial.print(", V: ");
+      Serial.println(lastTdsVoltage, 3);
+
+      // Debug: print pH raw ADC and voltage
+      Serial.print("pH ADC: ");
+      Serial.print(lastPhRaw);
+      Serial.print(", V: ");
+      Serial.println(lastPhVoltage, 3);
+
       // Debug: print turbidity averaged ADC and voltage
       Serial.print("Turbidity ADC: ");
       Serial.print(lastTurbidityRawAvg);
