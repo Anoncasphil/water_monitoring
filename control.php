@@ -635,8 +635,8 @@ $tdsRanges = [
 						</label>
 					</div>
 					<div class="row">
-						<label for="ph_range">pH Range:</label>
-						<select id="ph_range" name="ph_range">
+						<label for="manipulate_ph_range">pH Range:</label>
+						<select id="manipulate_ph_range" name="ph_range">
 							<option value="3-4" <?php echo $currentManipulationSettings['ph_range'] === '3-4' ? 'selected' : ''; ?>>3 - 4 (Very Acidic)</option>
 							<option value="4-5" <?php echo $currentManipulationSettings['ph_range'] === '4-5' ? 'selected' : ''; ?>>4 - 5 (Acidic)</option>
 							<option value="5-6" <?php echo $currentManipulationSettings['ph_range'] === '5-6' ? 'selected' : ''; ?>>5 - 6 (Slightly Acidic)</option>
@@ -657,8 +657,8 @@ $tdsRanges = [
 						</label>
 					</div>
 					<div class="row">
-						<label for="turbidity_range">Turbidity Range (NTU):</label>
-						<select id="turbidity_range" name="turbidity_range">
+						<label for="manipulate_turbidity_range">Turbidity Range (NTU):</label>
+						<select id="manipulate_turbidity_range" name="turbidity_range">
 							<option value="1-2" <?php echo $currentManipulationSettings['turbidity_range'] === '1-2' ? 'selected' : ''; ?>>1 - 2 (Very Clear)</option>
 							<option value="2-5" <?php echo $currentManipulationSettings['turbidity_range'] === '2-5' ? 'selected' : ''; ?>>2 - 5 (Clear)</option>
 							<option value="5-10" <?php echo $currentManipulationSettings['turbidity_range'] === '5-10' ? 'selected' : ''; ?>>5 - 10 (Slightly Turbid)</option>
@@ -678,8 +678,8 @@ $tdsRanges = [
 						</label>
 					</div>
 					<div class="row">
-						<label for="tds_range">TDS Range (ppm):</label>
-						<select id="tds_range" name="tds_range">
+						<label for="manipulate_tds_range">TDS Range (ppm):</label>
+						<select id="manipulate_tds_range" name="tds_range">
 							<option value="0-50" <?php echo $currentManipulationSettings['tds_range'] === '0-50' ? 'selected' : ''; ?>>0 - 50 (Very Low)</option>
 							<option value="50-150" <?php echo $currentManipulationSettings['tds_range'] === '50-150' ? 'selected' : ''; ?>>50 - 150 (Low)</option>
 							<option value="150-300" <?php echo $currentManipulationSettings['tds_range'] === '150-300' ? 'selected' : ''; ?>>150 - 300 (Medium)</option>
@@ -698,8 +698,8 @@ $tdsRanges = [
 						</label>
 					</div>
 					<div class="row">
-						<label for="temperature_range">Temperature Range (°C):</label>
-						<select id="temperature_range" name="temperature_range">
+						<label for="manipulate_temperature_range">Temperature Range (°C):</label>
+						<select id="manipulate_temperature_range" name="temperature_range">
 							<option value="15-20" <?php echo $currentManipulationSettings['temperature_range'] === '15-20' ? 'selected' : ''; ?>>15 - 20 (Cool)</option>
 							<option value="20-25" <?php echo $currentManipulationSettings['temperature_range'] === '20-25' ? 'selected' : ''; ?>>20 - 25 (Room Temp)</option>
 							<option value="25-30" <?php echo $currentManipulationSettings['temperature_range'] === '25-30' ? 'selected' : ''; ?>>25 - 30 (Warm)</option>
@@ -1019,7 +1019,7 @@ $tdsRanges = [
 				
 				// Only manipulate sensors that are enabled
 				if (manipulatePh) {
-					var phRange = document.getElementById('ph_range').value;
+					var phRange = document.getElementById('manipulate_ph_range').value;
 					phDisplay = randomInRange(parseRange(phRange)[0], parseRange(phRange)[1], 2);
 					manipulatedSensors.push('pH');
 				}
@@ -1113,10 +1113,10 @@ $tdsRanges = [
 			var data = window.latestOriginalData;
 			
 			// Get selected ranges from the form
-			var phRange = document.getElementById('ph_range').value;
-			var turbidityRange = document.getElementById('turbidity_range').value;
-			var tdsRange = document.getElementById('tds_range').value;
-			var temperatureRange = document.getElementById('temperature_range').value;
+			var phRange = document.getElementById('manipulate_ph_range').value;
+			var turbidityRange = document.getElementById('manipulate_turbidity_range').value;
+			var tdsRange = document.getElementById('manipulate_tds_range').value;
+			var temperatureRange = document.getElementById('manipulate_temperature_range').value;
 			
 			// Generate random values within ranges
 			var phRandom = randomInRange(parseRange(phRange)[0], parseRange(phRange)[1], 2);
@@ -1400,28 +1400,28 @@ $tdsRanges = [
 			var newValues = {};
 			
 			if (manipulatePh) {
-				var phRange = document.getElementById('ph_range').value;
+				var phRange = document.getElementById('manipulate_ph_range').value;
 				var [phMin, phMax] = parseRange(phRange);
 				newValues.ph = randomInRange(phMin, phMax, 2);
 				console.log('pH manipulation enabled, range:', phRange, 'new value:', newValues.ph);
 			}
 			
 			if (manipulateTurbidity) {
-				var turbidityRange = document.getElementById('turbidity_range').value;
+				var turbidityRange = document.getElementById('manipulate_turbidity_range').value;
 				var [turMin, turMax] = parseRange(turbidityRange);
 				newValues.turbidity = randomInRange(turMin, turMax, 2);
 				console.log('Turbidity manipulation enabled, range:', turbidityRange, 'new value:', newValues.turbidity);
 			}
 			
 			if (manipulateTds) {
-				var tdsRange = document.getElementById('tds_range').value;
+				var tdsRange = document.getElementById('manipulate_tds_range').value;
 				var [tdsMin, tdsMax] = parseRange(tdsRange);
 				newValues.tds = randomInRange(tdsMin, tdsMax, 2);
 				console.log('TDS manipulation enabled, range:', tdsRange, 'new value:', newValues.tds);
 			}
 			
 			if (manipulateTemperature) {
-				var temperatureRange = document.getElementById('temperature_range').value;
+				var temperatureRange = document.getElementById('manipulate_temperature_range').value;
 				var [tempMin, tempMax] = parseRange(temperatureRange);
 				newValues.temperature = randomInRange(tempMin, tempMax, 2);
 				console.log('Temperature manipulation enabled, range:', temperatureRange, 'new value:', newValues.temperature);
