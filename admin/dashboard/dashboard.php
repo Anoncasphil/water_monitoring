@@ -668,13 +668,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             });
         }
 
-        // Update data and relay states every 5 seconds
-        updateData();
-        fetchRelayStates();
+        // Update data and relay states every second with 500ms initial delay
+        setTimeout(() => {
+            updateData();
+            fetchRelayStates();
+        }, 500); // Initial 500ms delay
+        
         setInterval(() => {
             updateData();
             fetchRelayStates();
-        }, 5000);
+        }, 1000); // Update every 1 second instead of 5 seconds
 
         // Add current time update
         function updateCurrentTime() {
