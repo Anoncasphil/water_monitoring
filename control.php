@@ -39,6 +39,24 @@ function setSetting(mysqli $conn, string $name, string $value): void {
 	$stmt->close();
 }
 
+function getDataManipulationSettings(mysqli $conn): array {
+	return [
+		'ph_offset' => (float)getSetting($conn, 'ph_offset', '0.0'),
+		'ph_multiplier' => (float)getSetting($conn, 'ph_multiplier', '1.0'),
+		'turbidity_offset' => (float)getSetting($conn, 'turbidity_offset', '0.0'),
+		'turbidity_multiplier' => (float)getSetting($conn, 'turbidity_multiplier', '1.0'),
+		'tds_offset' => (float)getSetting($conn, 'tds_offset', '0.0'),
+		'tds_multiplier' => (float)getSetting($conn, 'tds_multiplier', '1.0'),
+		'temperature_offset' => (float)getSetting($conn, 'temperature_offset', '0.0'),
+		'temperature_multiplier' => (float)getSetting($conn, 'temperature_multiplier', '1.0'),
+		'manipulation_enabled' => getSetting($conn, 'manipulation_enabled', '0') === '1'
+	];
+}
+
+function applyDataManipulation(float $value, float $offset, float $multiplier): float {
+	return ($value + $offset) * $multiplier;
+}
+
 function parseRange(string $range): array {
 	// Expecting formats like "3-4", "10-20"
 	$parts = array_map('trim', explode('-', $range));
@@ -119,6 +137,26 @@ try {
 			$messages[] = $desired === '1' ? 'Uploads have been disabled.' : 'Uploads have been enabled.';
 		}
 
+		if ($action === 'save_manipulation_settings') {
+			$manipulationEnabled = isset($_POST['manipulation_enabled']) && $_POST['manipulation_enabled'] === '1' ? '1' : '0';
+			setSetting($conn, 'manipulation_enabled', $manipulationEnabled);
+			
+			$settings = [
+				'ph_offset', 'ph_multiplier', 'turbidity_offset', 'turbidity_multiplier',
+				'tds_offset', 'tds_multiplier', 'temperature_offset', 'temperature_multiplier'
+			];
+			
+			foreach ($settings as $setting) {
+				$value = isset($_POST[$setting]) && $_POST[$setting] !== '' ? (string)$_POST[$setting] : '0.0';
+				if ($setting === 'multiplier') {
+					$value = isset($_POST[$setting]) && $_POST[$setting] !== '' ? (string)$_POST[$setting] : '1.0';
+				}
+				setSetting($conn, $setting, $value);
+			}
+			
+			$messages[] = 'Data manipulation settings saved successfully.';
+		}
+
 		if ($action === 'insert_reading') {
 			// Expected inputs: ph_range, turbidity_range, tds_range, temperature, in_value
 			$phRangeStr = isset($_POST['ph_range']) ? (string)$_POST['ph_range'] : '';
@@ -134,6 +172,15 @@ try {
 			$ph = randomInRange($phMin, $phMax, 2);
 			$turbidity = randomInRange($turMin, $turMax, 2);
 			$tds = randomInRange($tdsMin, $tdsMax, 2);
+
+			// Apply data manipulation if enabled
+			$manipulationSettings = getDataManipulationSettings($conn);
+			if ($manipulationSettings['manipulation_enabled']) {
+				$ph = applyDataManipulation($ph, $manipulationSettings['ph_offset'], $manipulationSettings['ph_multiplier']);
+				$turbidity = applyDataManipulation($turbidity, $manipulationSettings['turbidity_offset'], $manipulationSettings['turbidity_multiplier']);
+				$tds = applyDataManipulation($tds, $manipulationSettings['tds_offset'], $manipulationSettings['tds_multiplier']);
+				$temperature = applyDataManipulation($temperature, $manipulationSettings['temperature_offset'], $manipulationSettings['temperature_multiplier']);
+			}
 
 			$stmt = $conn->prepare("INSERT INTO water_readings (turbidity, tds, ph, temperature, `in`) VALUES (?, ?, ?, ?, ?)");
 			$stmt->bind_param('ddddd', $turbidity, $tds, $ph, $temperature, $inValue);
@@ -180,6 +227,15 @@ try {
 			$turbidity = randomInRange($turMin, $turMax, 2);
 			$tds = randomInRange($tdsMin, $tdsMax, 2);
 
+			// Apply data manipulation if enabled
+			$manipulationSettings = getDataManipulationSettings($conn);
+			if ($manipulationSettings['manipulation_enabled']) {
+				$ph = applyDataManipulation($ph, $manipulationSettings['ph_offset'], $manipulationSettings['ph_multiplier']);
+				$turbidity = applyDataManipulation($turbidity, $manipulationSettings['turbidity_offset'], $manipulationSettings['turbidity_multiplier']);
+				$tds = applyDataManipulation($tds, $manipulationSettings['tds_offset'], $manipulationSettings['tds_multiplier']);
+				$temperature = applyDataManipulation($temperature, $manipulationSettings['temperature_offset'], $manipulationSettings['temperature_multiplier']);
+			}
+
 			$stmt = $conn->prepare("INSERT INTO water_readings (turbidity, tds, ph, temperature, `in`) VALUES (?, ?, ?, ?, ?)");
 			$stmt->bind_param('ddddd', $turbidity, $tds, $ph, $temperature, $inValue);
 			$ok = $stmt->execute();
@@ -215,6 +271,7 @@ try {
 	}
 
 	$currentUploadsDisabled = getSetting($conn, 'uploads_disabled', '0') === '1';
+	$manipulationSettings = getDataManipulationSettings($conn);
 } catch (Exception $e) {
 	$errors[] = 'Error: ' . $e->getMessage();
 }
@@ -263,6 +320,12 @@ $tdsRanges = [
 		select, input[type="number"] { padding: 6px 8px; }
 		button { padding: 8px 14px; cursor: pointer; }
 		.small { font-size: 12px; color: #666; }
+		.manipulation-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+		.manipulation-grid h3 { margin: 0 0 12px 0; font-size: 14px; color: #333; }
+		.manipulation-grid .row { margin-bottom: 8px; }
+		.manipulation-grid label { width: 80px; font-size: 12px; }
+		.manipulation-grid input { width: 80px; padding: 4px 6px; font-size: 12px; }
+		.formula-box { background: #f8f9fa; border: 1px solid #e9ecef; padding: 12px; border-radius: 4px; margin-top: 12px; }
 	</style>
 </head>
 <body>
@@ -328,6 +391,81 @@ $tdsRanges = [
 			</div>
 			<div class="row">
 				<button type="submit">Insert reading</button>
+			</div>
+		</form>
+	</section>
+
+	<section>
+		<h2>Data Manipulation Settings</h2>
+		<p class="small">Modify sensor readings in real-time. These settings affect all data being uploaded.</p>
+		<form method="post">
+			<input type="hidden" name="action" value="save_manipulation_settings" />
+			<div class="row">
+				<label>
+					<input type="checkbox" name="manipulation_enabled" value="1" <?php echo $manipulationSettings['manipulation_enabled'] ? 'checked' : ''; ?> />
+					Enable data manipulation
+				</label>
+			</div>
+			
+			<div class="manipulation-grid">
+				<div>
+					<h3>pH Sensor</h3>
+					<div class="row">
+						<label for="ph_offset">Offset:</label>
+						<input id="ph_offset" name="ph_offset" type="number" step="0.01" value="<?php echo $manipulationSettings['ph_offset']; ?>" />
+					</div>
+					<div class="row">
+						<label for="ph_multiplier">Multiplier:</label>
+						<input id="ph_multiplier" name="ph_multiplier" type="number" step="0.01" value="<?php echo $manipulationSettings['ph_multiplier']; ?>" />
+					</div>
+				</div>
+				
+				<div>
+					<h3>Turbidity Sensor</h3>
+					<div class="row">
+						<label for="turbidity_offset">Offset:</label>
+						<input id="turbidity_offset" name="turbidity_offset" type="number" step="0.01" value="<?php echo $manipulationSettings['turbidity_offset']; ?>" />
+					</div>
+					<div class="row">
+						<label for="turbidity_multiplier">Multiplier:</label>
+						<input id="turbidity_multiplier" name="turbidity_multiplier" type="number" step="0.01" value="<?php echo $manipulationSettings['turbidity_multiplier']; ?>" />
+					</div>
+				</div>
+				
+				<div>
+					<h3>TDS Sensor</h3>
+					<div class="row">
+						<label for="tds_offset">Offset:</label>
+						<input id="tds_offset" name="tds_offset" type="number" step="0.01" value="<?php echo $manipulationSettings['tds_offset']; ?>" />
+					</div>
+					<div class="row">
+						<label for="tds_multiplier">Multiplier:</label>
+						<input id="tds_multiplier" name="tds_multiplier" type="number" step="0.01" value="<?php echo $manipulationSettings['tds_multiplier']; ?>" />
+					</div>
+				</div>
+				
+				<div>
+					<h3>Temperature Sensor</h3>
+					<div class="row">
+						<label for="temperature_offset">Offset:</label>
+						<input id="temperature_offset" name="temperature_offset" type="number" step="0.01" value="<?php echo $manipulationSettings['temperature_offset']; ?>" />
+					</div>
+					<div class="row">
+						<label for="temperature_multiplier">Multiplier:</label>
+						<input id="temperature_multiplier" name="temperature_multiplier" type="number" step="0.01" value="<?php echo $manipulationSettings['temperature_multiplier']; ?>" />
+					</div>
+				</div>
+			</div>
+			
+			<div class="row" style="margin-top: 16px;">
+				<button type="submit">Save Manipulation Settings</button>
+			</div>
+			
+			<div class="formula-box">
+				<div class="small">
+					<strong>Formula:</strong> Final Value = (Original Value + Offset) × Multiplier<br/>
+					<strong>Example:</strong> pH 7.0 + 1.0 offset × 0.8 multiplier = (7.0 + 1.0) × 0.8 = 6.4
+				</div>
 			</div>
 		</form>
 	</section>
