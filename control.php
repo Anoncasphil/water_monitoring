@@ -234,6 +234,33 @@ try {
 			exit;
 		}
 
+		if ($action === 'verify_database') {
+			// Verify what's actually in the database
+			$stmt = $conn->prepare("SELECT id, turbidity, tds, ph, temperature, `in`, reading_time FROM water_readings ORDER BY id DESC LIMIT 5");
+			$stmt->execute();
+			$result = $stmt->get_result();
+			
+			$records = [];
+			while ($row = $result->fetch_assoc()) {
+				$records[] = $row;
+			}
+			$stmt->close();
+			
+			header('Content-Type: application/json');
+			echo json_encode([
+				'success' => true,
+				'latest_records' => $records,
+				'manipulation_status' => [
+					'enabled' => getSetting($conn, 'manipulation_enabled', '0'),
+					'running' => getSetting($conn, 'manipulation_running', '0'),
+					'ph_range' => getSetting($conn, 'ph_range', '6-7'),
+					'turbidity_range' => getSetting($conn, 'turbidity_range', '1-2'),
+					'tds_range' => getSetting($conn, 'tds_range', '0-50')
+				]
+			]);
+			exit;
+		}
+
 		if ($action === 'insert_reading_categories') {
 			$phCategory = isset($_POST['ph_category']) ? (string)$_POST['ph_category'] : '';
 			$turbidityCategory = isset($_POST['turbidity_category']) ? (string)$_POST['turbidity_category'] : '';
@@ -308,6 +335,45 @@ try {
 			$stmt = $conn->prepare("INSERT INTO water_readings (turbidity, tds, ph, temperature, `in`) VALUES (?, ?, ?, ?, ?)");
 			$stmt->bind_param('ddddd', $turbidity, $tds, $ph, $temperature, $inValue);
 			$ok = $stmt->execute();
+			
+			// Log the actual INSERT query and values
+			error_log("INSERT Query executed: INSERT INTO water_readings (turbidity, tds, ph, temperature, `in`) VALUES ($turbidity, $tds, $ph, $temperature, $inValue)");
+			error_log("INSERT Result: " . ($ok ? 'SUCCESS' : 'FAILED'));
+			
+			// If successful, verify what was actually stored in the database
+			if ($ok) {
+				$insertId = $conn->insert_id;
+				error_log("New record ID: $insertId");
+				
+				// Fetch the record we just inserted to verify the values
+				$verifyStmt = $conn->prepare("SELECT turbidity, tds, ph, temperature, `in` FROM water_readings WHERE id = ?");
+				$verifyStmt->bind_param('i', $insertId);
+				$verifyStmt->execute();
+				$verifyResult = $verifyStmt->get_result();
+				
+				if ($verifyResult && $verifyResult->num_rows > 0) {
+					$row = $verifyResult->fetch_assoc();
+					error_log("VERIFICATION - What was actually stored in database:");
+					error_log("  ID: $insertId");
+					error_log("  Turbidity: " . $row['turbidity'] . " (expected: $turbidity)");
+					error_log("  TDS: " . $row['tds'] . " (expected: $tds)");
+					error_log("  pH: " . $row['ph'] . " (expected: $ph)");
+					error_log("  Temperature: " . $row['temperature'] . " (expected: $temperature)");
+					error_log("  In: " . $row['in'] . " (expected: $inValue)");
+					
+					// Check if values match what we intended to insert
+					if ($row['turbidity'] == $turbidity && $row['tds'] == $tds && $row['ph'] == $ph && $row['temperature'] == $temperature) {
+						error_log("SUCCESS: Database values match intended values");
+					} else {
+						error_log("ERROR: Database values DO NOT match intended values!");
+						error_log("  This suggests the manipulation is not working or there's a database issue");
+					}
+				} else {
+					error_log("ERROR: Could not verify inserted record - verification query failed");
+				}
+				$verifyStmt->close();
+			}
+			
 			$stmt->close();
 
 			$isAjax = isset($_POST['ajax']) && $_POST['ajax'] === '1';
@@ -656,7 +722,9 @@ $tdsRanges = [
 				</div>
 				<div style="margin-top: 12px;">
 					<button id="testManipulationBtn" type="button" style="background: #007bff; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">Test Manipulation Settings</button>
+					<button id="verifyDatabaseBtn" type="button" style="background: #28a745; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-left: 8px;">Verify Database Contents</button>
 					<div id="testResults" style="margin-top: 8px; font-size: 11px;"></div>
+					<div id="databaseResults" style="margin-top: 8px; font-size: 11px;"></div>
 				</div>
 			</div>
 		</div>
@@ -1054,6 +1122,42 @@ $tdsRanges = [
 				}
 			}).catch(function(err) {
 				document.getElementById('testResults').innerHTML = 'Test failed: ' + err;
+			});
+		});
+
+		// Add database verification button event listener
+		document.getElementById('verifyDatabaseBtn').addEventListener('click', function() {
+			var formData = new FormData();
+			formData.append('action', 'verify_database');
+			
+			fetch(window.location.href, {
+				method: 'POST',
+				body: formData,
+				credentials: 'same-origin'
+			}).then(function(r) { return r.json(); })
+			.then(function(json) {
+				if (json && json.success) {
+					var records = json.latest_records;
+					var status = json.manipulation_status;
+					var el = document.getElementById('databaseResults');
+					
+					var html = '<strong>Database Verification:</strong><br/>';
+					html += '<strong>Manipulation Status:</strong><br/>';
+					html += '- Enabled: ' + status.enabled + '<br/>';
+					html += '- Running: ' + status.running + '<br/>';
+					html += '- pH Range: ' + status.ph_range + '<br/>';
+					html += '- Turbidity Range: ' + status.turbidity_range + '<br/>';
+					html += '- TDS Range: ' + status.tds_range + '<br/><br/>';
+					
+					html += '<strong>Latest 5 Records:</strong><br/>';
+					records.forEach(function(record) {
+						html += 'ID: ' + record.id + ' | T: ' + record.turbidity + ' | TDS: ' + record.tds + ' | pH: ' + record.ph + ' | Temp: ' + record.temperature + ' | Time: ' + record.reading_time + '<br/>';
+					});
+					
+					el.innerHTML = html;
+				}
+			}).catch(function(err) {
+				document.getElementById('databaseResults').innerHTML = 'Database verification failed: ' + err;
 			});
 		});
 
