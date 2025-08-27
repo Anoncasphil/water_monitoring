@@ -1461,53 +1461,28 @@ $tdsRanges = [
 			
 			// If we have new values, immediately update the latest reading
 			if (Object.keys(newValues).length > 0) {
-				// Create form data for immediate manipulation
-				var formData = new FormData();
-				formData.append('action', 'insert_reading_categories');
-				formData.append('ajax', '1');
-				
-				// Set default values for all sensors first
-				formData.append('temperature', '25');
-				formData.append('in_value', '0');
-				formData.append('ph_category', 'neutral');
-				formData.append('turbidity_category', 'clean');
-				formData.append('tds_category', 'low');
-				
-				// Override only the sensors that are actually being manipulated
-				if (manipulatePh && newValues.ph) {
-					formData.append('ph_override', newValues.ph);
-					console.log('Adding pH override:', newValues.ph);
-				}
-				if (manipulateTurbidity && newValues.turbidity) {
-					formData.append('turbidity_override', newValues.turbidity);
-					console.log('Adding turbidity override:', newValues.turbidity);
-				}
-				if (manipulateTds && newValues.tds) {
-					formData.append('tds_override', newValues.tds);
-					console.log('Adding TDS override:', newValues.tds);
-				}
-				if (manipulateTemperature && newValues.temperature) {
-					formData.append('temperature_override', newValues.temperature);
-					console.log('Adding temperature override:', newValues.temperature);
-				}
-				
-				// Send manipulation request
-				fetch(window.location.href, {
-					method: 'POST',
-					body: formData,
+				// Call the update_latest_reading API to modify existing readings
+				// This will only update the sensors that are checked for manipulation
+				fetch('api/update_latest_reading.php?action=update_latest', {
+					method: 'GET',
 					credentials: 'same-origin'
 				}).then(function(r) { return r.json(); })
 				.then(function(json) {
 					if (json && json.success) {
 						console.log('Manipulation successful:', json);
-						// Update the display immediately
+						// Update the display immediately with actual database values
 						var el = document.getElementById('dbUpdateResultsContent');
 						var html = '<div style="margin-bottom: 8px; color: #155724;">';
 						html += '<strong>AGGRESSIVE MANIPULATION:</strong> ' + new Date().toLocaleTimeString() + '<br/>';
-						if (newValues.ph) html += 'pH: ' + newValues.ph + '<br/>';
-						if (newValues.turbidity) html += 'Turbidity: ' + newValues.turbidity + ' NTU<br/>';
-						if (newValues.tds) html += 'TDS: ' + newValues.tds + ' ppm<br/>';
-						if (newValues.temperature) html += 'Temperature: ' + newValues.temperature + '°C<br/>';
+						
+						// Show the actual updated values from the database
+						if (json.data && json.data.updated) {
+							if (json.data.manipulated_sensors.ph) html += 'pH: ' + json.data.updated.ph + '<br/>';
+							if (json.data.manipulated_sensors.turbidity) html += 'Turbidity: ' + json.data.updated.turbidity + ' NTU<br/>';
+							if (json.data.manipulated_sensors.tds) html += 'TDS: ' + json.data.updated.tds + ' ppm<br/>';
+							if (json.data.manipulated_sensors.temperature) html += 'Temperature: ' + json.data.updated.temperature + '°C<br/>';
+						}
+						
 						html += '</div>';
 						el.innerHTML = html + el.innerHTML;
 					} else {
