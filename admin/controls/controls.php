@@ -102,7 +102,7 @@ try {
         /* Toast notification styles */
         .toast {
             position: fixed;
-            top: 20px;
+            bottom: 20px;
             right: 20px;
             z-index: 9999;
             max-width: 400px;
@@ -112,6 +112,7 @@ try {
             transform: translateX(100%);
             transition: transform 0.3s ease;
             font-weight: 500;
+            margin-bottom: 10px;
         }
         
         .toast.show {
@@ -516,10 +517,26 @@ try {
         
         // Toast notification functions
         function showToast(message, type = 'info', duration = 5000) {
+            // Remove emojis from message
+            const cleanMessage = message.replace(/[^\w\s\-.,!?()]/g, '');
+            
+            // Check if there's already a toast of the same type
+            const existingToast = document.querySelector(`.toast.${type}`);
+            if (existingToast) {
+                // Update existing toast instead of creating new one
+                existingToast.textContent = cleanMessage;
+                return;
+            }
+            
             const toastContainer = document.getElementById('toastContainer');
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
-            toast.textContent = message;
+            toast.textContent = cleanMessage;
+            
+            // Position the toast with proper spacing
+            const existingToasts = document.querySelectorAll('.toast');
+            const bottomOffset = existingToasts.length * 70; // 70px per toast (height + margin)
+            toast.style.bottom = `${20 + bottomOffset}px`;
             
             toastContainer.appendChild(toast);
             
@@ -532,9 +549,19 @@ try {
                 setTimeout(() => {
                     if (toast.parentNode) {
                         toast.parentNode.removeChild(toast);
+                        // Reposition remaining toasts
+                        repositionToasts();
                     }
                 }, 300);
             }, duration);
+        }
+        
+        function repositionToasts() {
+            const toasts = document.querySelectorAll('.toast');
+            toasts.forEach((toast, index) => {
+                const bottomOffset = index * 70;
+                toast.style.bottom = `${20 + bottomOffset}px`;
+            });
         }
         
         // Initialize uptime from localStorage or start new session
@@ -692,7 +719,7 @@ try {
             
             // Check if manual override is detected and show toast
             if (data.manual_control_detected && data.automation_settings && data.automation_settings.enabled == 0) {
-                showToast('⚠️ Automation cannot be turned ON - Manual relay control is active', 'warning');
+                showToast('Automation cannot be turned ON - Manual relay control is active', 'warning');
             }
 
             // Update status displays
