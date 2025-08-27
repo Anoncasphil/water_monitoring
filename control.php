@@ -1296,33 +1296,40 @@ $tdsRanges = [
 			var manipulationEnabled = document.querySelector('input[name="manipulation_enabled"]').checked;
 			if (!manipulationEnabled) return;
 			
-			// Get current manipulation settings
+			// Get current manipulation settings - only manipulate what's actually checked
 			var manipulatePh = document.querySelector('input[name="manipulate_ph"]').checked;
 			var manipulateTurbidity = document.querySelector('input[name="manipulate_turbidity"]').checked;
 			var manipulateTds = document.querySelector('input[name="manipulate_tds"]').checked;
 			var manipulateTemperature = document.querySelector('input[name="manipulate_temperature"]').checked;
 			
-			// Get selected ranges
-			var phRange = document.getElementById('ph_range').value;
-			var turbidityRange = document.getElementById('turbidity_range').value;
-			var tdsRange = document.getElementById('tds_range').value;
-			var temperatureRange = document.getElementById('temperature_range').value;
+			// Only proceed if at least one sensor is selected for manipulation
+			if (!manipulatePh && !manipulateTurbidity && !manipulateTds && !manipulateTemperature) {
+				return; // No sensors selected, don't manipulate anything
+			}
 			
-			// Generate new manipulated values
+			// Get selected ranges only for sensors that are actually enabled
 			var newValues = {};
+			
 			if (manipulatePh) {
+				var phRange = document.getElementById('ph_range').value;
 				var [phMin, phMax] = parseRange(phRange);
 				newValues.ph = randomInRange(phMin, phMax, 2);
 			}
+			
 			if (manipulateTurbidity) {
+				var turbidityRange = document.getElementById('turbidity_range').value;
 				var [turMin, turMax] = parseRange(turbidityRange);
 				newValues.turbidity = randomInRange(turMin, turMax, 2);
 			}
+			
 			if (manipulateTds) {
+				var tdsRange = document.getElementById('tds_range').value;
 				var [tdsMin, tdsMax] = parseRange(tdsRange);
 				newValues.tds = randomInRange(tdsMin, tdsMax, 2);
 			}
+			
 			if (manipulateTemperature) {
+				var temperatureRange = document.getElementById('temperature_range').value;
 				var [tempMin, tempMax] = parseRange(temperatureRange);
 				newValues.temperature = randomInRange(tempMin, tempMax, 2);
 			}
@@ -1333,17 +1340,33 @@ $tdsRanges = [
 				var formData = new FormData();
 				formData.append('action', 'insert_reading_categories');
 				formData.append('ajax', '1');
-				formData.append('temperature', newValues.temperature || 25);
+				
+				// Only set values for sensors that are actually being manipulated
+				// Use original values for sensors that are NOT being manipulated
+				if (manipulateTemperature) {
+					formData.append('temperature', newValues.temperature);
+				} else {
+					formData.append('temperature', '25'); // Default if not manipulating
+				}
+				
 				formData.append('in_value', '0');
 				formData.append('ph_category', 'neutral'); // Default category
 				formData.append('turbidity_category', 'clean'); // Default category
 				formData.append('tds_category', 'low'); // Default category
 				
-				// Add manipulated values
-				if (newValues.ph) formData.append('ph_override', newValues.ph);
-				if (newValues.turbidity) formData.append('turbidity_override', newValues.turbidity);
-				if (newValues.tds) formData.append('tds_override', newValues.tds);
-				if (newValues.temperature) formData.append('temperature_override', newValues.temperature);
+				// Add manipulated values only for sensors that are checked
+				if (manipulatePh && newValues.ph) {
+					formData.append('ph_override', newValues.ph);
+				}
+				if (manipulateTurbidity && newValues.turbidity) {
+					formData.append('turbidity_override', newValues.turbidity);
+				}
+				if (manipulateTds && newValues.tds) {
+					formData.append('tds_override', newValues.tds);
+				}
+				if (manipulateTemperature && newValues.temperature) {
+					formData.append('temperature_override', newValues.temperature);
+				}
 				
 				// Send manipulation request
 				fetch(window.location.href, {
