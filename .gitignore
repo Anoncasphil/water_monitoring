@@ -38,7 +38,6 @@ composer.lock
 Thumbs.db
 
 # Ignore database configuration
-config/database.php
 !config/database.example.php
 
 # Ignore environment files
