@@ -16,20 +16,43 @@ try {
     $db = Database::getInstance();
     $conn = $db->getConnection();
 
-    // Handle GET request for checking relay states
+    // Handle GET request for checking relay states (optionally for a specific relay)
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-        $result = $conn->query("SELECT relay_number, state, manual_override FROM relay_states ORDER BY relay_number");
         $states = [];
-        
-        while ($row = $result->fetch_assoc()) {
-            $states[] = [
-                "relay_number" => (int)$row['relay_number'],
-                "state" => (int)$row['state'],
-                "manual_override" => (int)$row['manual_override']
-            ];
+        if (isset($_GET['relay'])) {
+            $relay = (int)$_GET['relay'];
+            if ($relay >= 1 && $relay <= 4) {
+                $stmt = $conn->prepare("SELECT relay_number, state, manual_override FROM relay_states WHERE relay_number = ? LIMIT 1");
+                $stmt->bind_param("i", $relay);
+                $stmt->execute();
+                $res = $stmt->get_result();
+                if ($row = $res->fetch_assoc()) {
+                    $states[] = [
+                        "relay_number" => (int)$row['relay_number'],
+                        "state" => (int)$row['state'],
+                        "manual_override" => (int)$row['manual_override']
+                    ];
+                }
+                $stmt->close();
+            }
+        } else {
+            $result = $conn->query("SELECT relay_number, state, manual_override FROM relay_states ORDER BY relay_number");
+            while ($row = $result->fetch_assoc()) {
+                $states[] = [
+                    "relay_number" => (int)$row['relay_number'],
+                    "state" => (int)$row['state'],
+                    "manual_override" => (int)$row['manual_override']
+                ];
+            }
         }
-        
-        echo json_encode(["states" => $states]);
+
+        echo json_encode([
+            "success" => true,
+            "states" => $states,
+            // compatibility helper for clients expecting singular keys
+            "relay" => isset($states[0]) ? $states[0]["relay_number"] : null,
+            "state" => isset($states[0]) ? $states[0]["state"] : null
+        ]);
         exit;
     }
 
