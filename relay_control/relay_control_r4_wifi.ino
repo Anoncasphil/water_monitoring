@@ -171,6 +171,18 @@ void setup() {
     Serial.print("Signal strength (RSSI): ");
     Serial.print(WiFi.RSSI());
     Serial.println(" dBm");
+    
+    // Test server connection
+    Serial.println("Testing server connection...");
+    WiFiClient testClient;
+    if (testClient.connect(serverHost, serverPort)) {
+      Serial.println("Server connection test successful!");
+      testClient.stop();
+    } else {
+      Serial.println("Server connection test failed!");
+    }
+    // Fetch initial relay states immediately after WiFi connects
+    checkRelayStates();
   } else {
     Serial.println();
     Serial.println("WiFi connection failed! Check credentials and try again.");
@@ -727,5 +739,17 @@ bool detectTemperatureSensor() {
     tempSensors.setResolution(tempSensorAddress, 12);
     return true;
   }
+  return false;
+}
+
+bool tryHttpsConnection() {
+  // Note: Arduino R4 WiFi doesn't have built-in SSL/TLS support like ESP32
+  // This is a placeholder function that would need WiFiSSLClient or similar
+  // For now, we'll just return false and suggest manual URL verification
+  Serial.println("HTTPS not supported on Arduino R4 WiFi without additional libraries");
+  Serial.println("Please verify the correct URL in your web browser:");
+  Serial.println("- Try: https://waterquality.triple7autosupply.com/api/relay_control.php");
+  Serial.println("- Or: http://waterquality.triple7autosupply.com/api/relay_control.php");
+  Serial.println("If HTTPS is required, consider using ESP32 or add SSL support library");
   return false;
 }
