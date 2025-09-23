@@ -4,14 +4,15 @@
 #include <DallasTemperature.h>
  
 // WiFi credentials
-const char* ssid = "Converge_2.4GHz_3Fsb56";
-const char* password = "TQkcXYGS";
+const char* ssid = "Sean";
+const char* password = "mine3you";
 
-// Server details (HTTPS)
-const char* serverUrl = "https://waterquality.triple7autosupply.com/api/upload.php";
-const char* relayControlUrl = "https://waterquality.triple7autosupply.com/api/relay_control.php";
+// Server details (HTTP - Arduino R4 WiFi doesn't support HTTPS natively)
+const char* serverUrl = "http://waterquality.triple7autosupply.com/api/http_proxy.php?endpoint=upload";
+const char* relayControlUrl = "http://waterquality.triple7autosupply.com/api/http_proxy.php?endpoint=relay_control";
+const char* relayControlUrlBackup = "http://waterquality.triple7autosupply.com/api/relay_control.php"; // Fallback
 const char* serverHost = "waterquality.triple7autosupply.com";
-const int serverPort = 443;
+const int serverPort = 80;
 
 // Pin definitions for Arduino R4 WiFi
 const int tdsPin = A0;        // Analog pin A0
@@ -31,6 +32,7 @@ bool tempSensorFound = false;
 bool relayStates[4] = { false, false, false, false };
 const int RELAY_ON = LOW;
 const int RELAY_OFF = HIGH;
+bool relayControlDisabled = false; // Will be set to true if server requires HTTPS
 
 // pH sensor calibration (optimized)
 const int NUM_SAMPLES = 7;
@@ -172,9 +174,9 @@ void setup() {
     Serial.print(WiFi.RSSI());
     Serial.println(" dBm");
     
-    // Test server connection (HTTPS)
-    Serial.println("Testing server connection (HTTPS)...");
-    WiFiSSLClient testClient;
+    // Test server connection (HTTP)
+    Serial.println("Testing server connection (HTTP)...");
+    WiFiClient testClient;
     if (testClient.connect(serverHost, serverPort)) {
       Serial.println("Server connection test successful!");
       testClient.stop();
@@ -182,6 +184,7 @@ void setup() {
       Serial.println("Server connection test failed!");
     }
     // Fetch initial relay states immediately after WiFi connects
+    Serial.println("Checking initial relay states...");
     checkRelayStates();
   } else {
     Serial.println();
@@ -262,7 +265,18 @@ void loop() {
       Serial.print(tdsValue, 1);
       Serial.print(" ppm, Temp: ");
       Serial.print(temperature, 1);
-      Serial.println(" C");
+      Serial.print(" C | Relays: ");
+      for (int i = 0; i < 4; i++) {
+        Serial.print("R");
+        Serial.print(i + 1);
+        Serial.print(":");
+        Serial.print(relayStates[i] ? "ON" : "OFF");
+        if (i < 3) Serial.print(" ");
+      }
+      if (relayControlDisabled) {
+        Serial.print(" [RELAY CONTROL DISABLED - HTTPS REQUIRED]");
+      }
+      Serial.println();
 
       // Upload data with converted turbidity value
       uploadSensorData(turbidityNTU, tdsValue, phCalibrated, temperature);
@@ -272,10 +286,10 @@ void loop() {
     }
   }
 
-  // Check relay states
+  // Check relay states (only if not disabled due to HTTPS requirement)
   if (currentMillis - lastRelayCheck >= RELAY_CHECK_INTERVAL) {
     lastRelayCheck = currentMillis;
-    if (WiFi.status() == WL_CONNECTED) {
+    if (WiFi.status() == WL_CONNECTED && !relayControlDisabled) {
       checkRelayStates();
     }
   }
@@ -301,7 +315,7 @@ void loop() {
 }
 
 void uploadSensorData(float turbidity, float tds, float ph, float temperature) {
-  WiFiSSLClient client;
+  WiFiClient client;
   client.setTimeout(5000); // 5 second timeout
   
   if (client.connect(serverHost, serverPort)) {
@@ -309,7 +323,7 @@ void uploadSensorData(float turbidity, float tds, float ph, float temperature) {
     String postData = "turbidity=" + String(turbidity) + "&tds=" + String(tds) + "&ph=" + String(ph) + "&temperature=" + String(temperature);
     
     // Send HTTP POST request
-    client.println("POST /api/upload.php HTTP/1.1");
+    client.println("POST /api/http_proxy.php?endpoint=upload HTTP/1.1");
     client.println("Host: " + String(serverHost));
     client.println("Content-Type: application/x-www-form-urlencoded");
     client.println("User-Agent: Arduino-R4-WaterQuality");
@@ -343,21 +357,33 @@ void uploadSensorData(float turbidity, float tds, float ph, float temperature) {
 }
 
 void checkRelayStates() {
-  WiFiSSLClient client;
+  WiFiClient client;
   client.setTimeout(5000); // 5 second timeout
   
   if (client.connect(serverHost, serverPort)) {
     // Send HTTP GET request
-    client.println("GET /api/relay_control.php HTTP/1.1");
+    client.println("GET /api/http_proxy.php?endpoint=relay_control HTTP/1.1");
     client.println("Host: " + String(serverHost));
     client.println("User-Agent: Arduino-R4-WaterQuality");
     client.println("Connection: close");
     client.println();
     
-    // Read response headers
+    // Read response headers and check for redirects
+    String statusLine = "";
+    bool isRedirect = false;
+    
     while (client.connected()) {
       String line = client.readStringUntil('\n');
-      if (line == "\r") {
+      line.trim();
+      
+      if (line.startsWith("HTTP/")) {
+        statusLine = line;
+        if (line.indexOf("301") != -1 || line.indexOf("302") != -1) {
+          isRedirect = true;
+        }
+      }
+      
+      if (line == "\r" || line.length() == 0) {
         break;
       }
     }
@@ -365,8 +391,29 @@ void checkRelayStates() {
     // Read JSON response
     String response = client.readString();
     
+    // Handle redirect - Arduino R4 WiFi cannot follow HTTPS redirects
+    if (isRedirect) {
+      if (!relayControlDisabled) {
+        Serial.println("Server redirects to HTTPS - Arduino R4 WiFi cannot handle SSL");
+        Serial.println("Relay control disabled due to HTTPS requirement");
+        Serial.println("Status: " + statusLine);
+        Serial.println("Consider using ESP32 for HTTPS support or configure server for HTTP API access");
+        relayControlDisabled = true;
+      }
+      client.stop();
+      return;
+    }
+    
     // Debug: Print the raw response for troubleshooting
     Serial.println("Raw server response: " + response);
+    
+    // Check if response contains HTML (error page)
+    if (response.indexOf("<!DOCTYPE html>") != -1 || response.indexOf("<html") != -1) {
+      Serial.println("Server returned HTML instead of JSON - possible redirect or error page");
+      Serial.println("Status: " + statusLine);
+      client.stop();
+      return;
+    }
     
     // Check if response contains error message
     if (response.indexOf("ERR_NGROK") != -1) {
@@ -419,6 +466,17 @@ void checkRelayStates() {
             }
           }
         }
+        
+        // Display current relay status
+        Serial.print("Relay Status: ");
+        for (int i = 0; i < 4; i++) {
+          Serial.print("R");
+          Serial.print(i + 1);
+          Serial.print(":");
+          Serial.print(relayStates[i] ? "ON" : "OFF");
+          if (i < 3) Serial.print(" ");
+        }
+        Serial.println();
       }
     } else {
       Serial.println("Failed to parse JSON response");
@@ -435,7 +493,7 @@ void checkRelayStates() {
 
 void handleRelayCommand(int relay, int state) {
   if (relay >= 1 && relay <= 4) {
-    WiFiSSLClient client;
+    WiFiClient client;
     client.setTimeout(5000); // 5 second timeout
     
     if (client.connect(serverHost, serverPort)) {
@@ -443,7 +501,7 @@ void handleRelayCommand(int relay, int state) {
       String postData = "relay=" + String(relay) + "&state=" + String(state);
       
       // Send HTTP POST request
-      client.println("POST /api/relay_control.php HTTP/1.1");
+      client.println("POST /api/http_proxy.php?endpoint=relay_control HTTP/1.1");
       client.println("Host: " + String(serverHost));
       client.println("Content-Type: application/x-www-form-urlencoded");
       client.println("User-Agent: Arduino-R4-WaterQuality");
