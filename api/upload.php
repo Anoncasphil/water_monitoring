@@ -1,5 +1,14 @@
 <?php
-header('Content-Type: application/json');
+// Enforce strict JSON output and prevent caching/HTML leakage
+if (!headers_sent()) {
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store, no-cache, must-revalidate');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+    header('X-Content-Type-Options: nosniff');
+}
+// Clear any active output buffers to avoid stray output before JSON
+while (ob_get_level() > 0) { ob_end_clean(); }
 
 // Include database configuration
 require_once '../config/database.php';
@@ -66,4 +75,4 @@ try {
         "error" => $e->getMessage()
     ]);
 }
-?> 
+// Intentionally no closing PHP tag to avoid accidental output
