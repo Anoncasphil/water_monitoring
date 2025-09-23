@@ -2,7 +2,7 @@
 #include <ArduinoJson.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
-
+ 
 // WiFi credentials
 const char* ssid = "Converge_2.4GHz_3Fsb56";
 const char* password = "TQkcXYGS";
@@ -17,7 +17,7 @@ const int serverPort = 80;
 const int tdsPin = A0;        // Analog pin A0
 const int turbidityPin = A1;  // Analog pin A1
 const int pH_Pin = A2;        // Analog pin A2
-const int relayPins[] = { 3, 4, 5, 6 };  // Digital pins 3-6 (moved to avoid temp sensor)
+const int relayPins[] = { 3, 4, 5, 6 };  // Digital pins 3-6 a(moved to avoid temp sensor)
 const int numRelays = 4;
 
 // Temperature sensor setup

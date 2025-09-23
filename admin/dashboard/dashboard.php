@@ -118,9 +118,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div>
                 <h1 class="text-2xl font-bold text-gray-800 dark:text-white">
                     <i class="fas fa-water text-blue-500 mr-2"></i>
-                    Water Quality Monitor Llorenz
+                    Water Quality Monitor
                 </h1>
-                <p class="text-gray-600 dark:text-gray-400 text-sm mt-1">Real-time water quality monitoring system owenz</p>
+                <p class="text-gray-600 dark:text-gray-400 text-sm mt-1">Real-time water quality monitoring system</p>
             </div>
             <div class="flex items-center space-x-4">
                 <span class="text-sm text-gray-600 dark:text-gray-400">
