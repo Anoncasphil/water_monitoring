@@ -352,472 +352,512 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </div>
 
-   <script>
-    let readingsChart = null;
+    <script>
+        let readingsChart = null;
 
-    function formatDate(dateStr) {
-        const date = new Date(dateStr);
-        return date.toLocaleTimeString();
-    }
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleTimeString();
+        }
 
-    // Helper: safe parse
-    function safeNum(x) {
-        const n = parseFloat(x);
-        return Number.isFinite(n) ? n : null;
-    }
-
-    // Function to toggle relay state (unchanged)
-    function toggleRelay(checkbox) {
-        const relay = checkbox.dataset.relay;
-        const state = checkbox.checked ? 1 : 0;
-        checkbox.disabled = true;
-        fetch('../../api/relay_control.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: `relay=${relay}&state=${state}`
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success && data.states) {
-                data.states.forEach(s => {
-                    const cb = document.querySelector(`input[data-relay="${s.relay_number}"]`);
-                    if (cb) cb.checked = s.state === 1;
-                });
-            } else if (!data.success) {
-                console.error('Error updating relay state:', data.error);
-                checkbox.checked = !checkbox.checked;
-            }
-        })
-        .catch(err => {
-            console.error('Error:', err);
-            checkbox.checked = !checkbox.checked;
-        })
-        .finally(() => checkbox.disabled = false);
-    }
-
-    // Function to fetch current relay states (unchanged)
-    function fetchRelayStates() {
-        fetch('../../api/relay_control.php')
+        // Function to toggle relay state
+        function toggleRelay(checkbox) {
+            const relay = checkbox.dataset.relay;
+            const state = checkbox.checked ? 1 : 0;
+            
+            // Show loading state
+            checkbox.disabled = true;
+            
+            // Send command to server
+            fetch('../../api/relay_control.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `relay=${relay}&state=${state}`
+            })
             .then(response => response.json())
             .then(data => {
-                if (data.states) {
-                    data.states.forEach(state => {
-                        const checkbox = document.querySelector(`input[data-relay="${state.relay_number}"]`);
-                        if (checkbox) {
-                            checkbox.checked = state.state === 1;
-                        }
-                    });
-                }
-            })
-            .catch(error => console.error('Error fetching relay states:', error));
-    }
-
-    // Update data from API and render values as percentages
-    function updateData() {
-        fetch('../../api/get_readings.php')
-            .then(response => {
-                if (!response.ok) throw new Error('Network response was not ok');
-                return response.json();
-            })
-            .then(data => {
-                if (data.error) throw new Error(data.error);
-
-                // Latest reading
-                const latest = data.latest;
-                if (latest) {
-                    const turb = safeNum(latest.turbidity_ntu);
-                    const tds = safeNum(latest.tds_ppm);
-                    const ph  = safeNum(latest.ph);
-                    const tmp = safeNum(latest.temperature);
-
-                    const turbPct = turb !== null ? Math.round(turbidityToPercent(turb)) : null;
-                    const tdsPct  = tds !== null  ? Math.round(tdsToPercent(tds)) : null;
-                    const phPct   = ph !== null   ? Math.round(phToPercent(ph)) : null;
-                    const tmpPct  = tmp !== null  ? Math.round(tempToPercent(tmp)) : null;
-
-                    document.getElementById('turbidityValue').textContent = turbPct !== null ? `${turbPct}%` : '--';
-                    document.getElementById('tdsValue').textContent = tdsPct !== null ? `${tdsPct}%` : '--';
-                    document.getElementById('phValue').textContent = phPct !== null ? `${phPct}%` : '--';
-                    document.getElementById('temperatureValue').textContent = tmpPct !== null ? `${tmpPct}%` : '--';
-
-                    // Change small unit labels to percent to match the display
-                    // (value element's next sibling is the small unit div in current markup)
-                    try {
-                        const tUnit = document.getElementById('turbidityValue').nextElementSibling;
-                        if (tUnit) tUnit.textContent = '%';
-                        const dUnit = document.getElementById('tdsValue').nextElementSibling;
-                        if (dUnit) dUnit.textContent = '%';
-                        const pUnit = document.getElementById('phValue').nextElementSibling;
-                        if (pUnit) pUnit.textContent = '%';
-                        const tmUnit = document.getElementById('temperatureValue').nextElementSibling;
-                        if (tmUnit) tmUnit.textContent = '%';
-                    } catch (e) {
-                        // ignore if DOM structure differs
+                if (data.success) {
+                    // Update all relay states based on server response
+                    if (data.states) {
+                        data.states.forEach(state => {
+                            const checkbox = document.querySelector(`input[data-relay="${state.relay_number}"]`);
+                            if (checkbox) {
+                                checkbox.checked = state.state === 1;
+                            }
+                        });
                     }
-
-                    // Update timestamps (keep raw time)
-                    document.getElementById('turbidityTime').textContent = `Last updated: ${formatDate(latest.reading_time)}`;
-                    document.getElementById('tdsTime').textContent = `Last updated: ${formatDate(latest.reading_time)}`;
-                    document.getElementById('phTime').textContent = `Last updated: ${formatDate(latest.reading_time)}`;
-                    document.getElementById('temperatureTime').textContent = `Last updated: ${formatDate(latest.reading_time)}`;
-                }
-
-                // Update recent readings table (showing percentages)
-                if (data.recent && data.recent.length > 0) {
-                    const tableHtml = data.recent.map(reading => {
-                        const rt = formatDate(reading.reading_time);
-                        const turb = safeNum(reading.turbidity_ntu);
-                        const tds  = safeNum(reading.tds_ppm);
-                        const ph   = safeNum(reading.ph);
-                        const tmp  = safeNum(reading.temperature);
-
-                        const turbPct = turb !== null ? `${Math.round(turbidityToPercent(turb))}%` : '--';
-                        const tdsPct  = tds !== null  ? `${Math.round(tdsToPercent(tds))}%` : '--';
-                        const phPct   = ph !== null   ? `${Math.round(phToPercent(ph))}%` : '--';
-                        const tmpPct  = tmp !== null  ? `${Math.round(tempToPercent(tmp))}%` : '--';
-
-                        return `
-                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
-                                <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${rt}</td>
-                                <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${turbPct}</td>
-                                <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${tdsPct}</td>
-                                <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${phPct}</td>
-                                <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${tmpPct}</td>
-                            </tr>
-                        `;
-                    }).join('');
-                    document.getElementById('readingsTable').innerHTML = tableHtml;
-                }
-
-                // Update chart (plot percentages)
-                if (data.historical && data.historical.length > 0) {
-                    // convert historical array to percent-based objects
-                    const histPct = data.historical.map(d => ({
-                        reading_time: d.reading_time,
-                        turbidity_pct: turbidityToPercent(safeNum(d.turbidity_ntu) ?? 0),
-                        tds_pct: tdsToPercent(safeNum(d.tds_ppm) ?? 0),
-                        ph_pct: phToPercent(safeNum(d.ph) ?? 7),
-                        temp_pct: tempToPercent(safeNum(d.temperature) ?? ((thresholds.temperature.good.min + thresholds.temperature.good.max)/2))
-                    }));
-                    updateChart(histPct);
-                }
-
-                // Update water quality alerts (still based on raw values)
-                const displayedTurb = (() => {
-                    const el = document.getElementById('turbidityValue').textContent;
-                    return el === '--' ? null : safeNum(el.replace('%',''));
-                })();
-                // For alerts, pass raw numbers from latest if available in data.latest
-                const latestRaw = data.latest;
-                if (latestRaw) {
-                    updateWaterQualityAlerts(
-                        safeNum(latestRaw.turbidity_ntu) ?? 0,
-                        safeNum(latestRaw.tds_ppm) ?? 0,
-                        safeNum(latestRaw.ph) ?? 7,
-                        safeNum(latestRaw.temperature) ?? ((thresholds.temperature.good.min + thresholds.temperature.good.max)/2)
-                    );
+                } else {
+                    console.error('Error updating relay state:', data.error);
+                    checkbox.checked = !checkbox.checked; // Revert the toggle if there was an error
                 }
             })
             .catch(error => {
-                console.error('Error fetching data:', error);
-                document.getElementById('turbidityValue').textContent = 'Error';
-                document.getElementById('tdsValue').textContent = 'Error';
-                document.getElementById('turbidityTime').textContent = 'Failed to update';
-                document.getElementById('tdsTime').textContent = 'Failed to update';
-                document.getElementById('readingsTable').innerHTML = '<tr><td colspan="5" class="px-4 py-3 text-sm text-red-500 dark:text-red-400">Error loading data</td></tr>';
+                console.error('Error:', error);
+                checkbox.checked = !checkbox.checked; // Revert the toggle if there was an error
+            })
+            .finally(() => {
+                checkbox.disabled = false; // Re-enable the checkbox
             });
-    }
-
-    function updateChart(data) {
-        const ctx = document.getElementById('readingsChart').getContext('2d');
-
-        if (readingsChart instanceof Chart) {
-            readingsChart.destroy();
         }
 
-        // gradients (keep same visuals)
-        const turbidityGradient = ctx.createLinearGradient(0, 0, 0, 400);
-        turbidityGradient.addColorStop(0, 'rgba(59, 130, 246, 0.2)');
-        turbidityGradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
-
-        const tdsGradient = ctx.createLinearGradient(0, 0, 0, 400);
-        tdsGradient.addColorStop(0, 'rgba(16, 185, 129, 0.2)');
-        tdsGradient.addColorStop(1, 'rgba(16, 185, 129, 0)');
-
-        const phGradient = ctx.createLinearGradient(0, 0, 0, 400);
-        phGradient.addColorStop(0, 'rgba(168, 85, 247, 0.2)');
-        phGradient.addColorStop(1, 'rgba(168, 85, 247, 0)');
-
-        const tempGradient = ctx.createLinearGradient(0, 0, 0, 400);
-        tempGradient.addColorStop(0, 'rgba(239, 68, 68, 0.2)');
-        tempGradient.addColorStop(1, 'rgba(239, 68, 68, 0)');
-
-        readingsChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: data.map(d => formatDate(d.reading_time)),
-                datasets: [{
-                    label: 'Turbidity (%)',
-                    data: data.map(d => parseFloat(d.turbidity_pct)),
-                    borderColor: 'rgb(59, 130, 246)',
-                    backgroundColor: turbidityGradient,
-                    borderWidth: 2,
-                    tension: 0.4,
-                    fill: true,
-                    pointRadius: 3
-                }, {
-                    label: 'TDS (%)',
-                    data: data.map(d => parseFloat(d.tds_pct)),
-                    borderColor: 'rgb(16, 185, 129)',
-                    backgroundColor: tdsGradient,
-                    borderWidth: 2,
-                    tension: 0.4,
-                    fill: true,
-                    pointRadius: 3
-                }, {
-                    label: 'pH (%)',
-                    data: data.map(d => parseFloat(d.ph_pct)),
-                    borderColor: 'rgb(168, 85, 247)',
-                    backgroundColor: phGradient,
-                    borderWidth: 2,
-                    tension: 0.4,
-                    fill: true,
-                    pointRadius: 3
-                }, {
-                    label: 'Temperature (%)',
-                    data: data.map(d => parseFloat(d.temp_pct)),
-                    borderColor: 'rgb(239, 68, 68)',
-                    backgroundColor: tempGradient,
-                    borderWidth: 2,
-                    tension: 0.4,
-                    fill: true,
-                    pointRadius: 3
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                interaction: { intersect: false, mode: 'index' },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        max: 100,
-                        grid: { color: getChartColors().grid, drawBorder: false },
-                        ticks: { padding: 10, font: { size: 11 }, color: getChartColors().text }
-                    },
-                    x: {
-                        grid: { display: false },
-                        ticks: { padding: 10, font: { size: 11 }, color: getChartColors().text, maxRotation: 45, minRotation: 45 }
+        // Function to fetch current relay states
+        function fetchRelayStates() {
+            fetch('../../api/relay_control.php')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.states) {
+                        data.states.forEach(state => {
+                            const checkbox = document.querySelector(`input[data-relay="${state.relay_number}"]`);
+                            if (checkbox) {
+                                checkbox.checked = state.state === 1;
+                            }
+                        });
                     }
+                })
+                .catch(error => console.error('Error fetching relay states:', error));
+        }
+
+        function updateData() {
+            fetch('../../api/get_readings.php')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.error) {
+                        throw new Error(data.error);
+                    }
+
+                    // Update sensor cards
+                    const latest = data.latest;
+                    if (latest) {
+                        document.getElementById('turbidityValue').textContent = parseFloat(latest.turbidity_ntu).toFixed(1);
+                        document.getElementById('tdsValue').textContent = parseFloat(latest.tds_ppm).toFixed(1);
+                        document.getElementById('phValue').textContent = parseFloat(latest.ph).toFixed(2);
+                        document.getElementById('temperatureValue').textContent = parseFloat(latest.temperature).toFixed(2);
+                        document.getElementById('turbidityTime').textContent = `Last updated: ${formatDate(latest.reading_time)}`;
+                        document.getElementById('tdsTime').textContent = `Last updated: ${formatDate(latest.reading_time)}`;
+                        document.getElementById('phTime').textContent = `Last updated: ${formatDate(latest.reading_time)}`;
+                        document.getElementById('temperatureTime').textContent = `Last updated: ${formatDate(latest.reading_time)}`;
+                    }
+
+                    // Update table
+                    if (data.recent && data.recent.length > 0) {
+                        const tableHtml = data.recent.map(reading => `
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${formatDate(reading.reading_time)}</td>
+                                <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${parseFloat(reading.turbidity_ntu).toFixed(1)}</td>
+                                <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${parseFloat(reading.tds_ppm).toFixed(1)}</td>
+                                <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${parseFloat(reading.ph).toFixed(2)}</td>
+                                <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${parseFloat(reading.temperature).toFixed(2)}</td>
+                            </tr>
+                        `).join('');
+                        document.getElementById('readingsTable').innerHTML = tableHtml;
+                    }
+
+                    // Update chart
+                    if (data.historical && data.historical.length > 0) {
+                        updateChart(data.historical);
+                    }
+
+                    // Update water quality alerts
+                    updateWaterQualityAlerts(
+                        parseFloat(document.getElementById('turbidityValue').textContent),
+                        parseFloat(document.getElementById('tdsValue').textContent),
+                        parseFloat(document.getElementById('phValue').textContent),
+                        parseFloat(document.getElementById('temperatureValue').textContent)
+                    );
+                })
+                .catch(error => {
+                    console.error('Error fetching data:', error);
+                    document.getElementById('turbidityValue').textContent = 'Error';
+                    document.getElementById('tdsValue').textContent = 'Error';
+                    document.getElementById('turbidityTime').textContent = 'Failed to update';
+                    document.getElementById('tdsTime').textContent = 'Failed to update';
+                    document.getElementById('readingsTable').innerHTML = '<tr><td colspan="3" class="px-4 py-3 text-sm text-red-500 dark:text-red-400">Error loading data</td></tr>';
+                });
+        }
+
+        function updateChart(data) {
+            const ctx = document.getElementById('readingsChart').getContext('2d');
+            
+            if (readingsChart instanceof Chart) {
+                readingsChart.destroy();
+            }
+
+            // Create gradient for each dataset
+            const turbidityGradient = ctx.createLinearGradient(0, 0, 0, 400);
+            turbidityGradient.addColorStop(0, 'rgba(59, 130, 246, 0.2)');
+            turbidityGradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
+
+            const tdsGradient = ctx.createLinearGradient(0, 0, 0, 400);
+            tdsGradient.addColorStop(0, 'rgba(16, 185, 129, 0.2)');
+            tdsGradient.addColorStop(1, 'rgba(16, 185, 129, 0)');
+
+            const phGradient = ctx.createLinearGradient(0, 0, 0, 400);
+            phGradient.addColorStop(0, 'rgba(168, 85, 247, 0.2)');
+            phGradient.addColorStop(1, 'rgba(168, 85, 247, 0)');
+
+            const tempGradient = ctx.createLinearGradient(0, 0, 0, 400);
+            tempGradient.addColorStop(0, 'rgba(239, 68, 68, 0.2)');
+            tempGradient.addColorStop(1, 'rgba(239, 68, 68, 0)');
+
+            readingsChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.map(d => formatDate(d.reading_time)),
+                    datasets: [{
+                        label: 'Turbidity (NTU)',
+                        data: data.map(d => parseFloat(d.turbidity_ntu)),
+                        borderColor: 'rgb(59, 130, 246)',
+                        backgroundColor: turbidityGradient,
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 3,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: 'rgb(59, 130, 246)',
+                        pointBorderColor: document.documentElement.classList.contains('dark') ? '#1F2937' : '#fff',
+                        pointBorderWidth: 2,
+                        pointHoverBackgroundColor: document.documentElement.classList.contains('dark') ? '#1F2937' : '#fff',
+                        pointHoverBorderColor: 'rgb(59, 130, 246)',
+                        pointHoverBorderWidth: 2,
+                        pointStyle: 'circle'
+                    }, {
+                        label: 'TDS (ppm)',
+                        data: data.map(d => parseFloat(d.tds_ppm)),
+                        borderColor: 'rgb(16, 185, 129)',
+                        backgroundColor: tdsGradient,
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 3,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: 'rgb(16, 185, 129)',
+                        pointBorderColor: document.documentElement.classList.contains('dark') ? '#1F2937' : '#fff',
+                        pointBorderWidth: 2,
+                        pointHoverBackgroundColor: document.documentElement.classList.contains('dark') ? '#1F2937' : '#fff',
+                        pointHoverBorderColor: 'rgb(16, 185, 129)',
+                        pointHoverBorderWidth: 2,
+                        pointStyle: 'circle'
+                    }, {
+                        label: 'pH',
+                        data: data.map(d => parseFloat(d.ph)),
+                        borderColor: 'rgb(168, 85, 247)',
+                        backgroundColor: phGradient,
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 3,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: 'rgb(168, 85, 247)',
+                        pointBorderColor: document.documentElement.classList.contains('dark') ? '#1F2937' : '#fff',
+                        pointBorderWidth: 2,
+                        pointHoverBackgroundColor: document.documentElement.classList.contains('dark') ? '#1F2937' : '#fff',
+                        pointHoverBorderColor: 'rgb(168, 85, 247)',
+                        pointHoverBorderWidth: 2,
+                        pointStyle: 'circle'
+                    }, {
+                        label: 'Temperature (°C)',
+                        data: data.map(d => parseFloat(d.temperature)),
+                        borderColor: 'rgb(239, 68, 68)',
+                        backgroundColor: tempGradient,
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 3,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: 'rgb(239, 68, 68)',
+                        pointBorderColor: document.documentElement.classList.contains('dark') ? '#1F2937' : '#fff',
+                        pointBorderWidth: 2,
+                        pointHoverBackgroundColor: document.documentElement.classList.contains('dark') ? '#1F2937' : '#fff',
+                        pointHoverBorderColor: 'rgb(239, 68, 68)',
+                        pointHoverBorderWidth: 2,
+                        pointStyle: 'circle'
+                    }]
                 },
-                plugins: {
-                    legend: {
-                        position: 'top', align: 'end',
-                        labels: { padding: 20, usePointStyle: true, pointStyle: 'circle', font: { size: 12, weight: '500' }, color: document.documentElement.classList.contains('dark') ? '#F3F4F6' : '#374151' }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
                     },
-                    tooltip: {
-                        backgroundColor: getChartColors().tooltipBg,
-                        titleColor: getChartColors().tooltipText,
-                        bodyColor: getChartColors().tooltipText,
-                        borderColor: getChartColors().tooltipBorder,
-                        borderWidth: 1,
-                        padding: 12,
-                        boxPadding: 6,
-                        usePointStyle: true,
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.dataset.label || '';
-                                if (label) label += ': ';
-                                if (context.parsed.y !== null) {
-                                    label += `${context.parsed.y.toFixed(0)}%`;
-                                }
-                                return label;
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: getChartColors().grid,
+                                drawBorder: false
+                            },
+                            ticks: {
+                                padding: 10,
+                                font: {
+                                    size: 11
+                                },
+                                color: getChartColors().text
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                padding: 10,
+                                font: {
+                                    size: 11
+                                },
+                                color: getChartColors().text,
+                                maxRotation: 45,
+                                minRotation: 45
                             }
                         }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            align: 'end',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                                font: {
+                                    size: 12,
+                                    weight: '500'
+                                },
+                                color: document.documentElement.classList.contains('dark') ? '#F3F4F6' : '#374151'
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: getChartColors().tooltipBg,
+                            titleColor: getChartColors().tooltipText,
+                            bodyColor: getChartColors().tooltipText,
+                            borderColor: getChartColors().tooltipBorder,
+                            borderWidth: 1,
+                            padding: 12,
+                            boxPadding: 6,
+                            usePointStyle: true,
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += context.parsed.y.toFixed(2);
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    elements: {
+                        line: {
+                            tension: 0.4
+                        }
+                    },
+                    animation: {
+                        duration: 1000,
+                        easing: 'easeInOutQuart'
                     }
-                },
-                elements: { line: { tension: 0.4 } },
-                animation: { duration: 1000, easing: 'easeInOutQuart' }
+                }
+            });
+        }
+
+        // Update data and relay states every second with 500ms initial delay
+        setTimeout(() => {
+            updateData();
+            fetchRelayStates();
+        }, 500); // Initial 500ms delay
+        
+        setInterval(() => {
+            updateData();
+            fetchRelayStates();
+        }, 1000); // Update every 1 second instead of 5 seconds
+
+        // Add current time update
+        function updateCurrentTime() {
+            const now = new Date();
+            document.getElementById('currentTime').textContent = now.toLocaleTimeString();
+        }
+        setInterval(updateCurrentTime, 1000);
+        updateCurrentTime();
+
+        // Update table row colors for dark mode
+        function updateTableRowColors() {
+            const rows = document.querySelectorAll('#readingsTable tr');
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                cells.forEach(cell => {
+                    cell.classList.add('dark:text-gray-300');
+                });
+            });
+        }
+
+        // Dark mode toggle functionality
+        const themeToggle = document.getElementById('themeToggle');
+        const html = document.documentElement;
+
+        // Check for saved theme preference
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            html.classList.add('dark');
+        } else {
+            html.classList.remove('dark');
+        }
+
+        // Toggle theme
+        themeToggle.addEventListener('click', () => {
+            html.classList.toggle('dark');
+            localStorage.theme = html.classList.contains('dark') ? 'dark' : 'light';
+            
+            // Refresh the chart with new colors
+            if (readingsChart) {
+                readingsChart.destroy();
             }
+            updateData(); // This will recreate the chart with new colors
+            
+            // Update table colors
+            updateTableRowColors();
         });
-    }
 
-    // Update data and relay states every second with 500ms initial delay
-    setTimeout(() => {
-        updateData();
-        fetchRelayStates();
-    }, 500);
+        // Update chart colors based on theme
+        function getChartColors() {
+            const isDark = document.documentElement.classList.contains('dark');
+            return {
+                grid: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+                text: isDark ? '#9CA3AF' : '#6B7280',
+                tooltipBg: isDark ? 'rgba(31, 41, 55, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+                tooltipText: isDark ? '#F3F4F6' : '#1F2937',
+                tooltipBorder: isDark ? '#374151' : '#E5E7EB'
+            };
+        }
 
-    setInterval(() => {
-        updateData();
-        fetchRelayStates();
-    }, 1000);
-
-    // Add current time update
-    function updateCurrentTime() {
-        const now = new Date();
-        document.getElementById('currentTime').textContent = now.toLocaleTimeString();
-    }
-    setInterval(updateCurrentTime, 1000);
-    updateCurrentTime();
-
-    // Update table row colors for dark mode
-    function updateTableRowColors() {
-        const rows = document.querySelectorAll('#readingsTable tr');
-        rows.forEach(row => {
-            const cells = row.querySelectorAll('td');
-            cells.forEach(cell => cell.classList.add('dark:text-gray-300'));
-        });
-    }
-
-    // Dark mode toggle functionality (unchanged)
-    const themeToggle = document.getElementById('themeToggle');
-    const html = document.documentElement;
-    if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-        html.classList.add('dark');
-    } else { html.classList.remove('dark'); }
-
-    themeToggle.addEventListener('click', () => {
-        html.classList.toggle('dark');
-        localStorage.theme = html.classList.contains('dark') ? 'dark' : 'light';
-        if (readingsChart) readingsChart.destroy();
-        updateData();
-        updateTableRowColors();
-    });
-
-    // Update chart colors helper (unchanged)
-    function getChartColors() {
-        const isDark = document.documentElement.classList.contains('dark');
-        return {
-            grid: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
-            text: isDark ? '#9CA3AF' : '#6B7280',
-            tooltipBg: isDark ? 'rgba(31, 41, 55, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-            tooltipText: isDark ? '#F3F4F6' : '#1F2937',
-            tooltipBorder: isDark ? '#374151' : '#E5E7EB'
+        // Water quality thresholds
+        const thresholds = {
+            turbidity: {
+                good: 5,      // NTU
+                warning: 10,  // NTU
+                danger: 20    // NTU
+            },
+            tds: {
+                good: 300,    // ppm
+                warning: 500, // ppm
+                danger: 1000  // ppm
+            },
+            ph: {
+                good: { min: 6.5, max: 8.5 },
+                warning: { min: 6.0, max: 9.0 },
+                danger: { min: 5.0, max: 10.0 }
+            },
+            temperature: {
+                good: { min: 15, max: 30 },    // °C
+                warning: { min: 10, max: 35 }, // °C
+                danger: { min: 5, max: 40 }    // °C
+            }
         };
-    }
 
-    // Water quality thresholds (unchanged)
-    const thresholds = {
-        turbidity: { good: 5, warning: 10, danger: 20 },
-        tds: { good: 300, warning: 500, danger: 1000 },
-        ph: { good: { min: 6.5, max: 8.5 }, warning: { min: 6.0, max: 9.0 }, danger: { min: 5.0, max: 10.0 } },
-        temperature: { good: { min: 15, max: 30 }, warning: { min: 10, max: 35 }, danger: { min: 5, max: 40 } }
-    };
+        function evaluateWaterQuality(turbidity, tds, ph, temperature) {
+            const alerts = [];
+            
+            // Evaluate Turbidity
+            if (turbidity >= thresholds.turbidity.danger) {
+                alerts.push({
+                    type: 'danger',
+                    message: `High turbidity (${turbidity.toFixed(1)} NTU) - Water is very cloudy and may contain harmful particles`
+                });
+            } else if (turbidity >= thresholds.turbidity.warning) {
+                alerts.push({
+                    type: 'warning',
+                    message: `Elevated turbidity (${turbidity.toFixed(1)} NTU) - Water clarity is reduced`
+                });
+            } else if (turbidity <= thresholds.turbidity.good) {
+                alerts.push({
+                    type: 'success',
+                    message: `Good turbidity (${turbidity.toFixed(1)} NTU) - Water is clear`
+                });
+            }
 
-    // Percentage conversion functions (continuous mapping)
-    function turbidityToPercent(value) {
-        const g = thresholds.turbidity.good;
-        const d = thresholds.turbidity.danger;
-        if (value <= g) return 100;
-        if (value >= d) return 0;
-        // linear from good->100 to danger->0
-        const pct = (1 - (value - g) / (d - g)) * 100;
-        return Math.max(0, Math.min(100, pct));
-    }
+            // Evaluate TDS
+            if (tds >= thresholds.tds.danger) {
+                alerts.push({
+                    type: 'danger',
+                    message: `High TDS (${tds.toFixed(0)} ppm) - Water contains excessive dissolved solids`
+                });
+            } else if (tds >= thresholds.tds.warning) {
+                alerts.push({
+                    type: 'warning',
+                    message: `Elevated TDS (${tds.toFixed(0)} ppm) - Water may need treatment`
+                });
+            } else if (tds <= thresholds.tds.good) {
+                alerts.push({
+                    type: 'success',
+                    message: `Good TDS (${tds.toFixed(0)} ppm) - Water is within acceptable range`
+                });
+            }
 
-    function tdsToPercent(value) {
-        const g = thresholds.tds.good;
-        const d = thresholds.tds.danger;
-        if (value <= g) return 100;
-        if (value >= d) return 0;
-        const pct = (1 - (value - g) / (d - g)) * 100;
-        return Math.max(0, Math.min(100, pct));
-    }
+            // Evaluate pH
+            if (ph < thresholds.ph.danger.min || ph > thresholds.ph.danger.max) {
+                alerts.push({
+                    type: 'danger',
+                    message: `Extreme pH (${ph.toFixed(1)}) - Water is too acidic or alkaline`
+                });
+            } else if (ph < thresholds.ph.warning.min || ph > thresholds.ph.warning.max) {
+                alerts.push({
+                    type: 'warning',
+                    message: `Unbalanced pH (${ph.toFixed(1)}) - Water may need pH adjustment`
+                });
+            } else if (ph >= thresholds.ph.good.min && ph <= thresholds.ph.good.max) {
+                alerts.push({
+                    type: 'success',
+                    message: `Good pH (${ph.toFixed(1)}) - Water is within ideal range`
+                });
+            }
 
-    function phToPercent(value) {
-        const gmin = thresholds.ph.good.min, gmax = thresholds.ph.good.max;
-        const dmin = thresholds.ph.danger.min, dmax = thresholds.ph.danger.max;
+            // Evaluate Temperature
+            if (temperature < thresholds.temperature.danger.min || temperature > thresholds.temperature.danger.max) {
+                alerts.push({
+                    type: 'danger',
+                    message: `Extreme temperature (${temperature.toFixed(1)}°C) - Water is too hot or cold`
+                });
+            } else if (temperature < thresholds.temperature.warning.min || temperature > thresholds.temperature.warning.max) {
+                alerts.push({
+                    type: 'warning',
+                    message: `Unusual temperature (${temperature.toFixed(1)}°C) - Monitor water temperature`
+                });
+            } else if (temperature >= thresholds.temperature.good.min && temperature <= thresholds.temperature.good.max) {
+                alerts.push({
+                    type: 'success',
+                    message: `Good temperature (${temperature.toFixed(1)}°C) - Water is at ideal temperature`
+                });
+            }
 
-        if (value >= gmin && value <= gmax) return 100;
-        if (value <= dmin || value >= dmax) return 0;
-
-        if (value < gmin) {
-            // value in [dmin .. gmin] map to [0 .. 100]
-            const pct = ((value - dmin) / (gmin - dmin)) * 100;
-            return Math.max(0, Math.min(100, pct));
-        } else { // value > gmax
-            // value in [gmax .. dmax] map to [100 .. 0]
-            const pct = ((dmax - value) / (dmax - gmax)) * 100;
-            return Math.max(0, Math.min(100, pct));
-        }
-    }
-
-    function tempToPercent(value) {
-        const gmin = thresholds.temperature.good.min, gmax = thresholds.temperature.good.max;
-        const dmin = thresholds.temperature.danger.min, dmax = thresholds.temperature.danger.max;
-
-        if (value >= gmin && value <= gmax) return 100;
-        if (value <= dmin || value >= dmax) return 0;
-
-        if (value < gmin) {
-            const pct = ((value - dmin) / (gmin - dmin)) * 100;
-            return Math.max(0, Math.min(100, pct));
-        } else { // value > gmax
-            const pct = ((dmax - value) / (dmax - gmax)) * 100;
-            return Math.max(0, Math.min(100, pct));
-        }
-    }
-
-    // Existing alert evaluation (keeps showing raw numbers so operators know real units)
-    function evaluateWaterQuality(turbidity, tds, ph, temperature) {
-        const alerts = [];
-
-        if (turbidity >= thresholds.turbidity.danger) {
-            alerts.push({ type: 'danger', message: `High turbidity (${turbidity.toFixed(1)} NTU) - Water is very cloudy and may contain harmful particles` });
-        } else if (turbidity >= thresholds.turbidity.warning) {
-            alerts.push({ type: 'warning', message: `Elevated turbidity (${turbidity.toFixed(1)} NTU) - Water clarity is reduced` });
-        } else if (turbidity <= thresholds.turbidity.good) {
-            alerts.push({ type: 'success', message: `Good turbidity (${turbidity.toFixed(1)} NTU) - Water is clear` });
-        }
-
-        if (tds >= thresholds.tds.danger) {
-            alerts.push({ type: 'danger', message: `High TDS (${tds.toFixed(0)} ppm) - Water contains excessive dissolved solids` });
-        } else if (tds >= thresholds.tds.warning) {
-            alerts.push({ type: 'warning', message: `Elevated TDS (${tds.toFixed(0)} ppm) - Water may need treatment` });
-        } else if (tds <= thresholds.tds.good) {
-            alerts.push({ type: 'success', message: `Good TDS (${tds.toFixed(0)} ppm) - Water is within acceptable range` });
+            return alerts;
         }
 
-        if (ph < thresholds.ph.danger.min || ph > thresholds.ph.danger.max) {
-            alerts.push({ type: 'danger', message: `Extreme pH (${ph.toFixed(1)}) - Water is too acidic or alkaline` });
-        } else if (ph < thresholds.ph.warning.min || ph > thresholds.ph.warning.max) {
-            alerts.push({ type: 'warning', message: `Unbalanced pH (${ph.toFixed(1)}) - Water may need pH adjustment` });
-        } else if (ph >= thresholds.ph.good.min && ph <= thresholds.ph.good.max) {
-            alerts.push({ type: 'success', message: `Good pH (${ph.toFixed(1)}) - Water is within ideal range` });
+        function updateWaterQualityAlerts(turbidity, tds, ph, temperature) {
+            const alertsContainer = document.getElementById('waterQualityAlerts');
+            const alerts = evaluateWaterQuality(turbidity, tds, ph, temperature);
+            
+            alertsContainer.innerHTML = alerts.map(alert => `
+                <div class="flex items-center p-4 rounded-lg ${
+                    alert.type === 'danger' ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300' :
+                    alert.type === 'warning' ? 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300' :
+                    'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300'
+                }">
+                    <i class="fas ${
+                        alert.type === 'danger' ? 'fa-exclamation-circle' :
+                        alert.type === 'warning' ? 'fa-exclamation-triangle' :
+                        'fa-check-circle'
+                    } mr-3"></i>
+                    <span>${alert.message}</span>
+                </div>
+            `).join('');
         }
-
-        if (temperature < thresholds.temperature.danger.min || temperature > thresholds.temperature.danger.max) {
-            alerts.push({ type: 'danger', message: `Extreme temperature (${temperature.toFixed(1)}°C) - Water is too hot or cold` });
-        } else if (temperature < thresholds.temperature.warning.min || temperature > thresholds.temperature.warning.max) {
-            alerts.push({ type: 'warning', message: `Unusual temperature (${temperature.toFixed(1)}°C) - Monitor water temperature` });
-        } else if (temperature >= thresholds.temperature.good.min && temperature <= thresholds.temperature.good.max) {
-            alerts.push({ type: 'success', message: `Good temperature (${temperature.toFixed(1)}°C) - Water is at ideal temperature` });
-        }
-
-        return alerts;
-    }
-
-    function updateWaterQualityAlerts(turbidity, tds, ph, temperature) {
-        const alertsContainer = document.getElementById('waterQualityAlerts');
-        const alerts = evaluateWaterQuality(turbidity, tds, ph, temperature);
-
-        alertsContainer.innerHTML = alerts.map(alert => `
-            <div class="flex items-center p-4 rounded-lg ${
-                alert.type === 'danger' ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300' :
-                alert.type === 'warning' ? 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300' :
-                'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300'
-            }">
-                <i class="fas ${
-                    alert.type === 'danger' ? 'fa-exclamation-circle' :
-                    alert.type === 'warning' ? 'fa-exclamation-triangle' :
-                    'fa-check-circle'
-                } mr-3"></i>
-                <span>${alert.message}</span>
-            </div>
-        `).join('');
-    }
-</script>
+    </script>
         </div>
     </div>
 </body>
