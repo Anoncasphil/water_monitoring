@@ -7,11 +7,11 @@
 const char* ssid = "Converge_2.4GHz_3Fsb56";
 const char* password = "TQkcXYGS";
 
-// Server details
-const char* serverUrl = "http://waterquality.triple7autosupply.com/api/upload.php";
-const char* relayControlUrl = "http://waterquality.triple7autosupply.com/api/relay_control.php";
+// Server details (HTTPS)
+const char* serverUrl = "https://waterquality.triple7autosupply.com/api/upload.php";
+const char* relayControlUrl = "https://waterquality.triple7autosupply.com/api/relay_control.php";
 const char* serverHost = "waterquality.triple7autosupply.com";
-const int serverPort = 80;
+const int serverPort = 443;
 
 // Pin definitions for Arduino R4 WiFi
 const int tdsPin = A0;        // Analog pin A0
@@ -172,9 +172,9 @@ void setup() {
     Serial.print(WiFi.RSSI());
     Serial.println(" dBm");
     
-    // Test server connection
-    Serial.println("Testing server connection...");
-    WiFiClient testClient;
+    // Test server connection (HTTPS)
+    Serial.println("Testing server connection (HTTPS)...");
+    WiFiSSLClient testClient;
     if (testClient.connect(serverHost, serverPort)) {
       Serial.println("Server connection test successful!");
       testClient.stop();
@@ -301,7 +301,7 @@ void loop() {
 }
 
 void uploadSensorData(float turbidity, float tds, float ph, float temperature) {
-  WiFiClient client;
+  WiFiSSLClient client;
   client.setTimeout(5000); // 5 second timeout
   
   if (client.connect(serverHost, serverPort)) {
@@ -343,7 +343,7 @@ void uploadSensorData(float turbidity, float tds, float ph, float temperature) {
 }
 
 void checkRelayStates() {
-  WiFiClient client;
+  WiFiSSLClient client;
   client.setTimeout(5000); // 5 second timeout
   
   if (client.connect(serverHost, serverPort)) {
@@ -435,7 +435,7 @@ void checkRelayStates() {
 
 void handleRelayCommand(int relay, int state) {
   if (relay >= 1 && relay <= 4) {
-    WiFiClient client;
+    WiFiSSLClient client;
     client.setTimeout(5000); // 5 second timeout
     
     if (client.connect(serverHost, serverPort)) {
