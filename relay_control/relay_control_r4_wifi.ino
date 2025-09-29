@@ -2,18 +2,31 @@
 #include <ArduinoJson.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
- 
-// WiFi credentials
-const char* ssid = "Sean";
-const char* password = "mine3you";
+#include <ArduinoHttpClient.h>
 
-// Server details (HTTP - Arduino R4 WiFi doesn't support HTTPS natively)
-const char* serverUrl = "http://waterquality.triple7autosupply.com/api/http_proxy.php?endpoint=upload";
-const char* relayControlUrl = "http://waterquality.triple7autosupply.com/api/http_proxy.php?endpoint=relay_control";
-const char* relayControlUrlBackup = "http://waterquality.triple7autosupply.com/api/relay_control.php"; // Fallback
-const char* testUrl = "http://waterquality.triple7autosupply.com/api/test_http.php"; // HTTP test endpoint
+// WiFi credentials
+const char* ssid = "Converge_2.4GHz_3Fsb56";
+const char* password = "TQkcXYGS";
+
+// Server details - Support both HTTP and HTTPS
 const char* serverHost = "waterquality.triple7autosupply.com";
-const int serverPort = 80;
+const int httpPort = 80;
+const int httpsPort = 443;
+
+// HTTP endpoints (for Arduino without HTTPS support)
+const char* serverUrlHttp = "http://waterquality.triple7autosupply.com/api/http_proxy.php?endpoint=upload";
+const char* relayControlUrlHttp = "http://waterquality.triple7autosupply.com/api/http_proxy.php?endpoint=relay_control";
+const char* relayControlUrlBackupHttp = "http://waterquality.triple7autosupply.com/api/relay_control.php"; // Fallback
+const char* testUrlHttp = "http://waterquality.triple7autosupply.com/api/test_http.php"; // HTTP test endpoint
+
+// HTTPS endpoints (for secure connections)
+const char* serverUrlHttps = "/api/http_proxy.php?endpoint=upload";
+const char* relayControlUrlHttps = "/api/http_proxy.php?endpoint=relay_control";
+const char* relayControlUrlBackupHttps = "/api/relay_control.php"; // Fallback
+const char* testUrlHttps = "/api/test_http.php"; // HTTPS test endpoint
+
+// Configuration - Set to true to use HTTPS, false for HTTP
+const bool USE_HTTPS = false; // Change to true to enable HTTPS
 
 // Pin definitions for Arduino R4 WiFi
 const int tdsPin = A0;        // Analog pin A0
@@ -34,6 +47,12 @@ bool relayStates[4] = { false, false, false, false };
 const int RELAY_ON = LOW;
 const int RELAY_OFF = HIGH;
 bool relayControlDisabled = false; // Will be set to true if server requires HTTPS
+
+// HTTP/HTTPS client objects
+WiFiClient client;
+WiFiClientSecure secureClient;
+HttpClient httpClient;
+HttpClient httpsClient;
 
 // pH sensor calibration (optimized)
 const int NUM_SAMPLES = 7;
@@ -103,6 +122,9 @@ void checkSensorHealth();
 String cleanJsonResponse(String response);
 bool detectTemperatureSensor();
 bool testHttpConnectivity();
+bool testHttpsConnectivity();
+String makeHttpRequest(const char* endpoint, const char* method = "GET", const char* data = nullptr);
+String makeHttpsRequest(const char* endpoint, const char* method = "GET", const char* data = nullptr);
 
 // Function to map float values (like Arduino's map but for floats)
 float mapFloat(float x, float in_min, float in_max, float out_min, float out_max) {
@@ -156,6 +178,13 @@ void setup() {
     Serial.println("No DS18B20 address detected. Will try index-based reads.");
   }
 
+  // Initialize HTTP clients
+  httpClient = HttpClient(client, serverHost, httpPort);
+  httpsClient = HttpClient(secureClient, serverHost, httpsPort);
+  
+  // Configure secure client for HTTPS (skip certificate verification for now)
+  secureClient.setInsecure();
+
   // Connect to Wi-Fi
   Serial.println("Connecting to WiFi...");
   WiFi.begin(ssid, password);
@@ -176,27 +205,27 @@ void setup() {
     Serial.print(WiFi.RSSI());
     Serial.println(" dBm");
     
-    // Test server connection (HTTP)
-    Serial.println("Testing server connection (HTTP)...");
-    WiFiClient testClient;
-    if (testClient.connect(serverHost, serverPort)) {
-      Serial.println("Server connection test successful!");
-      testClient.stop();
-      
-      // Test HTTP API connectivity
-      Serial.println("Testing HTTP API connectivity...");
+    // Test connectivity based on configuration
+    if (USE_HTTPS) {
+      Serial.println("Testing HTTPS connectivity...");
+      if (testHttpsConnectivity()) {
+        Serial.println("HTTPS API test successful!");
+        Serial.println("Checking initial relay states...");
+        checkRelayStates();
+      } else {
+        Serial.println("HTTPS API test failed - falling back to HTTP");
+        relayControlDisabled = true;
+      }
+    } else {
+      Serial.println("Testing HTTP connectivity...");
       if (testHttpConnectivity()) {
         Serial.println("HTTP API test successful!");
-        // Fetch initial relay states immediately after WiFi connects
         Serial.println("Checking initial relay states...");
         checkRelayStates();
       } else {
         Serial.println("HTTP API test failed - checking server configuration");
         relayControlDisabled = true;
       }
-    } else {
-      Serial.println("Server connection test failed!");
-      relayControlDisabled = true;
     }
   } else {
     Serial.println();
@@ -327,250 +356,168 @@ void loop() {
 }
 
 void uploadSensorData(float turbidity, float tds, float ph, float temperature) {
-  WiFiClient client;
-  client.setTimeout(5000); // 5 second timeout
+  // Prepare POST data
+  String postData = "turbidity=" + String(turbidity) + "&tds=" + String(tds) + "&ph=" + String(ph) + "&temperature=" + String(temperature);
   
-  if (client.connect(serverHost, serverPort)) {
-    // Prepare POST data
-    String postData = "turbidity=" + String(turbidity) + "&tds=" + String(tds) + "&ph=" + String(ph) + "&temperature=" + String(temperature);
-    
-    // Send HTTP POST request
-    client.println("POST /api/http_proxy.php?endpoint=upload HTTP/1.1");
-    client.println("Host: " + String(serverHost));
-    client.println("Content-Type: application/x-www-form-urlencoded");
-    client.println("User-Agent: Arduino-R4-WaterQuality");
-    client.println("Connection: close");
-    client.print("Content-Length: ");
-    client.println(postData.length());
-    client.println();
-    client.print(postData);
-    
-    // Read response
-    while (client.connected()) {
-      String line = client.readStringUntil('\n');
-      if (line == "\r") {
-        break;
-      }
-    }
-    
-    String response = client.readString();
-    
+  String response;
+  if (USE_HTTPS) {
+    response = makeHttpsRequest(serverUrlHttps, "POST", postData.c_str());
+  } else {
+    response = makeHttpRequest("/api/http_proxy.php?endpoint=upload", "POST", postData.c_str());
+  }
+  
+  if (response.length() > 0) {
     // Check if response contains error message
     if (response.indexOf("ERR_NGROK") != -1) {
       Serial.println("Server error: NGROK tunnel issue");
-    } else {
+    } else if (response.indexOf("\"success\":true") != -1) {
       Serial.println("Data uploaded successfully");
+    } else {
+      Serial.println("Upload response: " + response.substring(0, 100));
     }
   } else {
-    Serial.println("Failed to connect to server");
+    Serial.println("Failed to upload data - no response");
   }
-  
-  client.stop();
 }
 
 void checkRelayStates() {
-  WiFiClient client;
-  client.setTimeout(5000); // 5 second timeout
+  String response;
+  if (USE_HTTPS) {
+    response = makeHttpsRequest(relayControlUrlHttps, "GET");
+  } else {
+    response = makeHttpRequest("/api/http_proxy.php?endpoint=relay_control", "GET");
+  }
   
-  if (client.connect(serverHost, serverPort)) {
-    // Send HTTP GET request
-    client.println("GET /api/http_proxy.php?endpoint=relay_control HTTP/1.1");
-    client.println("Host: " + String(serverHost));
-    client.println("User-Agent: Arduino-R4-WaterQuality");
-    client.println("Connection: close");
-    client.println();
-    
-    // Read response headers and check for redirects
-    String statusLine = "";
-    bool isRedirect = false;
-    
-    while (client.connected()) {
-      String line = client.readStringUntil('\n');
-      line.trim();
+  if (response.length() == 0) {
+    Serial.println("Failed to get relay states - no response");
+    return;
+  }
+  
+  // Debug: Print the raw response for troubleshooting
+  Serial.println("Raw server response: " + response);
+  
+  // Check if response contains HTML (error page)
+  if (response.indexOf("<!DOCTYPE html>") != -1 || response.indexOf("<html") != -1) {
+    Serial.println("Server returned HTML instead of JSON - possible redirect or error page");
+    return;
+  }
+  
+  // Check if response contains error message
+  if (response.indexOf("ERR_NGROK") != -1) {
+    Serial.println("Server error: NGROK tunnel issue");
+    return;
+  }
+
+  // Check if response is empty or too short
+  if (response.length() < 10) {
+    Serial.println("Server response too short: " + response);
+    return;
+  }
+
+  // Clean the JSON response
+  String cleanResponse = cleanJsonResponse(response);
+  if (cleanResponse.length() == 0) {
+    Serial.println("No valid JSON found in response");
+    return;
+  }
+  
+  Serial.println("Cleaned JSON: " + cleanResponse);
+
+  // Parse JSON response
+  DynamicJsonDocument doc(1024);
+  DeserializationError error = deserializeJson(doc, cleanResponse);
+
+  if (!error) {
+    if (doc.containsKey("states") && doc["states"].is<JsonArray>()) {
+      JsonArray states = doc["states"];
+      bool relayChanged = false;
       
-      if (line.startsWith("HTTP/")) {
-        statusLine = line;
-        if (line.indexOf("301") != -1 || line.indexOf("302") != -1) {
-          isRedirect = true;
-        }
-      }
-      
-      if (line == "\r" || line.length() == 0) {
-        break;
-      }
-    }
-    
-    // Read JSON response
-    String response = client.readString();
-    
-    // Handle redirect - Arduino R4 WiFi cannot follow HTTPS redirects
-    if (isRedirect) {
-      if (!relayControlDisabled) {
-        Serial.println("Server redirects to HTTPS - Arduino R4 WiFi cannot handle SSL");
-        Serial.println("Relay control disabled due to HTTPS requirement");
-        Serial.println("Status: " + statusLine);
-        Serial.println("Consider using ESP32 for HTTPS support or configure server for HTTP API access");
-        relayControlDisabled = true;
-      }
-      client.stop();
-      return;
-    }
-    
-    // Debug: Print the raw response for troubleshooting
-    Serial.println("Raw server response: " + response);
-    
-    // Check if response contains HTML (error page)
-    if (response.indexOf("<!DOCTYPE html>") != -1 || response.indexOf("<html") != -1) {
-      Serial.println("Server returned HTML instead of JSON - possible redirect or error page");
-      Serial.println("Status: " + statusLine);
-      client.stop();
-      return;
-    }
-    
-    // Check if response contains error message
-    if (response.indexOf("ERR_NGROK") != -1) {
-      Serial.println("Server error: NGROK tunnel issue");
-      client.stop();
-      return;
-    }
-
-    // Check if response is empty or too short
-    if (response.length() < 10) {
-      Serial.println("Server response too short: " + response);
-      client.stop();
-      return;
-    }
-
-    // Clean the JSON response
-    String cleanResponse = cleanJsonResponse(response);
-    if (cleanResponse.length() == 0) {
-      Serial.println("No valid JSON found in response");
-      client.stop();
-      return;
-    }
-    
-    Serial.println("Cleaned JSON: " + cleanResponse);
-
-    // Parse JSON response
-    DynamicJsonDocument doc(1024);
-    DeserializationError error = deserializeJson(doc, cleanResponse);
-
-    if (!error) {
-      if (doc.containsKey("states") && doc["states"].is<JsonArray>()) {
-        JsonArray states = doc["states"];
-        bool relayChanged = false;
-        
-        for (JsonObject state : states) {
-          if (state.containsKey("relay_number") && state.containsKey("state")) {
-            int relay = state["relay_number"];
-            int value = state["state"];
-            if (relay >= 1 && relay <= 4) {
-              bool newState = (value == 1);
-              if (relayStates[relay - 1] != newState) {
-                relayStates[relay - 1] = newState;
-                digitalWrite(relayPins[relay - 1], relayStates[relay - 1] ? RELAY_ON : RELAY_OFF);
-                Serial.print("Relay ");
-                Serial.print(relay);
-                Serial.print(" changed to: ");
-                Serial.println(newState ? "ON" : "OFF");
-                relayChanged = true;
-              }
+      for (JsonObject state : states) {
+        if (state.containsKey("relay_number") && state.containsKey("state")) {
+          int relay = state["relay_number"];
+          int value = state["state"];
+          if (relay >= 1 && relay <= 4) {
+            bool newState = (value == 1);
+            if (relayStates[relay - 1] != newState) {
+              relayStates[relay - 1] = newState;
+              digitalWrite(relayPins[relay - 1], relayStates[relay - 1] ? RELAY_ON : RELAY_OFF);
+              Serial.print("Relay ");
+              Serial.print(relay);
+              Serial.print(" changed to: ");
+              Serial.println(newState ? "ON" : "OFF");
+              relayChanged = true;
             }
           }
         }
-        
-        // Display current relay status
-        Serial.print("Relay Status: ");
-        for (int i = 0; i < 4; i++) {
-          Serial.print("R");
-          Serial.print(i + 1);
-          Serial.print(":");
-          Serial.print(relayStates[i] ? "ON" : "OFF");
-          if (i < 3) Serial.print(" ");
-        }
-        Serial.println();
       }
-    } else {
-      Serial.println("Failed to parse JSON response");
-      Serial.println("Error: " + String(error.c_str()));
-      Serial.println("Response length: " + String(response.length()));
-      Serial.println("First 100 chars: " + response.substring(0, 100));
+      
+      // Display current relay status
+      Serial.print("Relay Status: ");
+      for (int i = 0; i < 4; i++) {
+        Serial.print("R");
+        Serial.print(i + 1);
+        Serial.print(":");
+        Serial.print(relayStates[i] ? "ON" : "OFF");
+        if (i < 3) Serial.print(" ");
+      }
+      Serial.println();
     }
   } else {
-    Serial.println("Failed to connect to server for relay check");
+    Serial.println("Failed to parse JSON response");
+    Serial.println("Error: " + String(error.c_str()));
+    Serial.println("Response length: " + String(response.length()));
+    Serial.println("First 100 chars: " + response.substring(0, 100));
   }
-  
-  client.stop();
 }
 
 void handleRelayCommand(int relay, int state) {
   if (relay >= 1 && relay <= 4) {
-    WiFiClient client;
-    client.setTimeout(5000); // 5 second timeout
+    // Prepare POST data
+    String postData = "relay=" + String(relay) + "&state=" + String(state);
     
-    if (client.connect(serverHost, serverPort)) {
-      // Prepare POST data
-      String postData = "relay=" + String(relay) + "&state=" + String(state);
-      
-      // Send HTTP POST request
-      client.println("POST /api/http_proxy.php?endpoint=relay_control HTTP/1.1");
-      client.println("Host: " + String(serverHost));
-      client.println("Content-Type: application/x-www-form-urlencoded");
-      client.println("User-Agent: Arduino-R4-WaterQuality");
-      client.println("Connection: close");
-      client.print("Content-Length: ");
-      client.println(postData.length());
-      client.println();
-      client.print(postData);
-      
-      // Read response headers
-      while (client.connected()) {
-        String line = client.readStringUntil('\n');
-        if (line == "\r") {
-          break;
-        }
-      }
-      
-      // Read JSON response
-      String response = client.readString();
-      
-      // Debug: Print the raw response for troubleshooting
-      Serial.println("Relay command response: " + response);
-
-      // Clean the JSON response
-      String cleanResponse = cleanJsonResponse(response);
-      if (cleanResponse.length() == 0) {
-        Serial.println("No valid JSON found in relay command response");
-        client.stop();
-        return;
-      }
-      
-      Serial.println("Cleaned relay JSON: " + cleanResponse);
-
-      // Parse response to get updated states
-      DynamicJsonDocument doc(1024);
-      DeserializationError error = deserializeJson(doc, cleanResponse);
-
-      if (!error) {
-        JsonArray states = doc["states"];
-        for (JsonObject state : states) {
-          int relayNum = state["relay_number"];
-          int value = state["state"];
-          if (relayNum >= 1 && relayNum <= 4) {
-            relayStates[relayNum - 1] = (value == 1);
-            digitalWrite(relayPins[relayNum - 1], relayStates[relayNum - 1] ? RELAY_ON : RELAY_OFF);
-          }
-        }
-      } else {
-        Serial.println("Failed to parse relay command JSON response");
-        Serial.println("Error: " + String(error.c_str()));
-        Serial.println("Response: " + response);
-      }
+    String response;
+    if (USE_HTTPS) {
+      response = makeHttpsRequest(relayControlUrlHttps, "POST", postData.c_str());
     } else {
-      Serial.println("Failed to connect to server for relay command");
+      response = makeHttpRequest("/api/http_proxy.php?endpoint=relay_control", "POST", postData.c_str());
     }
     
-    client.stop();
+    if (response.length() == 0) {
+      Serial.println("Failed to send relay command - no response");
+      return;
+    }
+    
+    // Debug: Print the raw response for troubleshooting
+    Serial.println("Relay command response: " + response);
+
+    // Clean the JSON response
+    String cleanResponse = cleanJsonResponse(response);
+    if (cleanResponse.length() == 0) {
+      Serial.println("No valid JSON found in relay command response");
+      return;
+    }
+    
+    Serial.println("Cleaned relay JSON: " + cleanResponse);
+
+    // Parse response to get updated states
+    DynamicJsonDocument doc(1024);
+    DeserializationError error = deserializeJson(doc, cleanResponse);
+
+    if (!error) {
+      JsonArray states = doc["states"];
+      for (JsonObject state : states) {
+        int relayNum = state["relay_number"];
+        int value = state["state"];
+        if (relayNum >= 1 && relayNum <= 4) {
+          relayStates[relayNum - 1] = (value == 1);
+          digitalWrite(relayPins[relayNum - 1], relayStates[relayNum - 1] ? RELAY_ON : RELAY_OFF);
+        }
+      }
+    } else {
+      Serial.println("Failed to parse relay command JSON response");
+      Serial.println("Error: " + String(error.c_str()));
+      Serial.println("Response: " + response);
+    }
   }
 }
 
@@ -813,55 +760,11 @@ bool detectTemperatureSensor() {
 }
 
 bool testHttpConnectivity() {
-  WiFiClient client;
-  client.setTimeout(5000); // 5 second timeout
+  Serial.println("Testing HTTP connectivity to: " + String(serverHost) + ":" + String(httpPort));
   
-  if (client.connect(serverHost, serverPort)) {
-    // Send HTTP GET request to test endpoint
-    client.println("GET /api/test_http.php HTTP/1.1");
-    client.println("Host: " + String(serverHost));
-    client.println("User-Agent: Arduino-R4-WaterQuality");
-    client.println("Connection: close");
-    client.println();
-    
-    // Read response headers and check for redirects
-    String statusLine = "";
-    bool isRedirect = false;
-    
-    while (client.connected()) {
-      String line = client.readStringUntil('\n');
-      line.trim();
-      
-      if (line.startsWith("HTTP/")) {
-        statusLine = line;
-        if (line.indexOf("301") != -1 || line.indexOf("302") != -1) {
-          isRedirect = true;
-        }
-      }
-      
-      if (line == "\r" || line.length() == 0) {
-        break;
-      }
-    }
-    
-    // Read JSON response
-    String response = client.readString();
-    client.stop();
-    
-    // Check for redirect
-    if (isRedirect) {
-      Serial.println("HTTP API test failed - server redirects to HTTPS");
-      Serial.println("Status: " + statusLine);
-      return false;
-    }
-    
-    // Check if response contains HTML (error page)
-    if (response.indexOf("<!DOCTYPE html>") != -1 || response.indexOf("<html") != -1) {
-      Serial.println("HTTP API test failed - server returned HTML instead of JSON");
-      Serial.println("Status: " + statusLine);
-      return false;
-    }
-    
+  String response = makeHttpRequest(testUrlHttps);
+  
+  if (response.length() > 0) {
     // Check for valid JSON response
     if (response.indexOf("\"success\":true") != -1) {
       Serial.println("HTTP API connectivity verified!");
@@ -872,21 +775,88 @@ bool testHttpConnectivity() {
     Serial.println("HTTP API test failed - invalid response");
     Serial.println("Response: " + response.substring(0, 200));
     return false;
-    
   } else {
-    Serial.println("HTTP API test failed - cannot connect to server");
+    Serial.println("HTTP API test failed - no response received");
     return false;
   }
 }
 
+bool testHttpsConnectivity() {
+  Serial.println("Testing HTTPS connectivity to: " + String(serverHost) + ":" + String(httpsPort));
+  
+  String response = makeHttpsRequest(testUrlHttps);
+  
+  if (response.length() > 0) {
+    // Check for valid JSON response
+    if (response.indexOf("\"success\":true") != -1) {
+      Serial.println("HTTPS API connectivity verified!");
+      Serial.println("Response: " + response.substring(0, 100) + "...");
+      return true;
+    }
+    
+    Serial.println("HTTPS API test failed - invalid response");
+    Serial.println("Response: " + response.substring(0, 200));
+    return false;
+  } else {
+    Serial.println("HTTPS API test failed - no response received");
+    return false;
+  }
+}
+
+String makeHttpRequest(const char* endpoint, const char* method, const char* data) {
+  httpClient.beginRequest();
+  
+  if (strcmp(method, "GET") == 0) {
+    httpClient.get(endpoint);
+  } else if (strcmp(method, "POST") == 0) {
+    httpClient.post(endpoint);
+    httpClient.sendHeader("Content-Type", "application/x-www-form-urlencoded");
+    httpClient.sendHeader("Content-Length", strlen(data));
+    httpClient.beginBody();
+    httpClient.print(data);
+  }
+  
+  httpClient.endRequest();
+  
+  int statusCode = httpClient.responseStatusCode();
+  String response = httpClient.responseBody();
+  
+  if (statusCode >= 200 && statusCode < 300) {
+    return response;
+  } else {
+    Serial.println("HTTP request failed with status: " + String(statusCode));
+    return "";
+  }
+}
+
+String makeHttpsRequest(const char* endpoint, const char* method, const char* data) {
+  httpsClient.beginRequest();
+  
+  if (strcmp(method, "GET") == 0) {
+    httpsClient.get(endpoint);
+  } else if (strcmp(method, "POST") == 0) {
+    httpsClient.post(endpoint);
+    httpsClient.sendHeader("Content-Type", "application/x-www-form-urlencoded");
+    httpsClient.sendHeader("Content-Length", strlen(data));
+    httpsClient.beginBody();
+    httpsClient.print(data);
+  }
+  
+  httpsClient.endRequest();
+  
+  int statusCode = httpsClient.responseStatusCode();
+  String response = httpsClient.responseBody();
+  
+  if (statusCode >= 200 && statusCode < 300) {
+    return response;
+  } else {
+    Serial.println("HTTPS request failed with status: " + String(statusCode));
+    return "";
+  }
+}
+
 bool tryHttpsConnection() {
-  // Note: Arduino R4 WiFi doesn't have built-in SSL/TLS support like ESP32
-  // This is a placeholder function that would need WiFiSSLClient or similar
-  // For now, we'll just return false and suggest manual URL verification
-  Serial.println("HTTPS not supported on Arduino R4 WiFi without additional libraries");
-  Serial.println("Please verify the correct URL in your web browser:");
-  Serial.println("- Try: https://waterquality.triple7autosupply.com/api/relay_control.php");
-  Serial.println("- Or: http://waterquality.triple7autosupply.com/api/relay_control.php");
-  Serial.println("If HTTPS is required, consider using ESP32 or add SSL support library");
-  return false;
+  // This function is now replaced by testHttpsConnectivity()
+  // Keeping for backward compatibility
+  return testHttpsConnectivity();
 }
