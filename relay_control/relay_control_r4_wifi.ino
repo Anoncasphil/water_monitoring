@@ -817,12 +817,15 @@ bool testHttpsConnectivity() {
 
 String makeHttpRequest(const char* endpoint, const char* method, const char* data) {
   Serial.println("Attempting HTTP connection to: " + String(serverHost) + ":" + String(httpPort));
+  Serial.println("Endpoint: " + String(endpoint));
+  Serial.println("Method: " + String(method));
   
   HttpClient httpClient(client, serverHost, httpPort);
   
-  // Set timeout
-  httpClient.setTimeout(5000); // 5 seconds
+  // Set timeout - longer for better reliability
+  httpClient.setTimeout(15000); // 15 seconds
   
+  Serial.println("Starting HTTP request...");
   httpClient.beginRequest();
   
   if (strcmp(method, "GET") == 0) {
