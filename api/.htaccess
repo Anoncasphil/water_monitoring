@@ -1,28 +1,22 @@
-# Force HTTP access for Arduino - Security disabled for IoT compatibility
-# This configuration prioritizes Arduino connectivity over security
+# Normal HTTP configuration - No HTTPS enforcement
+# Allow both HTTP and HTTPS access without forcing redirects
 
 # Disable directory browsing
 Options -Indexes
 
-# Force HTTP access for all API endpoints
+# Allow normal HTTP/HTTPS access without redirects
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    
-    # FORCE HTTP ACCESS - Redirect HTTPS to HTTP for all API endpoints
-    RewriteCond %{HTTPS} on
-    RewriteCond %{REQUEST_URI} ^/api/
-    RewriteRule ^(.*)$ http://%{HTTP_HOST}/api/$1 [L,R=302]
     
     # Set environment variables for API endpoints
     RewriteCond %{REQUEST_URI} ^/api/
     RewriteRule .* - [E=api-endpoint:1]
     
     # Set environment variables for Arduino-specific endpoints
-    RewriteCond %{REQUEST_URI} ^/api/(http_proxy|relay_control|upload|get_readings|test_http)\.php$
+    RewriteCond %{REQUEST_URI} ^/api/(http_proxy|relay_control|upload|get_readings|test_http|simple)\.php$
     RewriteRule .* - [E=arduino-endpoint:1]
     
-    # Allow HTTP access for API endpoints
-    RewriteCond %{HTTPS} off
+    # Allow both HTTP and HTTPS access for API endpoints
     RewriteCond %{REQUEST_URI} ^/api/
     RewriteRule .* - [E=allow-http:1]
 </IfModule>

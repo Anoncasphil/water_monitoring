@@ -27,7 +27,7 @@ const char* relayControlUrlBackupHttps = "https://waterquality.triple7autosupply
 const char* testUrlHttps = "https://waterquality.triple7autosupply.com/api/test_http.php"; // HTTPS test endpoint
 
 // Configuration - Set to true to use HTTPS, false for HTTP
-const bool USE_HTTPS = true; // Hostinger forces HTTPS - Arduino will attempt HTTPS
+const bool USE_HTTPS = false; // Normal HTTP access - no HTTPS enforcement
 
 // Pin definitions for Arduino R4 WiFi
 const int tdsPin = A0;        // Analog pin A0
@@ -374,9 +374,6 @@ void uploadSensorData(float turbidity, float tds, float ph, float temperature) {
       Serial.println("Server error: NGROK tunnel issue");
     } else if (response.indexOf("\"success\":true") != -1) {
       Serial.println("Data uploaded successfully");
-    } else if (response == "REDIRECT_IGNORED") {
-      Serial.println("Data upload attempted (server redirect ignored)");
-      Serial.println("This is normal with Hostinger HTTPS enforcement");
     } else {
       Serial.println("Upload response: " + response.substring(0, 100));
     }
@@ -398,12 +395,6 @@ void checkRelayStates() {
     return;
   }
   
-  // Handle redirect responses
-  if (response == "REDIRECT_IGNORED") {
-    Serial.println("Relay state check attempted (server redirect ignored)");
-    Serial.println("This is normal with Hostinger HTTPS enforcement");
-    return;
-  }
   
   // Debug: Print the raw response for troubleshooting
   Serial.println("Raw server response: " + response);
@@ -784,12 +775,6 @@ bool testHttpConnectivity() {
       return true;
     }
     
-    // Handle redirect responses as successful (normal for Hostinger)
-    if (response == "REDIRECT_IGNORED") {
-      Serial.println("HTTP connectivity test completed (redirect ignored)");
-      Serial.println("This indicates server is accessible - redirects are normal");
-      return true;
-    }
     
     Serial.println("HTTP API test failed - invalid response");
     Serial.println("Response: " + response.substring(0, 200));
@@ -861,10 +846,8 @@ String makeHttpRequest(const char* endpoint, const char* method, const char* dat
     return response;
         } else if (statusCode == 301 || statusCode == 302) {
           Serial.println("HTTP redirect detected (status " + String(statusCode) + ")");
-          Serial.println("Server is redirecting to HTTPS - this is normal for Hostinger");
-          Serial.println("Arduino will continue with HTTP requests as they should work");
-          // Don't return empty string - continue processing
-          return "REDIRECT_IGNORED";
+          Serial.println("Server redirect detected - check server configuration");
+          return "";
   } else {
     Serial.println("HTTP request failed with status: " + String(statusCode));
     Serial.println("Response: " + response.substring(0, 200));
