@@ -820,47 +820,76 @@ String makeHttpRequest(const char* endpoint, const char* method, const char* dat
   Serial.println("Endpoint: " + String(endpoint));
   Serial.println("Method: " + String(method));
   
-  HttpClient httpClient(client, serverHost, httpPort);
-  
-  // Set timeout - longer for better reliability
-  httpClient.setTimeout(15000); // 15 seconds
-  
-  Serial.println("Starting HTTP request...");
-  httpClient.beginRequest();
-  
-  if (strcmp(method, "GET") == 0) {
-    httpClient.get(endpoint);
-  } else if (strcmp(method, "POST") == 0) {
-    httpClient.post(endpoint);
-    httpClient.sendHeader("Content-Type", "application/x-www-form-urlencoded");
-    httpClient.sendHeader("Content-Length", strlen(data));
-    httpClient.beginBody();
-    httpClient.print(data);
-  }
-  
-  httpClient.endRequest();
-  
-  int statusCode = httpClient.responseStatusCode();
-  String response = httpClient.responseBody();
-  
-  Serial.println("HTTP status code: " + String(statusCode));
-  
-  if (statusCode >= 200 && statusCode < 300) {
-    Serial.println("HTTP request successful!");
-    return response;
-        } else if (statusCode == 301 || statusCode == 302) {
-          Serial.println("HTTP redirect detected (status " + String(statusCode) + ")");
-          Serial.println("Server redirect detected - check server configuration");
-          return "";
-  } else if (statusCode == -3) {
-    Serial.println("HTTP connection failed - connection timeout or refused");
-    Serial.println("Check server availability and network connectivity");
-    return "";
-  } else {
-    Serial.println("HTTP request failed with status: " + String(statusCode));
-    if (response.length() > 0) {
-      Serial.println("Response: " + response.substring(0, 200));
+  // Try direct WiFiClient approach first (simpler)
+  if (client.connect(serverHost, httpPort)) {
+    Serial.println("Connected to server!");
+    
+    // Send HTTP request
+    client.print(method);
+    client.print(" ");
+    client.print(endpoint);
+    client.println(" HTTP/1.1");
+    client.print("Host: ");
+    client.println(serverHost);
+    client.println("Connection: close");
+    
+    if (strcmp(method, "POST") == 0 && data != nullptr) {
+      client.print("Content-Type: application/x-www-form-urlencoded\r\n");
+      client.print("Content-Length: ");
+      client.println(strlen(data));
+      client.println();
+      client.print(data);
+    } else {
+      client.println();
     }
+    
+    // Wait for response
+    unsigned long timeout = millis() + 10000; // 10 second timeout
+    while (client.available() == 0 && millis() < timeout) {
+      delay(10);
+    }
+    
+    if (client.available() > 0) {
+      String response = "";
+      while (client.available()) {
+        char c = client.read();
+        response += c;
+      }
+      
+      client.stop();
+      
+      // Parse status code from response
+      int statusCode = 200; // Default
+      if (response.indexOf("HTTP/1.1") != -1) {
+        int start = response.indexOf("HTTP/1.1 ") + 9;
+        int end = response.indexOf(" ", start);
+        if (end != -1) {
+          statusCode = response.substring(start, end).toInt();
+        }
+      }
+      
+      Serial.println("HTTP status code: " + String(statusCode));
+      
+      if (statusCode >= 200 && statusCode < 300) {
+        Serial.println("HTTP request successful!");
+        // Extract JSON from response
+        int jsonStart = response.indexOf("{");
+        int jsonEnd = response.lastIndexOf("}");
+        if (jsonStart != -1 && jsonEnd != -1) {
+          return response.substring(jsonStart, jsonEnd + 1);
+        }
+        return response;
+      } else {
+        Serial.println("HTTP request failed with status: " + String(statusCode));
+        return "";
+      }
+    } else {
+      Serial.println("No response received - timeout");
+      client.stop();
+      return "";
+    }
+  } else {
+    Serial.println("Failed to connect to server");
     return "";
   }
 }

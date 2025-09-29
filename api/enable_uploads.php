@@ -9,8 +9,8 @@ try {
     $db = Database::getInstance();
     $conn = $db->getConnection();
     
-    // Enable uploads by setting the system setting
-    $stmt = $conn->prepare("INSERT INTO system_settings (name, value, description, created_at, updated_at) VALUES ('uploads_disabled', '0', 'Enable/disable data uploads from Arduino', NOW(), NOW()) ON DUPLICATE KEY UPDATE value = '0', updated_at = NOW()");
+    // Enable uploads by setting the system setting (simplified schema)
+    $stmt = $conn->prepare("INSERT INTO system_settings (name, value) VALUES ('uploads_disabled', '0') ON DUPLICATE KEY UPDATE value = '0'");
     
     if ($stmt->execute()) {
         echo json_encode([

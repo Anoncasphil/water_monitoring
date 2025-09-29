@@ -18,7 +18,9 @@ try {
     $db = Database::getInstance();
     $conn = $db->getConnection();
 
-    // Check if uploads are disabled via system settings
+    // Skip uploads check for now - enable all uploads
+    // TODO: Re-enable this check once system_settings table is properly configured
+    /*
     $uploadsDisabled = false;
     try {
         $result = $conn->query("SELECT `value` AS v FROM `system_settings` WHERE `name` = 'uploads_disabled' LIMIT 1");
@@ -36,6 +38,7 @@ try {
         ]);
         exit;
     }
+    */
 
     // Get POST data
     $turbidity = isset($_POST['turbidity']) ? floatval($_POST['turbidity']) : null;
