@@ -40,7 +40,6 @@ bool relayControlDisabled = false; // Will be set to true if server requires HTT
 
 // HTTP client objects (Arduino R4 WiFi doesn't support WiFiClientSecure)
 WiFiClient client;
-HttpClient httpClient;
 
 // pH sensor calibration (optimized)
 const int NUM_SAMPLES = 7;
@@ -164,8 +163,7 @@ void setup() {
     Serial.println("No DS18B20 address detected. Will try index-based reads.");
   }
 
-  // Initialize HTTP client (Arduino R4 WiFi only supports HTTP)
-  httpClient = HttpClient(client, serverHost, httpPort);
+  // HTTP client will be initialized in functions as needed
 
   // Connect to Wi-Fi
   Serial.println("Connecting to WiFi...");
@@ -738,6 +736,8 @@ bool testHttpConnectivity() {
 
 
 String makeHttpRequest(const char* endpoint, const char* method, const char* data) {
+  HttpClient httpClient(client, serverHost, httpPort);
+  
   httpClient.beginRequest();
   
   if (strcmp(method, "GET") == 0) {
