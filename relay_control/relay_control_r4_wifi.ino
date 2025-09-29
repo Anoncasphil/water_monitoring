@@ -1,4 +1,5 @@
 #include <WiFiS3.h>
+#include <WiFiSSLClient.h>
 #include <ArduinoJson.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
@@ -8,15 +9,25 @@
 const char* ssid = "Converge_2.4GHz_3Fsb56";
 const char* password = "TQkcXYGS";
 
-// Server details - HTTP only (Arduino R4 WiFi doesn't support HTTPS natively)
+// Server details - Support both HTTP and HTTPS
 const char* serverHost = "waterquality.triple7autosupply.com";
 const int httpPort = 80;
+const int httpsPort = 443;
 
 // HTTP endpoints
 const char* serverUrlHttp = "http://waterquality.triple7autosupply.com/api/http_proxy.php?endpoint=upload";
 const char* relayControlUrlHttp = "http://waterquality.triple7autosupply.com/api/http_proxy.php?endpoint=relay_control";
 const char* relayControlUrlBackupHttp = "http://waterquality.triple7autosupply.com/api/relay_control.php"; // Fallback
 const char* testUrlHttp = "http://waterquality.triple7autosupply.com/api/test_http.php"; // HTTP test endpoint
+
+// HTTPS endpoints (secure)
+const char* serverUrlHttps = "https://waterquality.triple7autosupply.com/api/http_proxy.php?endpoint=upload";
+const char* relayControlUrlHttps = "https://waterquality.triple7autosupply.com/api/http_proxy.php?endpoint=relay_control";
+const char* relayControlUrlBackupHttps = "https://waterquality.triple7autosupply.com/api/relay_control.php"; // Fallback
+const char* testUrlHttps = "https://waterquality.triple7autosupply.com/api/test_http.php"; // HTTPS test endpoint
+
+// Configuration - Set to true to use HTTPS, false for HTTP
+const bool USE_HTTPS = true; // Change to true to enable HTTPS
 
 // Pin definitions for Arduino R4 WiFi
 const int tdsPin = A0;        // Analog pin A0
@@ -38,8 +49,9 @@ const int RELAY_ON = LOW;
 const int RELAY_OFF = HIGH;
 bool relayControlDisabled = false; // Will be set to true if server requires HTTPS
 
-// HTTP client objects (Arduino R4 WiFi doesn't support WiFiClientSecure)
+// HTTP/HTTPS client objects
 WiFiClient client;
+WiFiSSLClient secureClient;
 
 // pH sensor calibration (optimized)
 const int NUM_SAMPLES = 7;
@@ -109,7 +121,9 @@ void checkSensorHealth();
 String cleanJsonResponse(String response);
 bool detectTemperatureSensor();
 bool testHttpConnectivity();
+bool testHttpsConnectivity();
 String makeHttpRequest(const char* endpoint, const char* method = "GET", const char* data = nullptr);
+String makeHttpsRequest(const char* endpoint, const char* method = "GET", const char* data = nullptr);
 
 // Function to map float values (like Arduino's map but for floats)
 float mapFloat(float x, float in_min, float in_max, float out_min, float out_max) {
@@ -185,15 +199,35 @@ void setup() {
     Serial.print(WiFi.RSSI());
     Serial.println(" dBm");
     
-    // Test HTTP connectivity (Arduino R4 WiFi only supports HTTP)
-    Serial.println("Testing HTTP connectivity...");
-    if (testHttpConnectivity()) {
-      Serial.println("HTTP API test successful!");
-      Serial.println("Checking initial relay states...");
-      checkRelayStates();
+    // Test connectivity based on configuration
+    if (USE_HTTPS) {
+      Serial.println("Testing HTTPS connectivity...");
+      if (testHttpsConnectivity()) {
+        Serial.println("HTTPS API test successful!");
+        Serial.println("Checking initial relay states...");
+        checkRelayStates();
+      } else {
+        Serial.println("HTTPS API test failed - falling back to HTTP");
+        Serial.println("Testing HTTP connectivity...");
+        if (testHttpConnectivity()) {
+          Serial.println("HTTP API test successful!");
+          Serial.println("Checking initial relay states...");
+          checkRelayStates();
+        } else {
+          Serial.println("HTTP API test also failed - checking server configuration");
+          relayControlDisabled = true;
+        }
+      }
     } else {
-      Serial.println("HTTP API test failed - checking server configuration");
-      relayControlDisabled = true;
+      Serial.println("Testing HTTP connectivity...");
+      if (testHttpConnectivity()) {
+        Serial.println("HTTP API test successful!");
+        Serial.println("Checking initial relay states...");
+        checkRelayStates();
+      } else {
+        Serial.println("HTTP API test failed - checking server configuration");
+        relayControlDisabled = true;
+      }
     }
   } else {
     Serial.println();
@@ -327,7 +361,12 @@ void uploadSensorData(float turbidity, float tds, float ph, float temperature) {
   // Prepare POST data
   String postData = "turbidity=" + String(turbidity) + "&tds=" + String(tds) + "&ph=" + String(ph) + "&temperature=" + String(temperature);
   
-  String response = makeHttpRequest("/api/http_proxy.php?endpoint=upload", "POST", postData.c_str());
+  String response;
+  if (USE_HTTPS) {
+    response = makeHttpsRequest("/api/http_proxy.php?endpoint=upload", "POST", postData.c_str());
+  } else {
+    response = makeHttpRequest("/api/http_proxy.php?endpoint=upload", "POST", postData.c_str());
+  }
   
   if (response.length() > 0) {
     // Check if response contains error message
@@ -344,7 +383,12 @@ void uploadSensorData(float turbidity, float tds, float ph, float temperature) {
 }
 
 void checkRelayStates() {
-  String response = makeHttpRequest("/api/http_proxy.php?endpoint=relay_control", "GET");
+  String response;
+  if (USE_HTTPS) {
+    response = makeHttpsRequest("/api/http_proxy.php?endpoint=relay_control", "GET");
+  } else {
+    response = makeHttpRequest("/api/http_proxy.php?endpoint=relay_control", "GET");
+  }
   
   if (response.length() == 0) {
     Serial.println("Failed to get relay states - no response");
@@ -433,7 +477,12 @@ void handleRelayCommand(int relay, int state) {
     // Prepare POST data
     String postData = "relay=" + String(relay) + "&state=" + String(state);
     
-    String response = makeHttpRequest("/api/http_proxy.php?endpoint=relay_control", "POST", postData.c_str());
+    String response;
+    if (USE_HTTPS) {
+      response = makeHttpsRequest("/api/http_proxy.php?endpoint=relay_control", "POST", postData.c_str());
+    } else {
+      response = makeHttpRequest("/api/http_proxy.php?endpoint=relay_control", "POST", postData.c_str());
+    }
     
     if (response.length() == 0) {
       Serial.println("Failed to send relay command - no response");
@@ -734,6 +783,28 @@ bool testHttpConnectivity() {
   }
 }
 
+bool testHttpsConnectivity() {
+  Serial.println("Testing HTTPS connectivity to: " + String(serverHost) + ":" + String(httpsPort));
+  
+  String response = makeHttpsRequest("/api/test_http.php");
+  
+  if (response.length() > 0) {
+    // Check for valid JSON response
+    if (response.indexOf("\"success\":true") != -1) {
+      Serial.println("HTTPS API connectivity verified!");
+      Serial.println("Response: " + response.substring(0, 100) + "...");
+      return true;
+    }
+    
+    Serial.println("HTTPS API test failed - invalid response");
+    Serial.println("Response: " + response.substring(0, 200));
+    return false;
+  } else {
+    Serial.println("HTTPS API test failed - no response received");
+    return false;
+  }
+}
+
 
 String makeHttpRequest(const char* endpoint, const char* method, const char* data) {
   HttpClient httpClient(client, serverHost, httpPort);
@@ -763,11 +834,37 @@ String makeHttpRequest(const char* endpoint, const char* method, const char* dat
   }
 }
 
+String makeHttpsRequest(const char* endpoint, const char* method, const char* data) {
+  HttpClient httpsClient(secureClient, serverHost, httpsPort);
+  
+  httpsClient.beginRequest();
+  
+  if (strcmp(method, "GET") == 0) {
+    httpsClient.get(endpoint);
+  } else if (strcmp(method, "POST") == 0) {
+    httpsClient.post(endpoint);
+    httpsClient.sendHeader("Content-Type", "application/x-www-form-urlencoded");
+    httpsClient.sendHeader("Content-Length", strlen(data));
+    httpsClient.beginBody();
+    httpsClient.print(data);
+  }
+  
+  httpsClient.endRequest();
+  
+  int statusCode = httpsClient.responseStatusCode();
+  String response = httpsClient.responseBody();
+  
+  if (statusCode >= 200 && statusCode < 300) {
+    return response;
+  } else {
+    Serial.println("HTTPS request failed with status: " + String(statusCode));
+    return "";
+  }
+}
+
 
 bool tryHttpsConnection() {
-  // Arduino R4 WiFi doesn't support HTTPS natively
-  // This function is kept for backward compatibility but always returns false
-  Serial.println("HTTPS not supported on Arduino R4 WiFi");
-  Serial.println("Using HTTP only for API communication");
-  return false;
+  // This function is now replaced by testHttpsConnectivity()
+  // Keeping for backward compatibility
+  return testHttpsConnectivity();
 }
