@@ -1,0 +1,41 @@
+# HTTP-Only Configuration for Arduino/IoT Devices
+# This file should be placed in the /api/ directory to force HTTP access
+
+# Disable directory browsing
+Options -Indexes
+
+# Force HTTP access for all API endpoints
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Prevent any HTTPS redirects for API endpoints
+    RewriteCond %{REQUEST_URI} ^/api/
+    RewriteRule .* - [E=force-http:1]
+    
+    # If accessed via HTTPS, redirect to HTTP
+    RewriteCond %{HTTPS} on
+    RewriteCond %{REQUEST_URI} ^/api/
+    RewriteRule ^(.*)$ http://%{HTTP_HOST}/api/$1 [L,R=302]
+</IfModule>
+
+# Security headers for HTTP API access
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options nosniff
+    Header always set Access-Control-Allow-Origin "*"
+    Header always set Access-Control-Allow-Methods "GET, POST, OPTIONS"
+    Header always set Access-Control-Allow-Headers "Content-Type, Authorization"
+    
+    # Remove HTTPS-only headers for API endpoints
+    Header always unset Strict-Transport-Security env=force-http
+    Header always unset Content-Security-Policy env=force-http
+</IfModule>
+
+# Allow access to all PHP files in API directory
+<FilesMatch "\.(php)$">
+    Require all granted
+</FilesMatch>
+
+# Prevent access to sensitive files
+<FilesMatch "\.(htaccess|htpasswd|ini|log|sh|inc|bak|sql|db)$">
+    Require all denied
+</FilesMatch>

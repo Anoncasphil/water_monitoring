@@ -8,7 +8,7 @@ Options -Indexes
 <IfModule mod_rewrite.c>
     RewriteEngine On
     
-    # Allow both HTTP and HTTPS access to API endpoints
+    # CRITICAL: Disable HTTPS redirect for ALL API endpoints to allow Arduino HTTP access
     # This prevents redirect loops while still allowing Arduino HTTP access
     
     # Set environment variables for API endpoints
@@ -16,8 +16,13 @@ Options -Indexes
     RewriteRule .* - [E=api-endpoint:1]
     
     # Set environment variables for Arduino-specific endpoints
-    RewriteCond %{REQUEST_URI} ^/api/(http_proxy|relay_control|upload|get_readings)\.php$
+    RewriteCond %{REQUEST_URI} ^/api/(http_proxy|relay_control|upload|get_readings|test_http)\.php$
     RewriteRule .* - [E=arduino-endpoint:1]
+    
+    # Prevent HTTPS redirect for API endpoints - allow HTTP access for Arduino
+    RewriteCond %{HTTPS} off
+    RewriteCond %{REQUEST_URI} ^/api/
+    RewriteRule .* - [E=allow-http:1]
 </IfModule>
 
 # Security headers

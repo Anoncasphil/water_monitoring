@@ -27,7 +27,7 @@ const char* relayControlUrlBackupHttps = "https://waterquality.triple7autosupply
 const char* testUrlHttps = "https://waterquality.triple7autosupply.com/api/test_http.php"; // HTTPS test endpoint
 
 // Configuration - Set to true to use HTTPS, false for HTTP
-const bool USE_HTTPS = false; // Temporarily set to false for testing - change to true for HTTPS
+const bool USE_HTTPS = false; // Arduino R4 WiFi has SSL limitations - use HTTP for now
 
 // Pin definitions for Arduino R4 WiFi
 const int tdsPin = A0;        // Analog pin A0
