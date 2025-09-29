@@ -373,6 +373,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
+                    'Accept': 'application/json'
                 },
                 body: `relay=${relay}&state=${state}`
             })
@@ -404,8 +405,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Function to fetch current relay states
         function fetchRelayStates() {
-            fetch('../../api/relay_control.php')
-                .then(response => response.json())
+            fetch('../../api/relay_control.php', {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     if (data.states) {
                         data.states.forEach(state => {
@@ -420,10 +432,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         function updateData() {
-            fetch('../../api/get_readings.php')
+            fetch('../../api/get_readings.php', {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            })
                 .then(response => {
                     if (!response.ok) {
-                        throw new Error('Network response was not ok');
+                        throw new Error(`HTTP error! status: ${response.status}`);
                     }
                     return response.json();
                 })

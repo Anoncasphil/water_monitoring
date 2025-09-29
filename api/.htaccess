@@ -8,34 +8,33 @@ Options -Indexes
 <IfModule mod_rewrite.c>
     RewriteEngine On
     
-    # CRITICAL: Disable HTTPS redirect for ALL API endpoints to allow Arduino HTTP access
-    # This overrides any global HTTPS redirect rules
-    RewriteCond %{REQUEST_URI} ^/api/
-    RewriteRule .* - [E=no-https-redirect:1]
+    # Allow both HTTP and HTTPS access to API endpoints
+    # This prevents redirect loops while still allowing Arduino HTTP access
     
-    # Force HTTP access for Arduino API endpoints
+    # Set environment variables for API endpoints
+    RewriteCond %{REQUEST_URI} ^/api/
+    RewriteRule .* - [E=api-endpoint:1]
+    
+    # Set environment variables for Arduino-specific endpoints
     RewriteCond %{REQUEST_URI} ^/api/(http_proxy|relay_control|upload|get_readings)\.php$
-    RewriteRule .* - [E=allow-http:1]
-    
-    # Block any HTTPS redirect attempts for API files
-    RewriteCond %{HTTPS} on
-    RewriteCond %{REQUEST_URI} ^/api/
-    RewriteRule ^(.*)$ http://%{HTTP_HOST}/api/$1 [L,R=302]
+    RewriteRule .* - [E=arduino-endpoint:1]
 </IfModule>
 
 # Security headers
 <IfModule mod_headers.c>
     Header always set X-Content-Type-Options nosniff
-    Header always set X-Frame-Options DENY
     Header always set X-XSS-Protection "1; mode=block"
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
     Header always set Access-Control-Allow-Origin "*"
     Header always set Access-Control-Allow-Methods "GET, POST, OPTIONS"
     Header always set Access-Control-Allow-Headers "Content-Type, Authorization"
     
-    # Allow mixed content for API endpoints (HTTP requests to HTTPS site)
-    Header always set Content-Security-Policy "upgrade-insecure-requests; block-all-mixed-content;"
-    Header always unset Content-Security-Policy env=allow-http
+    # Allow API endpoints to be accessed from both HTTP and HTTPS
+    Header always set X-Frame-Options SAMEORIGIN env=api-endpoint
+    Header always set X-Frame-Options DENY
+    
+    # Remove CSP restrictions for API endpoints to prevent mixed content issues
+    Header always unset Content-Security-Policy env=api-endpoint
 </IfModule>
 
 # Allow access to ALL PHP files
