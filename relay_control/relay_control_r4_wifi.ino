@@ -14,17 +14,15 @@ const char* serverHost = "waterquality.triple7autosupply.com";
 const int httpPort = 80;
 const int httpsPort = 443;
 
-// HTTP endpoints
-const char* serverUrlHttp = "http://waterquality.triple7autosupply.com/api/http_proxy.php?endpoint=upload";
-const char* relayControlUrlHttp = "http://waterquality.triple7autosupply.com/api/http_proxy.php?endpoint=relay_control";
-const char* relayControlUrlBackupHttp = "http://waterquality.triple7autosupply.com/api/relay_control.php"; // Fallback
-const char* testUrlHttp = "http://waterquality.triple7autosupply.com/api/test_http.php"; // HTTP test endpoint
+// Direct API endpoints - no proxy needed
+const char* uploadUrlHttp = "http://waterquality.triple7autosupply.com/api/upload.php";
+const char* relayControlUrlHttp = "http://waterquality.triple7autosupply.com/api/relay_control.php";
+const char* testUrlHttp = "http://waterquality.triple7autosupply.com/api/simple.php";
 
 // HTTPS endpoints (secure)
-const char* serverUrlHttps = "https://waterquality.triple7autosupply.com/api/http_proxy.php?endpoint=upload";
-const char* relayControlUrlHttps = "https://waterquality.triple7autosupply.com/api/http_proxy.php?endpoint=relay_control";
-const char* relayControlUrlBackupHttps = "https://waterquality.triple7autosupply.com/api/relay_control.php"; // Fallback
-const char* testUrlHttps = "https://waterquality.triple7autosupply.com/api/test_http.php"; // HTTPS test endpoint
+const char* uploadUrlHttps = "https://waterquality.triple7autosupply.com/api/upload.php";
+const char* relayControlUrlHttps = "https://waterquality.triple7autosupply.com/api/relay_control.php";
+const char* testUrlHttps = "https://waterquality.triple7autosupply.com/api/simple.php";
 
 // Configuration - Set to true to use HTTPS, false for HTTP
 const bool USE_HTTPS = false; // Normal HTTP access - no HTTPS enforcement
@@ -363,9 +361,9 @@ void uploadSensorData(float turbidity, float tds, float ph, float temperature) {
   
   String response;
   if (USE_HTTPS) {
-    response = makeHttpsRequest("/api/http_proxy.php?endpoint=upload", "POST", postData.c_str());
+    response = makeHttpsRequest("/api/upload.php", "POST", postData.c_str());
   } else {
-    response = makeHttpRequest("/api/http_proxy.php?endpoint=upload", "POST", postData.c_str());
+    response = makeHttpRequest("/api/upload.php", "POST", postData.c_str());
   }
   
   if (response.length() > 0) {
@@ -388,9 +386,9 @@ void uploadSensorData(float turbidity, float tds, float ph, float temperature) {
 void checkRelayStates() {
   String response;
   if (USE_HTTPS) {
-    response = makeHttpsRequest("/api/http_proxy.php?endpoint=relay_control", "GET");
+    response = makeHttpsRequest("/api/relay_control.php", "GET");
   } else {
-    response = makeHttpRequest("/api/http_proxy.php?endpoint=relay_control", "GET");
+    response = makeHttpRequest("/api/relay_control.php", "GET");
   }
   
   if (response.length() == 0) {
@@ -483,9 +481,9 @@ void handleRelayCommand(int relay, int state) {
     
     String response;
     if (USE_HTTPS) {
-      response = makeHttpsRequest("/api/http_proxy.php?endpoint=relay_control", "POST", postData.c_str());
+      response = makeHttpsRequest("/api/relay_control.php", "POST", postData.c_str());
     } else {
-      response = makeHttpRequest("/api/http_proxy.php?endpoint=relay_control", "POST", postData.c_str());
+      response = makeHttpRequest("/api/relay_control.php", "POST", postData.c_str());
     }
     
     if (response.length() == 0) {
