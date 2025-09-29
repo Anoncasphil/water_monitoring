@@ -11,6 +11,7 @@ const char* password = "mine3you";
 const char* serverUrl = "http://waterquality.triple7autosupply.com/api/http_proxy.php?endpoint=upload";
 const char* relayControlUrl = "http://waterquality.triple7autosupply.com/api/http_proxy.php?endpoint=relay_control";
 const char* relayControlUrlBackup = "http://waterquality.triple7autosupply.com/api/relay_control.php"; // Fallback
+const char* testUrl = "http://waterquality.triple7autosupply.com/api/test_http.php"; // HTTP test endpoint
 const char* serverHost = "waterquality.triple7autosupply.com";
 const int serverPort = 80;
 
@@ -101,6 +102,7 @@ void checkWiFiHealth();
 void checkSensorHealth();
 String cleanJsonResponse(String response);
 bool detectTemperatureSensor();
+bool testHttpConnectivity();
 
 // Function to map float values (like Arduino's map but for floats)
 float mapFloat(float x, float in_min, float in_max, float out_min, float out_max) {
@@ -180,12 +182,22 @@ void setup() {
     if (testClient.connect(serverHost, serverPort)) {
       Serial.println("Server connection test successful!");
       testClient.stop();
+      
+      // Test HTTP API connectivity
+      Serial.println("Testing HTTP API connectivity...");
+      if (testHttpConnectivity()) {
+        Serial.println("HTTP API test successful!");
+        // Fetch initial relay states immediately after WiFi connects
+        Serial.println("Checking initial relay states...");
+        checkRelayStates();
+      } else {
+        Serial.println("HTTP API test failed - checking server configuration");
+        relayControlDisabled = true;
+      }
     } else {
       Serial.println("Server connection test failed!");
+      relayControlDisabled = true;
     }
-    // Fetch initial relay states immediately after WiFi connects
-    Serial.println("Checking initial relay states...");
-    checkRelayStates();
   } else {
     Serial.println();
     Serial.println("WiFi connection failed! Check credentials and try again.");
@@ -798,6 +810,73 @@ bool detectTemperatureSensor() {
     return true;
   }
   return false;
+}
+
+bool testHttpConnectivity() {
+  WiFiClient client;
+  client.setTimeout(5000); // 5 second timeout
+  
+  if (client.connect(serverHost, serverPort)) {
+    // Send HTTP GET request to test endpoint
+    client.println("GET /api/test_http.php HTTP/1.1");
+    client.println("Host: " + String(serverHost));
+    client.println("User-Agent: Arduino-R4-WaterQuality");
+    client.println("Connection: close");
+    client.println();
+    
+    // Read response headers and check for redirects
+    String statusLine = "";
+    bool isRedirect = false;
+    
+    while (client.connected()) {
+      String line = client.readStringUntil('\n');
+      line.trim();
+      
+      if (line.startsWith("HTTP/")) {
+        statusLine = line;
+        if (line.indexOf("301") != -1 || line.indexOf("302") != -1) {
+          isRedirect = true;
+        }
+      }
+      
+      if (line == "\r" || line.length() == 0) {
+        break;
+      }
+    }
+    
+    // Read JSON response
+    String response = client.readString();
+    client.stop();
+    
+    // Check for redirect
+    if (isRedirect) {
+      Serial.println("HTTP API test failed - server redirects to HTTPS");
+      Serial.println("Status: " + statusLine);
+      return false;
+    }
+    
+    // Check if response contains HTML (error page)
+    if (response.indexOf("<!DOCTYPE html>") != -1 || response.indexOf("<html") != -1) {
+      Serial.println("HTTP API test failed - server returned HTML instead of JSON");
+      Serial.println("Status: " + statusLine);
+      return false;
+    }
+    
+    // Check for valid JSON response
+    if (response.indexOf("\"success\":true") != -1) {
+      Serial.println("HTTP API connectivity verified!");
+      Serial.println("Response: " + response.substring(0, 100) + "...");
+      return true;
+    }
+    
+    Serial.println("HTTP API test failed - invalid response");
+    Serial.println("Response: " + response.substring(0, 200));
+    return false;
+    
+  } else {
+    Serial.println("HTTP API test failed - cannot connect to server");
+    return false;
+  }
 }
 
 bool tryHttpsConnection() {

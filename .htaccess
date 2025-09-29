@@ -38,7 +38,9 @@ Options -Indexes
     RewriteEngine On
     
     # Redirect to HTTPS (uncomment if you have SSL)
+    # BUT EXCLUDE API endpoints to allow Arduino HTTP access
     # RewriteCond %{HTTPS} off
+    # RewriteCond %{REQUEST_URI} !^/api/
     # RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
     
     # Handle 404 errors
