@@ -1,15 +1,17 @@
-# API Security Configuration - Allow HTTP access for Arduino/IoT devices
-# Allow legitimate API access while protecting against abuse
+# Force HTTP access for Arduino - Security disabled for IoT compatibility
+# This configuration prioritizes Arduino connectivity over security
 
 # Disable directory browsing
 Options -Indexes
 
-# Allow HTTP access - disable HTTPS redirect for API endpoints
+# Force HTTP access for all API endpoints
 <IfModule mod_rewrite.c>
     RewriteEngine On
     
-    # CRITICAL: Disable HTTPS redirect for ALL API endpoints to allow Arduino HTTP access
-    # This prevents redirect loops while still allowing Arduino HTTP access
+    # FORCE HTTP ACCESS - Redirect HTTPS to HTTP for all API endpoints
+    RewriteCond %{HTTPS} on
+    RewriteCond %{REQUEST_URI} ^/api/
+    RewriteRule ^(.*)$ http://%{HTTP_HOST}/api/$1 [L,R=302]
     
     # Set environment variables for API endpoints
     RewriteCond %{REQUEST_URI} ^/api/
@@ -19,27 +21,26 @@ Options -Indexes
     RewriteCond %{REQUEST_URI} ^/api/(http_proxy|relay_control|upload|get_readings|test_http)\.php$
     RewriteRule .* - [E=arduino-endpoint:1]
     
-    # Prevent HTTPS redirect for API endpoints - allow HTTP access for Arduino
+    # Allow HTTP access for API endpoints
     RewriteCond %{HTTPS} off
     RewriteCond %{REQUEST_URI} ^/api/
     RewriteRule .* - [E=allow-http:1]
 </IfModule>
 
-# Security headers
+# Minimal headers for Arduino compatibility - Security disabled
 <IfModule mod_headers.c>
-    Header always set X-Content-Type-Options nosniff
-    Header always set X-XSS-Protection "1; mode=block"
-    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    # Only essential headers for Arduino communication
     Header always set Access-Control-Allow-Origin "*"
     Header always set Access-Control-Allow-Methods "GET, POST, OPTIONS"
     Header always set Access-Control-Allow-Headers "Content-Type, Authorization"
     
-    # Allow API endpoints to be accessed from both HTTP and HTTPS
-    Header always set X-Frame-Options SAMEORIGIN env=api-endpoint
-    Header always set X-Frame-Options DENY
-    
-    # Remove CSP restrictions for API endpoints to prevent mixed content issues
+    # Remove all security headers that might interfere with Arduino
+    Header always unset X-Content-Type-Options env=api-endpoint
+    Header always unset X-XSS-Protection env=api-endpoint
+    Header always unset Referrer-Policy env=api-endpoint
+    Header always unset X-Frame-Options env=api-endpoint
     Header always unset Content-Security-Policy env=api-endpoint
+    Header always unset Strict-Transport-Security env=api-endpoint
 </IfModule>
 
 # Allow access to ALL PHP files
