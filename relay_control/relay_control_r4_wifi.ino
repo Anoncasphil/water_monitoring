@@ -374,6 +374,9 @@ void uploadSensorData(float turbidity, float tds, float ph, float temperature) {
       Serial.println("Server error: NGROK tunnel issue");
     } else if (response.indexOf("\"success\":true") != -1) {
       Serial.println("Data uploaded successfully");
+    } else if (response.indexOf("Unknown column") != -1) {
+      Serial.println("Database error detected - this will be fixed on next upload");
+      Serial.println("Server is accessible, database schema needs update");
     } else {
       Serial.println("Upload response: " + response.substring(0, 100));
     }
@@ -848,9 +851,15 @@ String makeHttpRequest(const char* endpoint, const char* method, const char* dat
           Serial.println("HTTP redirect detected (status " + String(statusCode) + ")");
           Serial.println("Server redirect detected - check server configuration");
           return "";
+  } else if (statusCode == -3) {
+    Serial.println("HTTP connection failed - connection timeout or refused");
+    Serial.println("Check server availability and network connectivity");
+    return "";
   } else {
     Serial.println("HTTP request failed with status: " + String(statusCode));
-    Serial.println("Response: " + response.substring(0, 200));
+    if (response.length() > 0) {
+      Serial.println("Response: " + response.substring(0, 200));
+    }
     return "";
   }
 }

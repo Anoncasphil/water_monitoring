@@ -94,7 +94,7 @@ try {
                 $db = Database::getInstance();
                 $conn = $db->getConnection();
                 
-                $stmt = $conn->prepare("INSERT INTO water_readings (turbidity, tds, ph, temperature, timestamp) VALUES (?, ?, ?, ?, NOW())");
+                $stmt = $conn->prepare("INSERT INTO water_readings (turbidity, tds, ph, temperature, `in`) VALUES (?, ?, ?, ?, 0)");
                 $stmt->bind_param("dddd", $turbidity, $tds, $ph, $temperature);
                 
                 if ($stmt->execute()) {
