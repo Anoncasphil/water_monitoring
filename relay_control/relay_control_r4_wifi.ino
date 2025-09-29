@@ -27,7 +27,7 @@ const char* relayControlUrlBackupHttps = "https://waterquality.triple7autosupply
 const char* testUrlHttps = "https://waterquality.triple7autosupply.com/api/test_http.php"; // HTTPS test endpoint
 
 // Configuration - Set to true to use HTTPS, false for HTTP
-const bool USE_HTTPS = false; // Arduino R4 WiFi has SSL limitations - use HTTP for now
+const bool USE_HTTPS = true; // Hostinger forces HTTPS - Arduino will attempt HTTPS
 
 // Pin definitions for Arduino R4 WiFi
 const int tdsPin = A0;        // Analog pin A0
@@ -774,11 +774,11 @@ bool detectTemperatureSensor() {
 bool testHttpConnectivity() {
   Serial.println("Testing HTTP connectivity to: " + String(serverHost) + ":" + String(httpPort));
   
-  String response = makeHttpRequest("/api/test_http.php");
+  String response = makeHttpRequest("/api/simple.php");
   
   if (response.length() > 0) {
     // Check for valid JSON response
-    if (response.indexOf("\"success\":true") != -1) {
+    if (response.indexOf("\"status\":\"ok\"") != -1 || response.indexOf("\"success\":true") != -1) {
       Serial.println("HTTP API connectivity verified!");
       Serial.println("Response: " + response.substring(0, 100) + "...");
       return true;
@@ -804,11 +804,11 @@ bool testHttpsConnectivity() {
   Serial.println("Testing HTTPS connectivity to: " + String(serverHost) + ":" + String(httpsPort));
   
   // Try the full API request directly
-  String response = makeHttpsRequest("/api/test_http.php");
+  String response = makeHttpsRequest("/api/simple.php");
   
   if (response.length() > 0) {
     // Check for valid JSON response
-    if (response.indexOf("\"success\":true") != -1) {
+    if (response.indexOf("\"status\":\"ok\"") != -1 || response.indexOf("\"success\":true") != -1) {
       Serial.println("HTTPS API connectivity verified!");
       Serial.println("Response: " + response.substring(0, 100) + "...");
       return true;
