@@ -27,7 +27,7 @@ const char* relayControlUrlBackupHttps = "https://waterquality.triple7autosupply
 const char* testUrlHttps = "https://waterquality.triple7autosupply.com/api/test_http.php"; // HTTPS test endpoint
 
 // Configuration - Set to true to use HTTPS, false for HTTP
-const bool USE_HTTPS = true; // Change to true to enable HTTPS
+const bool USE_HTTPS = false; // Temporarily set to false for testing - change to true for HTTPS
 
 // Pin definitions for Arduino R4 WiFi
 const int tdsPin = A0;        // Analog pin A0
@@ -786,28 +786,51 @@ bool testHttpConnectivity() {
 bool testHttpsConnectivity() {
   Serial.println("Testing HTTPS connectivity to: " + String(serverHost) + ":" + String(httpsPort));
   
-  String response = makeHttpsRequest("/api/test_http.php");
+  // First try a simple connection test
+  Serial.println("Testing basic HTTPS connection...");
+  secureClient.setInsecure(); // Skip certificate validation
+  secureClient.setTimeout(10000);
   
-  if (response.length() > 0) {
-    // Check for valid JSON response
-    if (response.indexOf("\"success\":true") != -1) {
-      Serial.println("HTTPS API connectivity verified!");
-      Serial.println("Response: " + response.substring(0, 100) + "...");
-      return true;
-    }
+  if (secureClient.connect(serverHost, httpsPort)) {
+    Serial.println("Basic HTTPS connection successful!");
+    secureClient.stop();
     
-    Serial.println("HTTPS API test failed - invalid response");
-    Serial.println("Response: " + response.substring(0, 200));
-    return false;
+    // Now try the full API request
+    String response = makeHttpsRequest("/api/test_http.php");
+    
+    if (response.length() > 0) {
+      // Check for valid JSON response
+      if (response.indexOf("\"success\":true") != -1) {
+        Serial.println("HTTPS API connectivity verified!");
+        Serial.println("Response: " + response.substring(0, 100) + "...");
+        return true;
+      }
+      
+      Serial.println("HTTPS API test failed - invalid response");
+      Serial.println("Response: " + response.substring(0, 200));
+      return false;
+    } else {
+      Serial.println("HTTPS API test failed - no response received");
+      return false;
+    }
   } else {
-    Serial.println("HTTPS API test failed - no response received");
+    Serial.println("Basic HTTPS connection failed - cannot connect to server");
+    Serial.println("This might indicate:");
+    Serial.println("1. Server is not accessible on port 443");
+    Serial.println("2. Firewall blocking HTTPS connections");
+    Serial.println("3. SSL/TLS configuration issues");
     return false;
   }
 }
 
 
 String makeHttpRequest(const char* endpoint, const char* method, const char* data) {
+  Serial.println("Attempting HTTP connection to: " + String(serverHost) + ":" + String(httpPort));
+  
   HttpClient httpClient(client, serverHost, httpPort);
+  
+  // Set timeout
+  httpClient.setTimeout(5000); // 5 seconds
   
   httpClient.beginRequest();
   
@@ -826,16 +849,32 @@ String makeHttpRequest(const char* endpoint, const char* method, const char* dat
   int statusCode = httpClient.responseStatusCode();
   String response = httpClient.responseBody();
   
+  Serial.println("HTTP status code: " + String(statusCode));
+  
   if (statusCode >= 200 && statusCode < 300) {
+    Serial.println("HTTP request successful!");
     return response;
+  } else if (statusCode == 301 || statusCode == 302) {
+    Serial.println("HTTP redirect detected - server redirects to HTTPS");
+    Serial.println("This is expected behavior for secure websites");
+    return "";
   } else {
     Serial.println("HTTP request failed with status: " + String(statusCode));
+    Serial.println("Response: " + response.substring(0, 200));
     return "";
   }
 }
 
 String makeHttpsRequest(const char* endpoint, const char* method, const char* data) {
+  Serial.println("Attempting HTTPS connection to: " + String(serverHost) + ":" + String(httpsPort));
+  
+  // Configure SSL client to be more permissive for testing
+  secureClient.setInsecure(); // Skip certificate validation for now
+  
   HttpClient httpsClient(secureClient, serverHost, httpsPort);
+  
+  // Set longer timeout for HTTPS
+  httpsClient.setTimeout(10000); // 10 seconds
   
   httpsClient.beginRequest();
   
@@ -854,12 +893,22 @@ String makeHttpsRequest(const char* endpoint, const char* method, const char* da
   int statusCode = httpsClient.responseStatusCode();
   String response = httpsClient.responseBody();
   
+  Serial.println("HTTPS status code: " + String(statusCode));
+  
   if (statusCode >= 200 && statusCode < 300) {
+    Serial.println("HTTPS request successful!");
     return response;
+  } else if (statusCode == -3) {
+    Serial.println("HTTPS connection failed - possible SSL/TLS issue");
+    Serial.println("This might be due to certificate validation or SSL handshake failure");
+  } else if (statusCode == -1) {
+    Serial.println("HTTPS connection timeout");
   } else {
     Serial.println("HTTPS request failed with status: " + String(statusCode));
-    return "";
+    Serial.println("Response: " + response.substring(0, 200));
   }
+  
+  return "";
 }
 
 
