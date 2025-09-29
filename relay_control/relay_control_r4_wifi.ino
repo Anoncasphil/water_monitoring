@@ -786,39 +786,27 @@ bool testHttpConnectivity() {
 bool testHttpsConnectivity() {
   Serial.println("Testing HTTPS connectivity to: " + String(serverHost) + ":" + String(httpsPort));
   
-  // First try a simple connection test
-  Serial.println("Testing basic HTTPS connection...");
-  secureClient.setInsecure(); // Skip certificate validation
-  secureClient.setTimeout(10000);
+  // Try the full API request directly
+  String response = makeHttpsRequest("/api/test_http.php");
   
-  if (secureClient.connect(serverHost, httpsPort)) {
-    Serial.println("Basic HTTPS connection successful!");
-    secureClient.stop();
-    
-    // Now try the full API request
-    String response = makeHttpsRequest("/api/test_http.php");
-    
-    if (response.length() > 0) {
-      // Check for valid JSON response
-      if (response.indexOf("\"success\":true") != -1) {
-        Serial.println("HTTPS API connectivity verified!");
-        Serial.println("Response: " + response.substring(0, 100) + "...");
-        return true;
-      }
-      
-      Serial.println("HTTPS API test failed - invalid response");
-      Serial.println("Response: " + response.substring(0, 200));
-      return false;
-    } else {
-      Serial.println("HTTPS API test failed - no response received");
-      return false;
+  if (response.length() > 0) {
+    // Check for valid JSON response
+    if (response.indexOf("\"success\":true") != -1) {
+      Serial.println("HTTPS API connectivity verified!");
+      Serial.println("Response: " + response.substring(0, 100) + "...");
+      return true;
     }
+    
+    Serial.println("HTTPS API test failed - invalid response");
+    Serial.println("Response: " + response.substring(0, 200));
+    return false;
   } else {
-    Serial.println("Basic HTTPS connection failed - cannot connect to server");
+    Serial.println("HTTPS API test failed - no response received");
     Serial.println("This might indicate:");
     Serial.println("1. Server is not accessible on port 443");
     Serial.println("2. Firewall blocking HTTPS connections");
     Serial.println("3. SSL/TLS configuration issues");
+    Serial.println("4. WiFiSSLClient library limitations");
     return false;
   }
 }
@@ -868,13 +856,7 @@ String makeHttpRequest(const char* endpoint, const char* method, const char* dat
 String makeHttpsRequest(const char* endpoint, const char* method, const char* data) {
   Serial.println("Attempting HTTPS connection to: " + String(serverHost) + ":" + String(httpsPort));
   
-  // Configure SSL client to be more permissive for testing
-  secureClient.setInsecure(); // Skip certificate validation for now
-  
   HttpClient httpsClient(secureClient, serverHost, httpsPort);
-  
-  // Set longer timeout for HTTPS
-  httpsClient.setTimeout(10000); // 10 seconds
   
   httpsClient.beginRequest();
   
@@ -901,11 +883,14 @@ String makeHttpsRequest(const char* endpoint, const char* method, const char* da
   } else if (statusCode == -3) {
     Serial.println("HTTPS connection failed - possible SSL/TLS issue");
     Serial.println("This might be due to certificate validation or SSL handshake failure");
+    Serial.println("Arduino R4 WiFi may have limited SSL/TLS support");
   } else if (statusCode == -1) {
     Serial.println("HTTPS connection timeout");
   } else {
     Serial.println("HTTPS request failed with status: " + String(statusCode));
-    Serial.println("Response: " + response.substring(0, 200));
+    if (response.length() > 0) {
+      Serial.println("Response: " + response.substring(0, 200));
+    }
   }
   
   return "";
