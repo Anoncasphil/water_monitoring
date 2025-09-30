@@ -1,945 +1,146 @@
 #include <WiFiS3.h>
-#include <WiFiSSLClient.h>
-#include <ArduinoJson.h>
-#include <OneWire.h>
-#include <DallasTemperature.h>
 #include <ArduinoHttpClient.h>
+#include <ArduinoJson.h>
 
-// WiFi credentials
-const char* ssid = "Converge_2.4GHz_3Fsb56";
-const char* password = "TQkcXYGS";
+// ---------------- WiFi Config ----------------
+char ssid[] = "Converge_2.4GHz_3Fsb56";
+char pass[] = "TQkcXYGS";
 
-// Server details - Support both HTTP and HTTPS
-const char* serverHost = "waterquality.triple7autosupply.com";
-const int httpPort = 80;
-const int httpsPort = 443;
+// ---------------- API Config ----------------
+const char server[] = "waterquality.triple7autosupply.com";
+int port = 80;
 
-// Direct API endpoints - no proxy needed
-const char* uploadUrlHttp = "http://waterquality.triple7autosupply.com/api/upload.php";
-const char* relayControlUrlHttp = "http://waterquality.triple7autosupply.com/api/relay_control.php";
-const char* testUrlHttp = "http://waterquality.triple7autosupply.com/api/simple.php";
+// Upload endpoint for sensor data
+const char uploadPath[] = "/api/upload.php";
+// Relay control endpoint
+const char relayPath[] = "/api/relay_control.php";
 
-// HTTPS endpoints (secure)
-const char* uploadUrlHttps = "https://waterquality.triple7autosupply.com/api/upload.php";
-const char* relayControlUrlHttps = "https://waterquality.triple7autosupply.com/api/relay_control.php";
-const char* testUrlHttps = "https://waterquality.triple7autosupply.com/api/simple.php";
+WiFiClient wifi;
+HttpClient uploadClient = HttpClient(wifi, server, port);
+HttpClient relayClient  = HttpClient(wifi, server, port);
 
-// Configuration - Set to true to use HTTPS, false for HTTP
-const bool USE_HTTPS = false; // Normal HTTP access - no HTTPS enforcement
-
-// Pin definitions for Arduino R4 WiFi
-const int tdsPin = A0;        // Analog pin A0
-const int turbidityPin = A1;  // Analog pin A1
-const int pH_Pin = A2;        // Analog pin A2
-const int relayPins[] = { 3, 4, 5, 6 };  // Digital pins 3-6 a(moved to avoid temp sensor)
+// ---------------- Pins ----------------
+const int relayPins[4] = {3, 4, 5, 6};  
 const int numRelays = 4;
 
-// Temperature sensor setup
-#define ONE_WIRE_BUS 2        // Digital pin 2 for DS18B20
-OneWire oneWire(ONE_WIRE_BUS);
-DallasTemperature tempSensors(&oneWire);
-DeviceAddress tempSensorAddress;
-bool tempSensorFound = false;
+#define RELAY_ON  LOW   // active LOW
+#define RELAY_OFF HIGH  // OFF = HIGH
 
-// Relay states and constants
-bool relayStates[4] = { false, false, false, false };
-const int RELAY_ON = LOW;
-const int RELAY_OFF = HIGH;
-bool relayControlDisabled = false; // Will be set to true if server requires HTTPS
+#define tempPin 2
+#define tdsPin A0
+#define turbidityPin A1
+#define phPin A2
 
-// HTTP/HTTPS client objects
-WiFiClient client;
-WiFiSSLClient secureClient;
+// Relay states
+bool relayStates[4] = {false, false, false, false};
 
-// pH sensor calibration (optimized)
-const int NUM_SAMPLES = 7;
-const int AVG_DELAY_MS = 5;
-const float SLOPE = 14.38005034237246;
-const float INTERCEPT = -15.497796174728297;
-const float ADC_MAX = 1023.0;  // 10-bit ADC for Arduino R4
-const float VREF = 5.0;        // 5V reference for Arduino R4
-// Apply simple runtime calibration without reflashing full curve
-const float PH_CAL_SLOPE = 0.951f;   // two-point fit from buffer data
-const float PH_CAL_OFFSET = 0.564f;  // two-point fit offset
-
-// Sensor constants (consolidated)
-#define TURBIDITY_ARRAY_LENGTH 5
-#define TDS_ARRAY_LENGTH 20
-#define TDS_SAMPLING_INTERVAL 10
-#define TURBIDITY_SAMPLING_INTERVAL 5
-#define TDS_VREF 5.0
-#define TDS_KVALUE 1.0
-#define TDS_SPIKE_THRESHOLD 500
-// If your TDS board outputs higher voltage in cleaner water, invert the reading
-#define TDS_INVERT 0
-// Calibration for TDS conversion
-#define TDS_FACTOR 0.5f        // 0.5 (DFRobot default). Adjust 0.45–0.7 to match your solution
-#define TDS_CAL_SLOPE 1.00f    // Post-polynomial scale
-#define TDS_OFFSET 0.0f        // Post-polynomial offset (ppm)
-
-// Turbidity calibration endpoints (ADC raw). Adjust these to your sensor.
-// Clean water typically outputs higher voltage (higher ADC) than dirty for common sensors.
-#define TURBIDITY_CLEAR_RAW 800   // Adjusted for 10-bit ADC
-#define TURBIDITY_DIRTY_RAW 300   // Adjusted for 10-bit ADC
-// Some turbidity sensors may be wired such that voltage decreases with clarity
-#define TURBIDITY_INVERT 0     // Set to 1 if your readings act inverted
-
-// Timing constants
-const unsigned long SENSOR_READ_INTERVAL = 1000;
-const unsigned long RELAY_CHECK_INTERVAL = 1000;
-unsigned long lastSensorRead = 0;
-unsigned long lastRelayCheck = 0;
-
-// Sensor arrays
-int tdsArray[TDS_ARRAY_LENGTH];
-int turbidityArray[TURBIDITY_ARRAY_LENGTH];
-int tdsArrayIndex = 0;
-float lastValidTds = 0.0;
-bool tdsInitialized = false;
-
-// Debug/telemetry holders for raw/voltage values
-float lastPhVoltage = 0.0f;
-int lastPhRaw = 0;
-int lastTurbidityRawAvg = 0;
-float lastTurbidityVoltage = 0.0f;
-float lastTdsRawAvg = 0.0f;
-float lastTdsVoltage = 0.0f;
-float lastTemperature = 25.0f;  // Default temperature if sensor fails
-
-// Function declarations
-void reconnectWiFi();
-void uploadSensorData(float turbidity, float tds, float ph, float temperature);
-void checkRelayStates();
-void handleRelayCommand(int relay, int state);
-float readTDSValue(float temperatureC);
-float readTurbidityValue();
-float readTemperatureValue();
-void checkWiFiHealth();
-void checkSensorHealth();
-String cleanJsonResponse(String response);
-bool detectTemperatureSensor();
-bool testHttpConnectivity();
-bool testHttpsConnectivity();
-String makeHttpRequest(const char* endpoint, const char* method = "GET", const char* data = nullptr);
-String makeHttpsRequest(const char* endpoint, const char* method = "GET", const char* data = nullptr);
-
-// Function to map float values (like Arduino's map but for floats)
-float mapFloat(float x, float in_min, float in_max, float out_min, float out_max) {
-  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-}
-
-// Median filter function for pH sensor
-float medianFilter(int arr[], int n) {
-  // simple insertion-sort-based median (n is small)
-  for (int i = 1; i < n; i++) {
-    int key = arr[i];
-    int j = i - 1;
-    while (j >= 0 && arr[j] > key) {
-      arr[j + 1] = arr[j];
-      j--;
-    }
-    arr[j + 1] = key;
-  }
-  return arr[n/2];
-}
-
+// ---------------- Setup ----------------
 void setup() {
   Serial.begin(115200);
-  delay(1000);
   
-  // Initialize analog reference (Arduino R4 uses 5V by default)
-  // analogReference is not needed for Arduino R4 WiFi as it uses 5V by default
-  
-  // Setup relay pins
+  // Init relays
   for (int i = 0; i < numRelays; i++) {
     pinMode(relayPins[i], OUTPUT);
-    digitalWrite(relayPins[i], RELAY_OFF);
-    relayStates[i] = false;
-  }
-  
-  // Initialize TDS array with default values
-  for (int i = 0; i < TDS_ARRAY_LENGTH; i++) {
-    tdsArray[i] = 0;
+    digitalWrite(relayPins[i], RELAY_OFF); // start OFF
   }
 
-  // Initialize turbidity array with default values
-  for (int i = 0; i < TURBIDITY_ARRAY_LENGTH; i++) {
-    turbidityArray[i] = 0;
-  }
+  // Connect WiFi
+  Serial.print("Connecting to WiFi: ");
+  Serial.println(ssid);
 
-  // Initialize temperature sensor
-  tempSensors.begin();
-  Serial.println("DS18B20 Temperature Sensor initialized");
-  tempSensorFound = detectTemperatureSensor();
-  if (!tempSensorFound) {
-    Serial.println("No DS18B20 address detected. Will try index-based reads.");
-  }
-
-  // HTTP client will be initialized in functions as needed
-
-  // Connect to Wi-Fi
-  Serial.println("Connecting to WiFi...");
-  WiFi.begin(ssid, password);
-  
-  int attempts = 0;
-  while (WiFi.status() != WL_CONNECTED && attempts < 30) {
-    delay(500);
+  while (WiFi.begin(ssid, pass) != WL_CONNECTED) {
+    delay(1000);
     Serial.print(".");
-    attempts++;
   }
-  
-  if (WiFi.status() == WL_CONNECTED) {
-    Serial.println();
-    Serial.println("WiFi connected successfully!");
-    Serial.print("IP address: ");
-    Serial.println(WiFi.localIP());
-    Serial.print("Signal strength (RSSI): ");
-    Serial.print(WiFi.RSSI());
-    Serial.println(" dBm");
-    
-    // Test connectivity based on configuration
-    if (USE_HTTPS) {
-      Serial.println("Testing HTTPS connectivity...");
-      if (testHttpsConnectivity()) {
-        Serial.println("HTTPS API test successful!");
-        Serial.println("Checking initial relay states...");
-        checkRelayStates();
-      } else {
-        Serial.println("HTTPS API test failed - falling back to HTTP");
-        Serial.println("Testing HTTP connectivity...");
-        if (testHttpConnectivity()) {
-          Serial.println("HTTP API test successful!");
-          Serial.println("Checking initial relay states...");
-          checkRelayStates();
-        } else {
-          Serial.println("HTTP API test also failed - checking server configuration");
-          relayControlDisabled = true;
-        }
-      }
-    } else {
-      Serial.println("Testing HTTP connectivity...");
-      if (testHttpConnectivity()) {
-        Serial.println("HTTP API test successful!");
-        Serial.println("Checking initial relay states...");
-        checkRelayStates();
-      } else {
-        Serial.println("HTTP API test failed - checking server configuration");
-        relayControlDisabled = true;
-      }
-    }
-  } else {
-    Serial.println();
-    Serial.println("WiFi connection failed! Check credentials and try again.");
-    Serial.println("The device will continue to attempt reconnection...");
-  }
+  Serial.println("\nWiFi connected!");
 }
 
+// ---------------- Loop ----------------
 void loop() {
-  unsigned long currentMillis = millis();
-
-  // Read and upload sensor data
-  if (currentMillis - lastSensorRead >= SENSOR_READ_INTERVAL) {
-    lastSensorRead = currentMillis;
-
-    if (WiFi.status() == WL_CONNECTED) {
-      // Read pH sensor with improved calibration method
-      int phSamples[NUM_SAMPLES];
-      long phSum = 0;
-      
-      // Take multiple samples for pH reading
-      for (int i = 0; i < NUM_SAMPLES; i++) {
-        int reading = analogRead(pH_Pin);
-        phSamples[i] = reading;
-        phSum += reading;
-        delay(AVG_DELAY_MS);
-      }
-      
-      // Compute median to reject spike outliers
-      float phMedianVal = medianFilter(phSamples, NUM_SAMPLES);
-      // Compute average
-      float phAvg = (float)phSum / (float)NUM_SAMPLES;
-      
-      // Use the median when spikes present, otherwise average — blend approach
-      float phRawValue = (phAvg * 0.6f) + (phMedianVal * 0.4f);
-      
-      // Bad/disconnected sensor detection
-      if ((int)phRawValue == 0) {
-        delay(1000);
-        return;
-      }
-      
-      // Convert ADC -> Voltage (V)
-      float phVoltage = (phRawValue / ADC_MAX) * VREF;
-      lastPhRaw = (int)phRawValue;
-      lastPhVoltage = phVoltage;
-      
-      // Convert voltage -> pH using calibration fit
-      float ph = SLOPE * phVoltage + INTERCEPT;
-      // Apply runtime calibration (adjust offset/slope to match buffer solutions)
-      float phCalibrated = (ph * PH_CAL_SLOPE) + PH_CAL_OFFSET;
-      
-      // Limit pH to physically sensible range
-      if (phCalibrated < 0.0) phCalibrated = 0.0;
-      if (phCalibrated > 14.0) phCalibrated = 14.0;
-
-      // Read temperature sensor
-      float temperature = readTemperatureValue();
-
-      // Read turbidity sensor with debugging
-      float turbidityNTU = readTurbidityValue();
-
-      // Read TDS sensor using provided sampling and conversion
-      float tdsValue = readTDSValue(temperature);
-      
-      // Debug: print turbidity averaged ADC and voltage
-      Serial.print("Turbidity ADC: ");
-      Serial.print(lastTurbidityRawAvg);
-      Serial.print(", V: ");
-      Serial.println(lastTurbidityVoltage, 3);
-      
-      // Single-line labeled data output
-      Serial.print("pH: ");
-      Serial.print(phCalibrated, 2);
-      Serial.print(", Turbidity: ");
-      Serial.print(turbidityNTU, 1);
-      Serial.print(" NTU, TDS: ");
-      Serial.print(tdsValue, 1);
-      Serial.print(" ppm, Temp: ");
-      Serial.print(temperature, 1);
-      Serial.print(" C | Relays: ");
-      for (int i = 0; i < 4; i++) {
-        Serial.print("R");
-        Serial.print(i + 1);
-        Serial.print(":");
-        Serial.print(relayStates[i] ? "ON" : "OFF");
-        if (i < 3) Serial.print(" ");
-      }
-      if (relayControlDisabled) {
-        Serial.print(" [RELAY CONTROL DISABLED - HTTPS REQUIRED]");
-      }
-      Serial.println();
-
-      // Upload data with converted turbidity value
-      uploadSensorData(turbidityNTU, tdsValue, phCalibrated, temperature);
-    } else {
-      Serial.println("WiFi disconnected, attempting to reconnect...");
-      reconnectWiFi();
-    }
-  }
-
-  // Check relay states (only if not disabled due to HTTPS requirement)
-  if (currentMillis - lastRelayCheck >= RELAY_CHECK_INTERVAL) {
-    lastRelayCheck = currentMillis;
-    if (WiFi.status() == WL_CONNECTED && !relayControlDisabled) {
-      checkRelayStates();
-    }
-  }
-
-  // Sensor health check (every 10 seconds)
-  static unsigned long lastHealthCheck = 0;
-  if (currentMillis - lastHealthCheck >= 10000) {
-    lastHealthCheck = currentMillis;
-    checkSensorHealth();
-  }
-
-  // WiFi health check (every 30 seconds)
-  static unsigned long lastWiFiCheck = 0;
-  if (currentMillis - lastWiFiCheck >= 30000) {
-    lastWiFiCheck = currentMillis;
-    checkWiFiHealth();
-  }
-
-  // Update relay outputs
-  for (int i = 0; i < numRelays; i++) {
-    digitalWrite(relayPins[i], relayStates[i] ? RELAY_ON : RELAY_OFF);
-  }
+  readAndUploadSensors();
+  checkRelayStates();
+  delay(5000); // run every 5s
 }
 
-void uploadSensorData(float turbidity, float tds, float ph, float temperature) {
-  // Prepare POST data
-  String postData = "turbidity=" + String(turbidity) + "&tds=" + String(tds) + "&ph=" + String(ph) + "&temperature=" + String(temperature);
-  
-  String response;
-  if (USE_HTTPS) {
-    response = makeHttpsRequest("/api/upload.php", "POST", postData.c_str());
-  } else {
-    response = makeHttpRequest("/api/upload.php", "POST", postData.c_str());
-  }
-  
-  if (response.length() > 0) {
-    // Check if response contains error message
-    if (response.indexOf("ERR_NGROK") != -1) {
-      Serial.println("Server error: NGROK tunnel issue");
-    } else if (response.indexOf("\"success\":true") != -1) {
-      Serial.println("Data uploaded successfully");
-    } else if (response.indexOf("Unknown column") != -1) {
-      Serial.println("Database error detected - this will be fixed on next upload");
-      Serial.println("Server is accessible, database schema needs update");
-    } else {
-      Serial.println("Upload response: " + response.substring(0, 100));
-    }
-  } else {
-    Serial.println("Failed to upload data - no response");
-  }
+// ---------------- Functions ----------------
+void readAndUploadSensors() {
+  // Read sensors (dummy analog for now)
+  int tempVal = analogRead(tempPin);
+  int tdsVal = analogRead(tdsPin);
+  int turbidityVal = analogRead(turbidityPin);
+  int phVal = analogRead(phPin);
+
+  // Convert tempVal (replace with DS18B20/DHT if needed)
+  float temperature = (tempVal / 1023.0) * 100.0;
+
+  Serial.println("---- Sensor Data ----");
+  Serial.print("Temperature: "); Serial.println(temperature);
+  Serial.print("TDS: "); Serial.println(tdsVal);
+  Serial.print("Turbidity: "); Serial.println(turbidityVal);
+  Serial.print("pH: "); Serial.println(phVal);
+
+  // Build JSON payload
+  String postData = "{";
+  postData += "\"temperature\":" + String(temperature) + ",";
+  postData += "\"tds\":" + String(tdsVal) + ",";
+  postData += "\"turbidity\":" + String(turbidityVal) + ",";
+  postData += "\"ph\":" + String(phVal);
+  postData += "}";
+
+  // Send POST
+  uploadClient.beginRequest();
+  uploadClient.post(uploadPath);
+  uploadClient.sendHeader("Content-Type", "application/json");
+  uploadClient.sendHeader("Content-Length", postData.length());
+  uploadClient.beginBody();
+  uploadClient.print(postData);
+  uploadClient.endRequest();
+
+  int statusCode = uploadClient.responseStatusCode();
+  String response = uploadClient.responseBody();
+
+  Serial.print("Upload status: "); Serial.println(statusCode);
+  Serial.println("Response: " + response);
 }
 
 void checkRelayStates() {
-  String response;
-  if (USE_HTTPS) {
-    response = makeHttpsRequest("/api/relay_control.php", "GET");
-  } else {
-    response = makeHttpRequest("/api/relay_control.php", "GET");
-  }
-  
-  if (response.length() == 0) {
-    Serial.println("Failed to get relay states - no response");
-    return;
-  }
-  
-  
-  // Debug: Print the raw response for troubleshooting
-  Serial.println("Raw server response: " + response);
-  
-  // Check if response contains HTML (error page)
-  if (response.indexOf("<!DOCTYPE html>") != -1 || response.indexOf("<html") != -1) {
-    Serial.println("Server returned HTML instead of JSON - possible redirect or error page");
-    return;
-  }
-  
-  // Check if response contains error message
-  if (response.indexOf("ERR_NGROK") != -1) {
-    Serial.println("Server error: NGROK tunnel issue");
-    return;
-  }
+  relayClient.get(relayPath);
+  int status = relayClient.responseStatusCode();
+  String body = relayClient.responseBody();
 
-  // Check if response is empty or too short
-  if (response.length() < 10) {
-    Serial.println("Server response too short: " + response);
-    return;
-  }
+  if (status == 200) {
+    DynamicJsonDocument doc(2048);
+    DeserializationError error = deserializeJson(doc, body);
 
-  // Clean the JSON response
-  String cleanResponse = cleanJsonResponse(response);
-  if (cleanResponse.length() == 0) {
-    Serial.println("No valid JSON found in response");
-    return;
-  }
-  
-  Serial.println("Cleaned JSON: " + cleanResponse);
+    if (!error) {
+      if (doc.containsKey("states")) {
+        JsonArray states = doc["states"];
 
-  // Parse JSON response
-  DynamicJsonDocument doc(1024);
-  DeserializationError error = deserializeJson(doc, cleanResponse);
+        for (JsonObject s : states) {
+          int relay = s["relay_number"];
+          int value = s["state"];
 
-  if (!error) {
-    if (doc.containsKey("states") && doc["states"].is<JsonArray>()) {
-      JsonArray states = doc["states"];
-      bool relayChanged = false;
-      
-      for (JsonObject state : states) {
-        if (state.containsKey("relay_number") && state.containsKey("state")) {
-          int relay = state["relay_number"];
-          int value = state["state"];
-          if (relay >= 1 && relay <= 4) {
-            bool newState = (value == 1);
-            if (relayStates[relay - 1] != newState) {
-              relayStates[relay - 1] = newState;
-              digitalWrite(relayPins[relay - 1], relayStates[relay - 1] ? RELAY_ON : RELAY_OFF);
+          if (relay >= 1 && relay <= numRelays) {
+            relayStates[relay - 1] = (value == 1);
+
+            digitalWrite(
+              relayPins[relay - 1],
+              relayStates[relay - 1] ? RELAY_ON : RELAY_OFF
+            );
+
               Serial.print("Relay ");
               Serial.print(relay);
-              Serial.print(" changed to: ");
-              Serial.println(newState ? "ON" : "OFF");
-              relayChanged = true;
-            }
+            Serial.print(" set to ");
+            Serial.println(relayStates[relay - 1] ? "ON" : "OFF");
           }
         }
       }
-      
-      // Display current relay status
-      Serial.print("Relay Status: ");
-      for (int i = 0; i < 4; i++) {
-        Serial.print("R");
-        Serial.print(i + 1);
-        Serial.print(":");
-        Serial.print(relayStates[i] ? "ON" : "OFF");
-        if (i < 3) Serial.print(" ");
-      }
-      Serial.println();
-    }
-  } else {
-    Serial.println("Failed to parse JSON response");
-    Serial.println("Error: " + String(error.c_str()));
-    Serial.println("Response length: " + String(response.length()));
-    Serial.println("First 100 chars: " + response.substring(0, 100));
-  }
-}
-
-void handleRelayCommand(int relay, int state) {
-  if (relay >= 1 && relay <= 4) {
-    // Prepare POST data
-    String postData = "relay=" + String(relay) + "&state=" + String(state);
-    
-    String response;
-    if (USE_HTTPS) {
-      response = makeHttpsRequest("/api/relay_control.php", "POST", postData.c_str());
     } else {
-      response = makeHttpRequest("/api/relay_control.php", "POST", postData.c_str());
-    }
-    
-    if (response.length() == 0) {
-      Serial.println("Failed to send relay command - no response");
-      return;
-    }
-    
-    // Debug: Print the raw response for troubleshooting
-    Serial.println("Relay command response: " + response);
-
-    // Clean the JSON response
-    String cleanResponse = cleanJsonResponse(response);
-    if (cleanResponse.length() == 0) {
-      Serial.println("No valid JSON found in relay command response");
-      return;
-    }
-    
-    Serial.println("Cleaned relay JSON: " + cleanResponse);
-
-    // Parse response to get updated states
-    DynamicJsonDocument doc(1024);
-    DeserializationError error = deserializeJson(doc, cleanResponse);
-
-    if (!error) {
-      JsonArray states = doc["states"];
-      for (JsonObject state : states) {
-        int relayNum = state["relay_number"];
-        int value = state["state"];
-        if (relayNum >= 1 && relayNum <= 4) {
-          relayStates[relayNum - 1] = (value == 1);
-          digitalWrite(relayPins[relayNum - 1], relayStates[relayNum - 1] ? RELAY_ON : RELAY_OFF);
-        }
-      }
-    } else {
-      Serial.println("Failed to parse relay command JSON response");
-      Serial.println("Error: " + String(error.c_str()));
-      Serial.println("Response: " + response);
-    }
-  }
-}
-
-float readTDSValue(float temperatureC) {
-  int adcValue = 0;
-  long sum = 0;
-
-  // Take 30 samples and average
-  for (int i = 0; i < 30; i++) {
-    adcValue = analogRead(tdsPin);
-    sum += adcValue;
-    delay(40);
-  }
-  adcValue = sum / 30;
-
-  // Save debug values
-  lastTdsRawAvg = adcValue;
-
-  // Convert to voltage
-  float voltage = (adcValue * TDS_VREF) / ADC_MAX;
-  lastTdsVoltage = voltage;
-
-  // Temperature compensation (simple linear formula)
-  float compensationCoefficient = 1.0 + 0.02f * (temperatureC - 25.0f);
-  float compensationVoltage = voltage / compensationCoefficient;
-
-  // Convert voltage to TDS (ppm) using DFRobot polynomial with adjustable factor
-  float tdsValue = (133.42f * compensationVoltage * compensationVoltage * compensationVoltage
-                   - 255.86f * compensationVoltage * compensationVoltage
-                   + 857.39f * compensationVoltage) * TDS_FACTOR;
-
-  // Optional post-calibration (two-point field calibration)
-  tdsValue = (tdsValue * TDS_CAL_SLOPE) + TDS_OFFSET;
-
-  if (tdsValue < 0.0f) tdsValue = 0.0f;
-
-  // Update last valid reading flags
-  lastValidTds = tdsValue;
-  tdsInitialized = true;
-
-  return tdsValue;
-}
-
-float readTurbidityValue() {
-  int rawValue = 0;
-
-  // Take multiple readings for smoothing
-  for (int i = 0; i < TURBIDITY_ARRAY_LENGTH; i++) {
-    rawValue += analogRead(turbidityPin);
-    delay(TURBIDITY_SAMPLING_INTERVAL);
-  }
-  rawValue /= TURBIDITY_ARRAY_LENGTH;
-  lastTurbidityRawAvg = rawValue;
-  lastTurbidityVoltage = (rawValue / ADC_MAX) * VREF;
-  
-  // Convert voltage to NTU using provided linear model
-  float voltage = lastTurbidityVoltage;
-  float ntu = -309.0f * (voltage - 1.964f) + 1.0f; // clean ~1 NTU, dirtier -> higher
-  if (ntu < 0.0f) ntu = 0.0f;
-  
-  return ntu;
-}
-
-void checkWiFiHealth() {
-  if (WiFi.status() == WL_CONNECTED) {
-    long rssi = WiFi.RSSI();
-    if (rssi < -80) {
-      Serial.println("WiFi signal weak (RSSI: " + String(rssi) + ")");
-    } else if (rssi < -70) {
-      Serial.println("WiFi signal moderate (RSSI: " + String(rssi) + ")");
+      Serial.print("JSON parse failed: ");
+      Serial.println(error.c_str());
     }
   } else {
-    Serial.println("WiFi disconnected, attempting to reconnect...");
-    reconnectWiFi();
+    Serial.print("Relay check HTTP error: ");
+    Serial.println(status);
   }
-}
-
-void reconnectWiFi() {
-  static unsigned long lastReconnectAttempt = 0;
-  static int reconnectAttempts = 0;
-  
-  unsigned long currentTime = millis();
-  
-  // Only attempt reconnection every 10 seconds
-  if (currentTime - lastReconnectAttempt >= 10000) {
-    lastReconnectAttempt = currentTime;
-    reconnectAttempts++;
-    
-    Serial.println("Reconnection attempt #" + String(reconnectAttempts));
-    
-    WiFi.disconnect();
-    delay(1000);
-    WiFi.begin(ssid, password);
-    
-    // Wait up to 10 seconds for connection
-    int attempts = 0;
-    while (WiFi.status() != WL_CONNECTED && attempts < 20) {
-      delay(500);
-      attempts++;
-    }
-    
-    if (WiFi.status() == WL_CONNECTED) {
-      Serial.println("WiFi reconnected successfully!");
-      Serial.print("IP address: ");
-      Serial.println(WiFi.localIP());
-      reconnectAttempts = 0; // Reset counter on successful connection
-    } else {
-      Serial.println("Reconnection failed. Will try again in 10 seconds...");
-    }
-  }
-}
-
-float readTemperatureValue() {
-  // Ensure sensor presence is tracked
-  if (!tempSensorFound) {
-    tempSensorFound = detectTemperatureSensor();
-  }
-
-  // Request temperature conversion
-  tempSensors.requestTemperatures();
-
-  // Prefer address-based read when available
-  float temperatureC = tempSensorFound
-    ? tempSensors.getTempC(tempSensorAddress)
-    : tempSensors.getTempCByIndex(0);
-
-  // Retry a few times if disconnected/invalid
-  int retries = 0;
-  while ((temperatureC == DEVICE_DISCONNECTED_C || isnan(temperatureC)) && retries < 3) {
-    delay(200);
-    tempSensors.requestTemperatures();
-    temperatureC = tempSensorFound
-      ? tempSensors.getTempC(tempSensorAddress)
-      : tempSensors.getTempCByIndex(0);
-    retries++;
-  }
-
-  if (temperatureC == DEVICE_DISCONNECTED_C || isnan(temperatureC)) {
-    Serial.println("Temperature read failed - using last valid value");
-    return lastTemperature;
-  }
-
-  lastTemperature = temperatureC;
-  return temperatureC;
-}
-
-String cleanJsonResponse(String response) {
-  // Remove any leading/trailing whitespace
-  response.trim();
-  
-  // Find the start of JSON (look for '{' or '[')
-  int jsonStart = -1;
-  for (int i = 0; i < response.length(); i++) {
-    if (response.charAt(i) == '{' || response.charAt(i) == '[') {
-      jsonStart = i;
-      break;
-    }
-  }
-  
-  if (jsonStart == -1) {
-    Serial.println("No JSON found in response");
-    return "";
-  }
-  
-  // Find the end of JSON (look for matching '}' or ']')
-  int braceCount = 0;
-  int bracketCount = 0;
-  int jsonEnd = -1;
-  
-  for (int i = jsonStart; i < response.length(); i++) {
-    char c = response.charAt(i);
-    if (c == '{') braceCount++;
-    else if (c == '}') braceCount--;
-    else if (c == '[') bracketCount++;
-    else if (c == ']') bracketCount--;
-    
-    if (braceCount == 0 && bracketCount == 0) {
-      jsonEnd = i;
-      break;
-    }
-  }
-  
-  if (jsonEnd == -1) {
-    Serial.println("Incomplete JSON in response");
-    return response.substring(jsonStart); // Return what we have
-  }
-  
-  return response.substring(jsonStart, jsonEnd + 1);
-}
-
-void checkSensorHealth() {
-  // Check pH sensor
-  int phRaw = analogRead(pH_Pin);
-  float phVoltage = (phRaw * VREF) / ADC_MAX;
-  if (phRaw > 1015) {  // Adjusted for 10-bit ADC
-    Serial.println("pH sensor reading too high - check connection");
-  } else if (phRaw < 10) {
-    Serial.println("pH sensor reading too low - check connection");
-  }
-  
-  // Check turbidity sensor
-  int turbidityRaw = analogRead(turbidityPin);
-  if (turbidityRaw > 1015) {  // Adjusted for 10-bit ADC
-    Serial.println("Turbidity sensor reading too high - check connection");
-  } else if (turbidityRaw < 10) {
-    Serial.println("Turbidity sensor reading too low - check connection");
-  }
-  
-  // Check TDS sensor
-  int tdsRaw = analogRead(tdsPin);
-  if (tdsRaw > 1015) {  // Adjusted for 10-bit ADC
-    Serial.println("TDS sensor reading too high - check connection");
-  } else if (tdsRaw < 10) {
-    Serial.println("TDS sensor reading too low - check connection");
-  }
-  
-  // Check temperature sensor
-  tempSensors.requestTemperatures();
-  float tempC = tempSensors.getTempCByIndex(0);
-  if (tempC == DEVICE_DISCONNECTED_C) {
-    Serial.println("Temperature sensor disconnected - check connection");
-  } else if (tempC < -40.0 || tempC > 85.0) {
-    Serial.println("Temperature reading out of range - check sensor");
-  }
-}
-
-bool detectTemperatureSensor() {
-  // Attempt to obtain the first sensor's address
-  if (tempSensors.getAddress(tempSensorAddress, 0)) {
-    Serial.print("DS18B20 address: ");
-    for (uint8_t i = 0; i < 8; i++) {
-      if (tempSensorAddress[i] < 16) Serial.print("0");
-      Serial.print(tempSensorAddress[i], HEX);
-    }
-    Serial.println();
-    tempSensors.setResolution(tempSensorAddress, 12);
-    return true;
-  }
-  return false;
-}
-
-bool testHttpConnectivity() {
-  Serial.println("Testing HTTP connectivity to: " + String(serverHost) + ":" + String(httpPort));
-  
-  String response = makeHttpRequest("/api/simple.php");
-  
-  if (response.length() > 0) {
-    // Check for valid JSON response
-    if (response.indexOf("\"status\":\"ok\"") != -1 || response.indexOf("\"success\":true") != -1) {
-      Serial.println("HTTP API connectivity verified!");
-      Serial.println("Response: " + response.substring(0, 100) + "...");
-      return true;
-    }
-    
-    
-    Serial.println("HTTP API test failed - invalid response");
-    Serial.println("Response: " + response.substring(0, 200));
-    return false;
-  } else {
-    Serial.println("HTTP API test failed - no response received");
-    return false;
-  }
-}
-
-bool testHttpsConnectivity() {
-  Serial.println("Testing HTTPS connectivity to: " + String(serverHost) + ":" + String(httpsPort));
-  
-  // Try the full API request directly
-  String response = makeHttpsRequest("/api/simple.php");
-  
-  if (response.length() > 0) {
-    // Check for valid JSON response
-    if (response.indexOf("\"status\":\"ok\"") != -1 || response.indexOf("\"success\":true") != -1) {
-      Serial.println("HTTPS API connectivity verified!");
-      Serial.println("Response: " + response.substring(0, 100) + "...");
-      return true;
-    }
-    
-    Serial.println("HTTPS API test failed - invalid response");
-    Serial.println("Response: " + response.substring(0, 200));
-    return false;
-  } else {
-    Serial.println("HTTPS API test failed - no response received");
-    Serial.println("This might indicate:");
-    Serial.println("1. Server is not accessible on port 443");
-    Serial.println("2. Firewall blocking HTTPS connections");
-    Serial.println("3. SSL/TLS configuration issues");
-    Serial.println("4. WiFiSSLClient library limitations");
-    return false;
-  }
-}
-
-
-String makeHttpRequest(const char* endpoint, const char* method, const char* data) {
-  Serial.println("Attempting HTTP connection to: " + String(serverHost) + ":" + String(httpPort));
-  Serial.println("Endpoint: " + String(endpoint));
-  Serial.println("Method: " + String(method));
-  
-  // Try direct WiFiClient approach first (simpler)
-  if (client.connect(serverHost, httpPort)) {
-    Serial.println("Connected to server!");
-    
-    // Send HTTP request
-    client.print(method);
-    client.print(" ");
-    client.print(endpoint);
-    client.println(" HTTP/1.1");
-    client.print("Host: ");
-    client.println(serverHost);
-    client.println("Connection: close");
-    
-    if (strcmp(method, "POST") == 0 && data != nullptr) {
-      client.print("Content-Type: application/x-www-form-urlencoded\r\n");
-      client.print("Content-Length: ");
-      client.println(strlen(data));
-      client.println();
-      client.print(data);
-    } else {
-      client.println();
-    }
-    
-    // Wait for response
-    unsigned long timeout = millis() + 10000; // 10 second timeout
-    while (client.available() == 0 && millis() < timeout) {
-      delay(10);
-    }
-    
-    if (client.available() > 0) {
-      String response = "";
-      while (client.available()) {
-        char c = client.read();
-        response += c;
-      }
-      
-      client.stop();
-      
-      // Parse status code from response
-      int statusCode = 200; // Default
-      if (response.indexOf("HTTP/1.1") != -1) {
-        int start = response.indexOf("HTTP/1.1 ") + 9;
-        int end = response.indexOf(" ", start);
-        if (end != -1) {
-          statusCode = response.substring(start, end).toInt();
-        }
-      }
-      
-      Serial.println("HTTP status code: " + String(statusCode));
-      
-      if (statusCode >= 200 && statusCode < 300) {
-        Serial.println("HTTP request successful!");
-        // Extract JSON from response
-        int jsonStart = response.indexOf("{");
-        int jsonEnd = response.lastIndexOf("}");
-        if (jsonStart != -1 && jsonEnd != -1) {
-          return response.substring(jsonStart, jsonEnd + 1);
-        }
-        return response;
-      } else {
-        Serial.println("HTTP request failed with status: " + String(statusCode));
-        return "";
-      }
-    } else {
-      Serial.println("No response received - timeout");
-      client.stop();
-      return "";
-    }
-  } else {
-    Serial.println("Failed to connect to server");
-    return "";
-  }
-}
-
-String makeHttpsRequest(const char* endpoint, const char* method, const char* data) {
-  Serial.println("Attempting HTTPS connection to: " + String(serverHost) + ":" + String(httpsPort));
-  
-  HttpClient httpsClient(secureClient, serverHost, httpsPort);
-  
-  httpsClient.beginRequest();
-  
-  if (strcmp(method, "GET") == 0) {
-    httpsClient.get(endpoint);
-  } else if (strcmp(method, "POST") == 0) {
-    httpsClient.post(endpoint);
-    httpsClient.sendHeader("Content-Type", "application/x-www-form-urlencoded");
-    httpsClient.sendHeader("Content-Length", strlen(data));
-    httpsClient.beginBody();
-    httpsClient.print(data);
-  }
-  
-  httpsClient.endRequest();
-  
-  int statusCode = httpsClient.responseStatusCode();
-  String response = httpsClient.responseBody();
-  
-  Serial.println("HTTPS status code: " + String(statusCode));
-  
-  if (statusCode >= 200 && statusCode < 300) {
-    Serial.println("HTTPS request successful!");
-    return response;
-  } else if (statusCode == -3) {
-    Serial.println("HTTPS connection failed - possible SSL/TLS issue");
-    Serial.println("This might be due to certificate validation or SSL handshake failure");
-    Serial.println("Arduino R4 WiFi may have limited SSL/TLS support");
-  } else if (statusCode == -1) {
-    Serial.println("HTTPS connection timeout");
-  } else {
-    Serial.println("HTTPS request failed with status: " + String(statusCode));
-    if (response.length() > 0) {
-      Serial.println("Response: " + response.substring(0, 200));
-    }
-  }
-  
-  return "";
-}
-
-
-bool tryHttpsConnection() {
-  // This function is now replaced by testHttpsConnectivity()
-  // Keeping for backward compatibility
-  return testHttpsConnectivity();
 }
