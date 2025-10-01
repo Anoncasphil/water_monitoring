@@ -342,6 +342,32 @@ try {
                 </div>
             </div>
 
+            <!-- Acknowledgment Tracker -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 mb-8">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                            <i class="fas fa-clock text-amber-500 mr-3"></i>
+                            Acknowledgment Tracker
+                        </h2>
+                        <p class="text-gray-600 dark:text-gray-400">Currently acknowledged sensors and their duration</p>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <button id="refreshAcknowledgmentTracker" class="px-4 py-2 bg-amber-100 dark:bg-amber-900 text-amber-600 dark:text-amber-300 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-800 transition-colors">
+                            <i class="fas fa-refresh mr-2"></i>Refresh
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="acknowledgmentTrackerContainer">
+                    <!-- Acknowledgment tracker will be loaded here -->
+                    <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                        <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                        <p>Loading acknowledgment status...</p>
+                    </div>
+                </div>
+            </div>
+
             <!-- Acknowledgment Reports -->
             <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 mb-8">
                 <div class="flex items-center justify-between mb-6">
@@ -787,10 +813,10 @@ try {
         let unacknowledgedAlerts = new Map();
         let lastAlertCheck = new Map();
 
-        // Load acknowledged alerts from database
-        async function loadAcknowledgedAlerts() {
+        // Load acknowledgment tracker data
+        async function loadAcknowledgmentTracker() {
             try {
-                const response = await fetch('../../api/get_acknowledgments.php?limit=100', {
+                const response = await fetch('../../api/acknowledgment_tracker.php', {
                     method: 'GET',
                     headers: {
                         'Accept': 'application/json',
@@ -800,37 +826,150 @@ try {
                 
                 const data = await response.json();
                 if (data.success && data.data) {
-                    const now = new Date();
-                    data.data.forEach(report => {
-                        const ackTime = new Date(report.acknowledged_at);
-                        const timeDiff = now - ackTime;
-                        const fiveHoursInMs = 5 * 60 * 60 * 1000; // 5 hours in milliseconds
+                    // Clear previous acknowledgments
+                    acknowledgedAlerts.clear();
+                    unacknowledgedAlerts.clear();
+                    
+                    // Load current acknowledgments
+                    data.data.forEach(ack => {
+                        acknowledgedAlerts.add(ack.sensor_type);
                         
-                        if (timeDiff < fiveHoursInMs) {
-                            // Store by alert type for general acknowledgment tracking
-                            acknowledgedAlerts.add(report.alert_type);
-                            
-                            // Also store the specific acknowledgment for detailed tracking
-                            const alertKey = `${report.alert_type}_${report.alert_message}`;
-                            unacknowledgedAlerts.set(alertKey, {
-                                type: report.alert_type,
-                                message: report.alert_message,
-                                acknowledged: true,
-                                acknowledgedAt: report.acknowledged_at,
-                                actionTaken: report.action_taken,
-                                responsiblePerson: report.responsible_person
-                            });
-                            
-                            console.log(`Loaded acknowledged alert: ${report.alert_type} from ${report.acknowledged_at} (${Math.round(timeDiff / (60 * 1000))} minutes ago)`);
-                        }
+                        const alertKey = `${ack.sensor_type}_${ack.alert_level}`;
+                        unacknowledgedAlerts.set(alertKey, {
+                            type: ack.sensor_type,
+                            message: ack.alert_message,
+                            acknowledged: true,
+                            acknowledgedAt: ack.acknowledged_at,
+                            actionTaken: ack.action_taken,
+                            responsiblePerson: ack.acknowledged_by,
+                            minutesAcknowledged: ack.minutes_acknowledged,
+                            minutesRemaining: ack.minutes_remaining
+                        });
                     });
                     
-                    console.log(`Total acknowledged alerts loaded: ${acknowledgedAlerts.size}`);
-                    console.log('Acknowledged alert types:', Array.from(acknowledgedAlerts));
-                    console.log('Unacknowledged alerts map size:', unacknowledgedAlerts.size);
+                    console.log(`Loaded ${data.data.length} active acknowledgments`);
+                    renderAcknowledgmentTracker(data.data);
+                } else {
+                    console.log('No active acknowledgments found');
+                    renderAcknowledgmentTracker([]);
                 }
             } catch (error) {
-                console.error('Error loading acknowledged alerts:', error);
+                console.error('Error loading acknowledgment tracker:', error);
+                renderAcknowledgmentTracker([]);
+            }
+        }
+
+        // Render acknowledgment tracker
+        function renderAcknowledgmentTracker(acknowledgments) {
+            const container = document.getElementById('acknowledgmentTrackerContainer');
+            
+            if (acknowledgments.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                        <i class="fas fa-check-circle text-4xl mb-4 text-green-500"></i>
+                        <p class="text-lg font-medium">No Active Acknowledgments</p>
+                        <p class="text-sm">All sensors are currently unacknowledged</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = `
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="border-b border-gray-200 dark:border-gray-700">
+                                <th class="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Sensor</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Value</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Level</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Acknowledged By</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Duration</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Remaining</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${acknowledgments.map(ack => `
+                                <tr class="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                    <td class="py-3 px-4">
+                                        <div class="flex items-center">
+                                            <i class="fas ${getSensorIcon(ack.sensor_type)} ${getSensorColor(ack.sensor_type)} mr-2"></i>
+                                            <span class="font-medium text-gray-900 dark:text-white capitalize">${ack.sensor_type}</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <span class="font-mono text-gray-900 dark:text-white">${ack.sensor_value} ${getSensorUnit(ack.sensor_type)}</span>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <span class="px-2 py-1 text-xs rounded-full ${ack.alert_level === 'critical' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'}">
+                                            ${ack.alert_level.toUpperCase()}
+                                        </span>
+                                    </td>
+                                    <td class="py-3 px-4 text-gray-700 dark:text-gray-300">${ack.acknowledged_by}</td>
+                                    <td class="py-3 px-4">
+                                        <div class="flex items-center">
+                                            <i class="fas fa-clock text-gray-400 mr-1"></i>
+                                            <span class="text-gray-700 dark:text-gray-300">${formatDuration(ack.minutes_acknowledged)}</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <div class="flex items-center">
+                                            <div class="w-16 bg-gray-200 dark:bg-gray-700 rounded-full h-2 mr-2">
+                                                <div class="bg-amber-500 h-2 rounded-full" style="width: ${Math.max(0, (ack.minutes_remaining / 300) * 100)}%"></div>
+                                            </div>
+                                            <span class="text-gray-700 dark:text-gray-300 text-sm">${formatDuration(ack.minutes_remaining)}</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <span class="text-gray-700 dark:text-gray-300">${ack.action_taken}</span>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        // Helper functions for acknowledgment tracker
+        function getSensorIcon(sensorType) {
+            const icons = {
+                'turbidity': 'fa-tint',
+                'tds': 'fa-flask',
+                'ph': 'fa-vial'
+            };
+            return icons[sensorType] || 'fa-question';
+        }
+
+        function getSensorColor(sensorType) {
+            const colors = {
+                'turbidity': 'text-blue-500',
+                'tds': 'text-green-500',
+                'ph': 'text-purple-500'
+            };
+            return colors[sensorType] || 'text-gray-500';
+        }
+
+        function getSensorUnit(sensorType) {
+            const units = {
+                'turbidity': 'NTU',
+                'tds': 'ppm',
+                'ph': 'pH'
+            };
+            return units[sensorType] || '';
+        }
+
+        function formatDuration(minutes) {
+            if (minutes < 60) {
+                return `${minutes}m`;
+            } else if (minutes < 1440) {
+                const hours = Math.floor(minutes / 60);
+                const mins = minutes % 60;
+                return `${hours}h ${mins}m`;
+            } else {
+                const days = Math.floor(minutes / 1440);
+                const hours = Math.floor((minutes % 1440) / 60);
+                return `${days}d ${hours}h`;
             }
         }
 
@@ -860,6 +999,7 @@ try {
         // Submit acknowledgment
         async function submitAcknowledgment(alertType, alertMessage, alertTimestamp, actionTaken, details, responsiblePerson, values) {
             try {
+                // Submit to both the old API and new tracker API
                 const response = await fetch('../../api/acknowledge_alert.php', {
                     method: 'POST',
                     headers: {
@@ -877,7 +1017,35 @@ try {
                 });
                 
                 const data = await response.json();
-                return data.success;
+                const success = data.success;
+                
+                // Also submit to acknowledgment tracker
+                if (success) {
+                    try {
+                        const trackerResponse = await fetch('../../api/acknowledgment_tracker.php', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                sensor_type: alertType,
+                                sensor_value: values.value || 0,
+                                alert_level: alertMessage.includes('High') || alertMessage.includes('Critical') ? 'critical' : 'warning',
+                                alert_message: alertMessage,
+                                acknowledged_by: responsiblePerson,
+                                action_taken: actionTaken,
+                                details: details
+                            })
+                        });
+                        
+                        const trackerData = await trackerResponse.json();
+                        console.log('Tracker response:', trackerData);
+                    } catch (trackerError) {
+                        console.error('Error updating tracker:', trackerError);
+                    }
+                }
+                
+                return success;
             } catch (error) {
                 console.error('Error submitting acknowledgment:', error);
                 return false;
@@ -984,6 +1152,7 @@ try {
                     
                     modal.remove();
                     updateActiveAlerts(alertHistory.filter(a => a.type === 'critical' || a.type === 'warning'));
+                    loadAcknowledgmentTracker(); // Refresh the tracker
                     showNotification('Alert acknowledged successfully!', 'success');
                 } else {
                     showNotification('Failed to acknowledge alert. Please try again.', 'error');
@@ -1114,6 +1283,7 @@ try {
                 if (successCount > 0) {
                     showNotification(`Successfully acknowledged ${successCount} alert(s)`, 'success');
                     updateActiveAlerts(alertHistory.filter(a => a.type === 'critical' || a.type === 'warning'));
+                    loadAcknowledgmentTracker(); // Refresh the tracker
                     loadAcknowledgmentStats();
                     refreshAcknowledgmentReports();
                 }
@@ -1287,6 +1457,11 @@ try {
                 const isUnacknowledged = alertKey && unacknowledgedAlerts.has(alertKey);
                 const isAcknowledged = alertType && acknowledgedAlerts.has(alertType);
                 const shouldShowAcknowledge = alertType ? shouldShowAcknowledgeButton(alertType, alertLevel) : false;
+                
+                // Debug logging
+                if (alertType) {
+                    console.log(`Alert: ${alertType} - isAcknowledged: ${isAcknowledged}, shouldShowAcknowledge: ${shouldShowAcknowledge}, acknowledgedAlerts:`, Array.from(acknowledgedAlerts));
+                }
                 
                 return `
                     <div class="alert-card alert-item p-6 rounded-xl border-l-4 ${
@@ -1890,15 +2065,28 @@ try {
         });
 
         // Initialize and update data every 5 seconds
-        fetchData();
-        loadAcknowledgedAlerts();
-        loadAcknowledgmentStats();
-        refreshAcknowledgmentReports();
+        async function initialize() {
+            // Load acknowledgments first
+            await loadAcknowledgmentTracker();
+            console.log('Acknowledgments loaded, now fetching data...');
+            
+            // Then fetch data and update UI
+            fetchData();
+            loadAcknowledgmentStats();
+            refreshAcknowledgmentReports();
+        }
+        
+        initialize();
+        
         setInterval(fetchData, 5000);
         setInterval(() => {
+            loadAcknowledgmentTracker();
             loadAcknowledgmentStats();
             refreshAcknowledgmentReports();
         }, 30000); // Update acknowledgment data every 30 seconds
+        
+        // Event listener for acknowledgment tracker refresh
+        document.getElementById('refreshAcknowledgmentTracker').addEventListener('click', loadAcknowledgmentTracker);
     </script>
 </body>
 </html>
