@@ -664,13 +664,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         updateChart(data.historical);
                     }
 
-                    // Update water quality alerts
-                    updateWaterQualityAlerts(
-                        parseFloat(document.getElementById('turbidityValue').textContent),
-                        parseFloat(document.getElementById('tdsValue').textContent),
-                        parseFloat(document.getElementById('phValue').textContent),
-                        parseFloat(document.getElementById('temperatureValue').textContent)
-                    );
+            // Update water quality alerts
+            updateWaterQualityAlerts(
+                parseFloat(document.getElementById('turbidityValue').textContent),
+                parseFloat(document.getElementById('tdsValue').textContent),
+                parseFloat(document.getElementById('phValue').textContent),
+                parseFloat(document.getElementById('temperatureValue').textContent)
+            );
+            
+            // Debug: Log current acknowledgment state
+            console.log('Dashboard updateData - acknowledgedAlerts:', Array.from(acknowledgedAlerts));
+            console.log('Dashboard updateData - localStorage:', Object.keys(readAckStorage()));
                 })
                 .catch(error => {
                     console.error('Error fetching data:', error);
@@ -894,6 +898,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             updateData();
             fetchRelayStates();
             refreshAcknowledgmentReports();
+            
+            // Force refresh water quality alerts to show acknowledgment status
+            setTimeout(() => {
+                const turbidity = parseFloat(document.getElementById('turbidityValue').textContent) || 0;
+                const tds = parseFloat(document.getElementById('tdsValue').textContent) || 0;
+                const ph = parseFloat(document.getElementById('phValue').textContent) || 0;
+                const temperature = parseFloat(document.getElementById('temperatureValue').textContent) || 0;
+                updateWaterQualityAlerts(turbidity, tds, ph, temperature);
+            }, 1000);
         }, 500); // Initial 500ms delay
         
         setInterval(() => {
@@ -1185,29 +1198,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                  alert.message.includes('pH') ? 'ph' : null;
                 const alertLevel = alert.type;
                 const alertKey = alertType ? `${alertType}_${alertLevel}` : null;
-                const isUnacknowledged = alertKey && unacknowledgedAlerts.has(alertKey);
-                const isAcknowledged = alertKey && (acknowledgedAlerts.has(alertKey) || isSensorAcknowledged(alertType));
+                
+                // Only show acknowledge button for danger/warning alerts that need acknowledgment
+                const needsAcknowledgment = alertType && (
+                    (alert.type === 'danger' && (alertType === 'turbidity' || alertType === 'tds' || alertType === 'ph')) ||
+                    (alert.type === 'warning' && (alertType === 'tds' || alertType === 'ph'))
+                );
+                
+                // Check if this specific alert type is acknowledged (same logic as alerts page)
+                const isAcknowledged = alertType && (acknowledgedAlerts.has(alertType) || isSensorAcknowledged(alertType));
+                const isUnacknowledged = alertKey && unacknowledgedAlerts.has(alertKey) && !isAcknowledged;
+                
+                // Debug logging
+                if (alertType && needsAcknowledgment) {
+                    console.log(`Dashboard Alert: ${alertType} (${alertLevel}) - isAcknowledged: ${isAcknowledged}, isUnacknowledged: ${isUnacknowledged}, acknowledgedAlerts:`, Array.from(acknowledgedAlerts), 'localStorage:', isSensorAcknowledged(alertType));
+                }
                 
                 return `
                     <div class="flex items-center justify-between p-4 rounded-lg ${
-                        alert.type === 'danger' ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300' :
-                        alert.type === 'warning' ? 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300' :
-                        'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300'
-                    }">
+                    alert.type === 'danger' ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300' :
+                    alert.type === 'warning' ? 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300' :
+                    'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300'
+                }">
                         <div class="flex items-center">
-                            <i class="fas ${
-                                alert.type === 'danger' ? 'fa-exclamation-circle' :
-                                alert.type === 'warning' ? 'fa-exclamation-triangle' :
-                                'fa-check-circle'
-                            } mr-3"></i>
-                            <span>${alert.message}</span>
-                        </div>
-                        ${isUnacknowledged ? `
+                    <i class="fas ${
+                        alert.type === 'danger' ? 'fa-exclamation-circle' :
+                        alert.type === 'warning' ? 'fa-exclamation-triangle' :
+                        'fa-check-circle'
+                    } mr-3"></i>
+                    <span>${alert.message}</span>
+                </div>
+                        ${needsAcknowledgment && isUnacknowledged ? `
                             <button onclick="openAcknowledgeModal('${alertKey}')" 
                                     class="ml-4 px-4 py-2 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 dark:bg-amber-700 dark:hover:bg-amber-600 rounded-lg transition-colors shadow-sm">
                                 <i class="fas fa-shield-alt mr-2"></i>Acknowledge
                             </button>
-                        ` : isAcknowledged ? `
+                        ` : needsAcknowledgment && isAcknowledged ? `
                             <span class="ml-4 px-4 py-2 text-sm font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700 rounded-lg">
                                 <i class="fas fa-check-circle mr-2"></i>Acknowledged (5h)
                             </span>
