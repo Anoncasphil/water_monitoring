@@ -51,11 +51,12 @@ try {
     
     // Validate action taken
     $validActions = [
+        'investigated', 'corrected', 'monitoring', 'maintenance', 'reported', 'other',
         'filter_replacement', 'system_maintenance', 'chemical_treatment', 
-        'system_flush', 'investigation', 'manual_intervention', 'other'
+        'system_flush', 'investigation', 'manual_intervention'
     ];
     if (!in_array($actionTaken, $validActions)) {
-        throw new Exception('Invalid action taken');
+        throw new Exception('Invalid action taken: ' . $actionTaken);
     }
     
     // Get database connection
@@ -68,7 +69,7 @@ try {
         $createTable = "
             CREATE TABLE alert_acknowledgments (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                alert_type ENUM('turbidity', 'tds') NOT NULL,
+                alert_type ENUM('turbidity', 'tds', 'ph') NOT NULL,
                 alert_message TEXT NOT NULL,
                 action_taken VARCHAR(50) NOT NULL,
                 details TEXT NOT NULL,

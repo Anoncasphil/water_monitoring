@@ -1067,7 +1067,7 @@ try {
         // Show notification
         function showNotification(message, type) {
             const notification = document.createElement('div');
-            notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
+            notification.className = `fixed bottom-4 right-4 p-4 rounded-lg shadow-lg z-50 transform transition-all duration-300 ease-in-out ${
                 type === 'success' ? 'bg-green-500 text-white' : 
                 type === 'error' ? 'bg-red-500 text-white' :
                 type === 'info' ? 'bg-blue-500 text-white' : 'bg-yellow-500 text-white'
@@ -1081,12 +1081,25 @@ try {
                     } mr-2"></i>
                     ${message}
                 </div>
+                <button onclick="this.closest('.fixed').remove()" class="absolute top-1 right-1 text-white hover:text-gray-200">
+                    <i class="fas fa-times text-sm"></i>
+                </button>
             `;
             
+            // Add slide-in animation
+            notification.style.transform = 'translateX(100%)';
             document.body.appendChild(notification);
             
+            // Trigger slide-in animation
             setTimeout(() => {
-                notification.remove();
+                notification.style.transform = 'translateX(0)';
+            }, 10);
+            
+            setTimeout(() => {
+                notification.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    notification.remove();
+                }, 300);
             }, 3000);
         }
 

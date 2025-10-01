@@ -1471,7 +1471,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         function showNotification(message, type = 'info') {
             // Create notification element
             const notification = document.createElement('div');
-            notification.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg transition-all duration-300 ${
+            notification.className = `fixed bottom-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg transform transition-all duration-300 ease-in-out ${
                 type === 'success' ? 'bg-emerald-500 dark:bg-emerald-600 text-white' :
                 type === 'error' ? 'bg-red-500 dark:bg-red-600 text-white' :
                 'bg-blue-500 dark:bg-blue-600 text-white'
@@ -1485,13 +1485,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     } mr-2"></i>
                     <span class="font-medium">${message}</span>
                 </div>
+                <button onclick="this.closest('.fixed').remove()" class="absolute top-1 right-1 text-white hover:text-gray-200">
+                    <i class="fas fa-times text-sm"></i>
+                </button>
             `;
             
+            // Add slide-in animation
+            notification.style.transform = 'translateX(100%)';
             document.body.appendChild(notification);
+            
+            // Trigger slide-in animation
+            setTimeout(() => {
+                notification.style.transform = 'translateX(0)';
+            }, 10);
             
             // Remove after 5 seconds
             setTimeout(() => {
-                notification.style.opacity = '0';
+                notification.style.transform = 'translateX(100%)';
                 setTimeout(() => {
                     if (notification.parentNode) {
                         notification.parentNode.removeChild(notification);
