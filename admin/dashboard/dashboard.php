@@ -1296,9 +1296,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     data.data.forEach(report => {
                         const ackTime = new Date(report.acknowledged_at);
                         
-                        // Mark as acknowledged if acknowledged within last 24 hours
+                        // Mark as acknowledged if acknowledged within last 5 hours
                         // This provides better persistence while still allowing new alerts
-                        if ((now - ackTime) < 24 * 60 * 60 * 1000) {
+                        if ((now - ackTime) < 5 * 60 * 60 * 1000) {
                             // Store both the alert type and the specific acknowledgment data
                             acknowledgedAlerts.add(report.alert_type);
                             console.log(`Loaded acknowledged alert: ${report.alert_type} from ${report.acknowledged_at}`);

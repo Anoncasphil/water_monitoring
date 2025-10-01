@@ -56,13 +56,13 @@ try {
         exit();
     }
     
-    // Check if there's an acknowledgment for this alert type within the last 24 hours
+    // Check if there's an acknowledgment for this alert type within the last 5 hours
     // This provides better persistence while still allowing new alerts to be detected
     $query = "
         SELECT COUNT(*) as count 
         FROM alert_acknowledgments 
         WHERE alert_type = ? 
-        AND acknowledged_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+        AND acknowledged_at >= DATE_SUB(NOW(), INTERVAL 5 HOUR)
         ORDER BY acknowledged_at DESC 
         LIMIT 1
     ";
@@ -82,7 +82,7 @@ try {
             FROM alert_acknowledgments 
             WHERE alert_type = ? 
             AND alert_timestamp > ?
-            AND acknowledged_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+            AND acknowledged_at >= DATE_SUB(NOW(), INTERVAL 5 HOUR)
             ORDER BY acknowledged_at DESC 
             LIMIT 1
         ";

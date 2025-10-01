@@ -764,7 +764,7 @@ try {
                     const now = new Date();
                     data.data.forEach(report => {
                         const ackTime = new Date(report.acknowledged_at);
-                        if ((now - ackTime) < 24 * 60 * 60 * 1000) {
+                        if ((now - ackTime) < 5 * 60 * 60 * 1000) { // 5 hours
                             acknowledgedAlerts.add(report.alert_type);
                         }
                     });
@@ -915,6 +915,127 @@ try {
                     showNotification('Alert acknowledged successfully!', 'success');
                 } else {
                     showNotification('Failed to acknowledge alert. Please try again.', 'error');
+                }
+            });
+        }
+
+        // Show bulk acknowledgment modal
+        function showBulkAcknowledgmentModal(alerts) {
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            
+            const alertSummary = alerts.map(alert => 
+                `${alert.parameter}: ${alert.value} (${alert.type.toUpperCase()})`
+            ).join('<br>');
+            
+            modal.innerHTML = `
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md mx-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                            <i class="fas fa-check-circle text-amber-500 mr-2"></i>
+                            Acknowledge All Alerts
+                        </h3>
+                        <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="mb-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <h4 class="font-medium text-gray-900 dark:text-white mb-2">Alerts to Acknowledge:</h4>
+                        <div class="text-sm text-gray-700 dark:text-gray-300">${alertSummary}</div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                            <i class="fas fa-info-circle mr-1"></i>This will acknowledge ${alerts.length} alert(s)
+                        </p>
+                    </div>
+                    
+                    <form id="bulkAcknowledgeForm">
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Action Taken <span class="text-red-500">*</span>
+                            </label>
+                            <select name="action_taken" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+                                <option value="">Select action...</option>
+                                <option value="investigated">Investigated Issue</option>
+                                <option value="corrected">Corrected Problem</option>
+                                <option value="monitoring">Monitoring Closely</option>
+                                <option value="maintenance">Scheduled Maintenance</option>
+                                <option value="reported">Reported to Supervisor</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Additional Details
+                            </label>
+                            <textarea name="details" rows="3" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500" placeholder="Describe what was done to address these alerts..."></textarea>
+                        </div>
+                        
+                        <div class="mb-6">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Responsible Person <span class="text-red-500">*</span>
+                            </label>
+                            <input type="text" name="responsible_person" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500" placeholder="Enter your name">
+                        </div>
+                        
+                        <div class="flex space-x-3">
+                            <button type="submit" class="flex-1 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                                <i class="fas fa-check mr-2"></i>Acknowledge All
+                            </button>
+                            <button type="button" onclick="this.closest('.fixed').remove()" class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                                Cancel
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // Handle form submission
+            modal.querySelector('#bulkAcknowledgeForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const formData = new FormData(e.target);
+                const actionTaken = formData.get('action_taken');
+                const details = formData.get('details');
+                const responsiblePerson = formData.get('responsible_person');
+                
+                let successCount = 0;
+                let failCount = 0;
+                
+                // Acknowledge each alert
+                for (const alert of alerts) {
+                    const alertType = alert.parameter.toLowerCase().replace(' ', '');
+                    const success = await submitAcknowledgment(
+                        alertType,
+                        alert.message,
+                        alert.time,
+                        actionTaken,
+                        details,
+                        responsiblePerson,
+                        { value: alert.value }
+                    );
+                    
+                    if (success) {
+                        acknowledgedAlerts.add(alertType);
+                        successCount++;
+                    } else {
+                        failCount++;
+                    }
+                }
+                
+                modal.remove();
+                
+                if (successCount > 0) {
+                    showNotification(`Successfully acknowledged ${successCount} alert(s)`, 'success');
+                    updateActiveAlerts(alertHistory.filter(a => a.type === 'critical' || a.type === 'warning'));
+                    loadAcknowledgmentStats();
+                    refreshAcknowledgmentReports();
+                }
+                
+                if (failCount > 0) {
+                    showNotification(`Failed to acknowledge ${failCount} alert(s)`, 'error');
                 }
             });
         }
@@ -1396,32 +1517,23 @@ try {
                 updateAlertStatistics([]);
             }
         });
-        document.getElementById('acknowledgeAll').addEventListener('click', async () => {
-            if (confirm('Are you sure you want to acknowledge all active alerts?')) {
-                const activeAlerts = alertHistory.filter(a => a.type === 'critical' || a.type === 'warning');
-                const acknowledgmentAlerts = activeAlerts.filter(alert => 
-                    (alert.type === 'critical' && alert.message.includes('turbidity')) ||
-                    (alert.type === 'critical' && alert.message.includes('TDS')) ||
-                    (alert.type === 'critical' && alert.message.includes('pH')) ||
-                    (alert.type === 'warning' && alert.message.includes('TDS')) ||
-                    (alert.type === 'warning' && alert.message.includes('pH'))
-                );
+        document.getElementById('acknowledgeAll').addEventListener('click', () => {
+            const activeAlerts = alertHistory.filter(a => a.type === 'critical' || a.type === 'warning');
+            const acknowledgmentAlerts = activeAlerts.filter(alert => 
+                (alert.type === 'critical' && alert.message.includes('turbidity')) ||
+                (alert.type === 'critical' && alert.message.includes('TDS')) ||
+                (alert.type === 'critical' && alert.message.includes('pH')) ||
+                (alert.type === 'warning' && alert.message.includes('TDS')) ||
+                (alert.type === 'warning' && alert.message.includes('pH'))
+            );
 
-                if (acknowledgmentAlerts.length === 0) {
-                    showNotification('No alerts available for acknowledgment', 'info');
-                    return;
-                }
-
-                // Show acknowledgment modal for each alert
-                for (const alert of acknowledgmentAlerts) {
-                    await acknowledgeAlertInBulk(alert);
-                }
-
-                showNotification(`Successfully acknowledged ${acknowledgmentAlerts.length} alerts`, 'success');
-                updateActiveAlerts(alertHistory.filter(a => a.type === 'critical' || a.type === 'warning'));
-                loadAcknowledgmentStats();
-                refreshAcknowledgmentReports();
+            if (acknowledgmentAlerts.length === 0) {
+                showNotification('No alerts available for acknowledgment', 'info');
+                return;
             }
+
+            // Show bulk acknowledgment modal
+            showBulkAcknowledgmentModal(acknowledgmentAlerts);
         });
         document.getElementById('filterType').addEventListener('change', () => {
             currentPage = 1; // Reset to first page when filter changes
