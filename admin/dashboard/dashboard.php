@@ -1047,17 +1047,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             const alertsContainer = document.getElementById('waterQualityAlerts');
             const alerts = evaluateWaterQuality(turbidity, tds, ph, temperature);
             
-            // Filter alerts that need acknowledgment (danger level turbidity, TDS, and pH)
+            // Filter alerts that need acknowledgment (danger level turbidity, TDS, and pH; warning level TDS and pH)
             const acknowledgmentAlerts = alerts.filter(alert => 
-                alert.type === 'danger' && 
-                (alert.message.includes('turbidity') || alert.message.includes('TDS') || alert.message.includes('pH'))
+                (alert.type === 'danger' && alert.message.includes('turbidity')) ||
+                (alert.type === 'danger' && alert.message.includes('TDS')) ||
+                (alert.type === 'danger' && alert.message.includes('pH')) ||
+                (alert.type === 'warning' && alert.message.includes('TDS')) ||
+                (alert.type === 'warning' && alert.message.includes('pH'))
             );
             
-            // Update unacknowledged alerts - only add if not already acknowledged
+            // Update unacknowledged alerts - create unique keys for each alert instance
             acknowledgmentAlerts.forEach(alert => {
-                const alertKey = alert.message.includes('turbidity') ? 'turbidity' : 
-                                alert.message.includes('TDS') ? 'tds' : 'ph';
+                const alertType = alert.message.includes('turbidity') ? 'turbidity' : 
+                                 alert.message.includes('TDS') ? 'tds' : 'ph';
+                const alertLevel = alert.type; // 'danger' or 'warning'
                 const now = new Date();
+                
+                // Create a unique key that includes type and level for better tracking
+                const alertKey = `${alertType}_${alertLevel}`;
                 const lastCheck = lastAlertCheck.get(alertKey);
                 
                 // Only check database every 30 seconds to avoid too many requests
@@ -1065,7 +1072,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     lastAlertCheck.set(alertKey, now);
                     
                     // Check if already acknowledged in database
-                    checkAlertAcknowledged(alertKey, alert.message, now.toISOString()).then(isAcknowledged => {
+                    checkAlertAcknowledged(alertType, alert.message, now.toISOString()).then(isAcknowledged => {
                         if (isAcknowledged) {
                             acknowledgedAlerts.add(alertKey);
                             unacknowledgedAlerts.delete(alertKey);
@@ -1076,9 +1083,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     });
                 }
                 
+                // Only add to unacknowledged if not already tracked
                 if (!unacknowledgedAlerts.has(alertKey) && !acknowledgedAlerts.has(alertKey)) {
                     unacknowledgedAlerts.set(alertKey, {
                         alert: alert,
+                        alertType: alertType,
+                        alertLevel: alertLevel,
                         timestamp: new Date(),
                         values: { turbidity, tds, ph, temperature }
                     });
@@ -1089,9 +1099,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             updateUnacknowledgedCount();
             
             alertsContainer.innerHTML = alerts.map(alert => {
-                const alertKey = alert.message.includes('turbidity') ? 'turbidity' : 
-                                alert.message.includes('TDS') ? 'tds' :
-                                alert.message.includes('pH') ? 'ph' : null;
+                const alertType = alert.message.includes('turbidity') ? 'turbidity' : 
+                                 alert.message.includes('TDS') ? 'tds' :
+                                 alert.message.includes('pH') ? 'ph' : null;
+                const alertLevel = alert.type;
+                const alertKey = alertType ? `${alertType}_${alertLevel}` : null;
                 const isUnacknowledged = alertKey && unacknowledgedAlerts.has(alertKey);
                 const isAcknowledged = alertKey && acknowledgedAlerts.has(alertKey);
                 
@@ -1192,7 +1204,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             const formData = new FormData(this);
             const acknowledgeData = {
-                alert_type: currentAlertData.key,
+                alert_type: currentAlertData.data.alertType, // Use the actual alert type (turbidity, tds, ph)
                 alert_message: currentAlertData.data.alert.message,
                 action_taken: formData.get('action_taken'),
                 details: formData.get('details'),
@@ -1274,14 +1286,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 const data = await response.json();
                 if (data.success && data.data) {
-                    // Mark recent acknowledgments as acknowledged
+                    // Mark recent acknowledgments as acknowledged (only very recent ones)
                     const now = new Date();
                     data.data.forEach(report => {
                         const ackTime = new Date(report.acknowledged_at);
-                        const alertTime = new Date(report.alert_timestamp);
                         
-                        // If acknowledged within last 24 hours, mark as acknowledged
-                        if ((now - ackTime) < 24 * 60 * 60 * 1000) {
+                        // Only mark as acknowledged if acknowledged within last 2 hours
+                        // This ensures new alerts are properly detected
+                        if ((now - ackTime) < 2 * 60 * 60 * 1000) {
+                            // Create key with alert type only (since we don't have level info from DB)
                             acknowledgedAlerts.add(report.alert_type);
                         }
                     });

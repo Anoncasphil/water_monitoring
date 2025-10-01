@@ -56,31 +56,34 @@ try {
         exit();
     }
     
-    // Check if there's an acknowledgment for this alert type within the last 24 hours
+    // Check if there's an acknowledgment for this specific alert message within the last 2 hours
+    // This is more restrictive to ensure new alerts are properly tracked
     $query = "
         SELECT COUNT(*) as count 
         FROM alert_acknowledgments 
         WHERE alert_type = ? 
-        AND acknowledged_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+        AND alert_message = ?
+        AND acknowledged_at >= DATE_SUB(NOW(), INTERVAL 2 HOUR)
         ORDER BY acknowledged_at DESC 
         LIMIT 1
     ";
     
     $stmt = $conn->prepare($query);
-    $stmt->bind_param("s", $alertType);
+    $stmt->bind_param("ss", $alertType, $alertMessage);
     $stmt->execute();
     $result = $stmt->get_result();
     $row = $result->fetch_assoc();
     
     $acknowledged = ($row['count'] > 0);
     
-    // If we have a specific timestamp, check for acknowledgments after that time
-    if ($alertTimestamp && !$acknowledged) {
+    // If not acknowledged and we have a specific timestamp, check for recent acknowledgments
+    if (!$acknowledged && $alertTimestamp) {
         $timestampQuery = "
             SELECT COUNT(*) as count 
             FROM alert_acknowledgments 
             WHERE alert_type = ? 
             AND alert_timestamp >= ?
+            AND acknowledged_at >= DATE_SUB(NOW(), INTERVAL 2 HOUR)
             ORDER BY acknowledged_at DESC 
             LIMIT 1
         ";
