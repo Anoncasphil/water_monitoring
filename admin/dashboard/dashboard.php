@@ -9,6 +9,26 @@ if (!isset($_SESSION['user_id'])) {
 
 require_once '../../config/database.php';
 
+// Get current user information
+$currentUser = null;
+if (isset($_SESSION['user_id'])) {
+    try {
+        $db = Database::getInstance();
+        $conn = $db->getConnection();
+        
+        $stmt = $conn->prepare("SELECT username, full_name, email FROM users WHERE id = ?");
+        $stmt->bind_param("i", $_SESSION['user_id']);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        if ($result->num_rows > 0) {
+            $currentUser = $result->fetch_assoc();
+        }
+    } catch (Exception $e) {
+        // User info not critical, continue without it
+    }
+}
+
 // Handle POST request from Arduino
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $turbidity = isset($_POST['turbidity']) ? floatval($_POST['turbidity']) : null;
@@ -234,8 +254,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         Water Quality Status
                     </h5>
                     <div class="flex items-center space-x-2">
-                        <span id="unacknowledgedCount" class="hidden px-2 py-1 text-xs bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-300 rounded-full">
-                            <i class="fas fa-exclamation-circle mr-1"></i>
+                        <span id="unacknowledgedCount" class="hidden px-3 py-1 text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700 rounded-full">
+                            <i class="fas fa-exclamation-triangle mr-1"></i>
                             <span id="unackCount">0</span> Unacknowledged
                         </span>
                     </div>
@@ -359,22 +379,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 
     <!-- Acknowledgment Modal -->
-    <div id="acknowledgeModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
-        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white dark:bg-gray-800">
+    <div id="acknowledgeModal" class="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+        <div class="relative top-20 mx-auto p-6 border border-gray-200 dark:border-gray-700 w-full max-w-md shadow-2xl rounded-xl bg-white dark:bg-gray-800">
             <div class="mt-3">
                 <!-- Modal Header -->
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-semibold text-gray-800 dark:text-white">
-                        <i class="fas fa-exclamation-triangle text-yellow-500 mr-2"></i>
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
+                        <i class="fas fa-shield-alt text-amber-500 mr-3"></i>
                         Acknowledge Alert
                     </h3>
-                    <button id="closeModal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                        <i class="fas fa-times text-xl"></i>
+                    <button id="closeModal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                        <i class="fas fa-times text-lg"></i>
                     </button>
                 </div>
                 
                 <!-- Alert Details -->
-                <div id="modalAlertDetails" class="mb-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                <div id="modalAlertDetails" class="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
                     <!-- Alert details will be inserted here -->
                 </div>
                 
@@ -384,7 +404,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                             Action Taken <span class="text-red-500">*</span>
                         </label>
-                        <select id="actionTaken" name="action_taken" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <select id="actionTaken" name="action_taken" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
                             <option value="">Select an action...</option>
                             <option value="filter_replacement">Filter Replacement</option>
                             <option value="system_maintenance">System Maintenance</option>
@@ -401,7 +421,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             Details <span class="text-red-500">*</span>
                         </label>
                         <textarea id="acknowledgeDetails" name="details" required rows="3" 
-                                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
                                   placeholder="Please describe what action was taken to address this alert..."></textarea>
                     </div>
                     
@@ -410,18 +430,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             Responsible Person
                         </label>
                         <input type="text" id="responsiblePerson" name="responsible_person" 
-                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                               value="<?php echo isset($currentUser['full_name']) ? htmlspecialchars($currentUser['full_name']) : (isset($currentUser['username']) ? htmlspecialchars($currentUser['username']) : ''); ?>"
                                placeholder="Enter your name or ID">
                     </div>
                     
-                    <div class="flex justify-end space-x-3">
+                    <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
                         <button type="button" id="cancelAcknowledge" 
-                                class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md transition-colors">
+                                class="px-6 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors">
                             Cancel
                         </button>
                         <button type="submit" id="submitAcknowledge"
-                                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors">
-                            <i class="fas fa-check mr-1"></i>Acknowledge
+                                class="px-6 py-2.5 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 dark:bg-amber-700 dark:hover:bg-amber-600 rounded-lg transition-colors shadow-sm">
+                            <i class="fas fa-shield-alt mr-2"></i>Acknowledge Alert
                         </button>
                     </div>
                 </form>
@@ -983,8 +1004,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </div>
                         ${isUnacknowledged ? `
                             <button onclick="openAcknowledgeModal('${alertKey}')" 
-                                    class="ml-4 px-3 py-1 text-xs font-medium text-white bg-red-600 hover:bg-red-700 rounded-full transition-colors">
-                                <i class="fas fa-check mr-1"></i>Acknowledge
+                                    class="ml-4 px-4 py-2 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 dark:bg-amber-700 dark:hover:bg-amber-600 rounded-lg transition-colors shadow-sm">
+                                <i class="fas fa-shield-alt mr-2"></i>Acknowledge
                             </button>
                         ` : ''}
                     </div>
@@ -1101,9 +1122,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Create notification element
             const notification = document.createElement('div');
             notification.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg transition-all duration-300 ${
-                type === 'success' ? 'bg-green-500 text-white' :
-                type === 'error' ? 'bg-red-500 text-white' :
-                'bg-blue-500 text-white'
+                type === 'success' ? 'bg-emerald-500 dark:bg-emerald-600 text-white' :
+                type === 'error' ? 'bg-red-500 dark:bg-red-600 text-white' :
+                'bg-blue-500 dark:bg-blue-600 text-white'
             }`;
             notification.innerHTML = `
                 <div class="flex items-center">
@@ -1112,7 +1133,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         type === 'error' ? 'fa-exclamation-circle' :
                         'fa-info-circle'
                     } mr-2"></i>
-                    <span>${message}</span>
+                    <span class="font-medium">${message}</span>
                 </div>
             `;
             
