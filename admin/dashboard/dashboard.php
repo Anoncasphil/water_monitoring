@@ -233,6 +233,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <i class="fas fa-exclamation-triangle mr-2 text-yellow-500"></i>
                         Water Quality Status
                     </h5>
+                    <div class="flex items-center space-x-2">
+                        <span id="unacknowledgedCount" class="hidden px-2 py-1 text-xs bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-300 rounded-full">
+                            <i class="fas fa-exclamation-circle mr-1"></i>
+                            <span id="unackCount">0</span> Unacknowledged
+                        </span>
+                    </div>
                 </div>
                 <div id="waterQualityAlerts" class="space-y-4">
                     <!-- Alerts will be dynamically inserted here -->
@@ -348,6 +354,77 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="w-11 h-6 bg-gray-200 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                     </label>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Acknowledgment Modal -->
+    <div id="acknowledgeModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white dark:bg-gray-800">
+            <div class="mt-3">
+                <!-- Modal Header -->
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-800 dark:text-white">
+                        <i class="fas fa-exclamation-triangle text-yellow-500 mr-2"></i>
+                        Acknowledge Alert
+                    </h3>
+                    <button id="closeModal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                
+                <!-- Alert Details -->
+                <div id="modalAlertDetails" class="mb-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                    <!-- Alert details will be inserted here -->
+                </div>
+                
+                <!-- Acknowledgment Form -->
+                <form id="acknowledgeForm">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Action Taken <span class="text-red-500">*</span>
+                        </label>
+                        <select id="actionTaken" name="action_taken" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Select an action...</option>
+                            <option value="filter_replacement">Filter Replacement</option>
+                            <option value="system_maintenance">System Maintenance</option>
+                            <option value="chemical_treatment">Chemical Treatment</option>
+                            <option value="system_flush">System Flush</option>
+                            <option value="investigation">Under Investigation</option>
+                            <option value="manual_intervention">Manual Intervention</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Details <span class="text-red-500">*</span>
+                        </label>
+                        <textarea id="acknowledgeDetails" name="details" required rows="3" 
+                                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  placeholder="Please describe what action was taken to address this alert..."></textarea>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Responsible Person
+                        </label>
+                        <input type="text" id="responsiblePerson" name="responsible_person" 
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                               placeholder="Enter your name or ID">
+                    </div>
+                    
+                    <div class="flex justify-end space-x-3">
+                        <button type="button" id="cancelAcknowledge" 
+                                class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md transition-colors">
+                            Cancel
+                        </button>
+                        <button type="submit" id="submitAcknowledge"
+                                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors">
+                            <i class="fas fa-check mr-1"></i>Acknowledge
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -856,24 +933,200 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             return alerts;
         }
 
+        // Track unacknowledged alerts
+        let unacknowledgedAlerts = new Map();
+        let currentAlertData = null;
+
         function updateWaterQualityAlerts(turbidity, tds, ph, temperature) {
             const alertsContainer = document.getElementById('waterQualityAlerts');
             const alerts = evaluateWaterQuality(turbidity, tds, ph, temperature);
             
-            alertsContainer.innerHTML = alerts.map(alert => `
-                <div class="flex items-center p-4 rounded-lg ${
-                    alert.type === 'danger' ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300' :
-                    alert.type === 'warning' ? 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300' :
-                    'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300'
-                }">
-                    <i class="fas ${
-                        alert.type === 'danger' ? 'fa-exclamation-circle' :
-                        alert.type === 'warning' ? 'fa-exclamation-triangle' :
-                        'fa-check-circle'
-                    } mr-3"></i>
-                    <span>${alert.message}</span>
+            // Filter alerts that need acknowledgment (danger level turbidity and TDS)
+            const acknowledgmentAlerts = alerts.filter(alert => 
+                alert.type === 'danger' && 
+                (alert.message.includes('turbidity') || alert.message.includes('TDS'))
+            );
+            
+            // Update unacknowledged alerts
+            acknowledgmentAlerts.forEach(alert => {
+                const alertKey = alert.message.includes('turbidity') ? 'turbidity' : 'tds';
+                if (!unacknowledgedAlerts.has(alertKey)) {
+                    unacknowledgedAlerts.set(alertKey, {
+                        alert: alert,
+                        timestamp: new Date(),
+                        values: { turbidity, tds, ph, temperature }
+                    });
+                }
+            });
+            
+            // Update unacknowledged count
+            updateUnacknowledgedCount();
+            
+            alertsContainer.innerHTML = alerts.map(alert => {
+                const alertKey = alert.message.includes('turbidity') ? 'turbidity' : 
+                                alert.message.includes('TDS') ? 'tds' : null;
+                const isUnacknowledged = alertKey && unacknowledgedAlerts.has(alertKey);
+                
+                return `
+                    <div class="flex items-center justify-between p-4 rounded-lg ${
+                        alert.type === 'danger' ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300' :
+                        alert.type === 'warning' ? 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300' :
+                        'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300'
+                    }">
+                        <div class="flex items-center">
+                            <i class="fas ${
+                                alert.type === 'danger' ? 'fa-exclamation-circle' :
+                                alert.type === 'warning' ? 'fa-exclamation-triangle' :
+                                'fa-check-circle'
+                            } mr-3"></i>
+                            <span>${alert.message}</span>
+                        </div>
+                        ${isUnacknowledged ? `
+                            <button onclick="openAcknowledgeModal('${alertKey}')" 
+                                    class="ml-4 px-3 py-1 text-xs font-medium text-white bg-red-600 hover:bg-red-700 rounded-full transition-colors">
+                                <i class="fas fa-check mr-1"></i>Acknowledge
+                            </button>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateUnacknowledgedCount() {
+            const count = unacknowledgedAlerts.size;
+            const countElement = document.getElementById('unackCount');
+            const containerElement = document.getElementById('unacknowledgedCount');
+            
+            countElement.textContent = count;
+            if (count > 0) {
+                containerElement.classList.remove('hidden');
+            } else {
+                containerElement.classList.add('hidden');
+            }
+        }
+
+        function openAcknowledgeModal(alertKey) {
+            const alertData = unacknowledgedAlerts.get(alertKey);
+            if (!alertData) return;
+            
+            currentAlertData = { key: alertKey, data: alertData };
+            
+            // Update modal content
+            const modalDetails = document.getElementById('modalAlertDetails');
+            modalDetails.innerHTML = `
+                <div class="text-sm">
+                    <div class="font-medium mb-2">Alert Details:</div>
+                    <div class="mb-1">${alertData.alert.message}</div>
+                    <div class="text-xs text-gray-600 dark:text-gray-400">
+                        Detected at: ${alertData.timestamp.toLocaleString()}
+                    </div>
                 </div>
-            `).join('');
+            `;
+            
+            // Reset form
+            document.getElementById('acknowledgeForm').reset();
+            
+            // Show modal
+            document.getElementById('acknowledgeModal').classList.remove('hidden');
+        }
+
+        function closeAcknowledgeModal() {
+            document.getElementById('acknowledgeModal').classList.add('hidden');
+            currentAlertData = null;
+        }
+
+        // Modal event listeners
+        document.getElementById('closeModal').addEventListener('click', closeAcknowledgeModal);
+        document.getElementById('cancelAcknowledge').addEventListener('click', closeAcknowledgeModal);
+        
+        // Close modal when clicking outside
+        document.getElementById('acknowledgeModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeAcknowledgeModal();
+            }
+        });
+
+        // Handle form submission
+        document.getElementById('acknowledgeForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (!currentAlertData) return;
+            
+            const formData = new FormData(this);
+            const acknowledgeData = {
+                alert_type: currentAlertData.key,
+                alert_message: currentAlertData.data.alert.message,
+                action_taken: formData.get('action_taken'),
+                details: formData.get('details'),
+                responsible_person: formData.get('responsible_person'),
+                timestamp: currentAlertData.data.timestamp.toISOString(),
+                values: currentAlertData.data.values
+            };
+            
+            // Submit acknowledgment
+            fetch('../../api/acknowledge_alert.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(acknowledgeData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Remove from unacknowledged alerts
+                    unacknowledgedAlerts.delete(currentAlertData.key);
+                    updateUnacknowledgedCount();
+                    
+                    // Close modal
+                    closeAcknowledgeModal();
+                    
+                    // Show success message
+                    showNotification('Alert acknowledged successfully', 'success');
+                    
+                    // Refresh alerts to update UI
+                    updateData();
+                } else {
+                    showNotification('Failed to acknowledge alert: ' + (data.error || 'Unknown error'), 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('Error acknowledging alert', 'error');
+            });
+        });
+
+        function showNotification(message, type = 'info') {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg transition-all duration-300 ${
+                type === 'success' ? 'bg-green-500 text-white' :
+                type === 'error' ? 'bg-red-500 text-white' :
+                'bg-blue-500 text-white'
+            }`;
+            notification.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas ${
+                        type === 'success' ? 'fa-check-circle' :
+                        type === 'error' ? 'fa-exclamation-circle' :
+                        'fa-info-circle'
+                    } mr-2"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Remove after 5 seconds
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }, 5000);
         }
     </script>
         </div>
