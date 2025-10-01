@@ -1047,15 +1047,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             const alertsContainer = document.getElementById('waterQualityAlerts');
             const alerts = evaluateWaterQuality(turbidity, tds, ph, temperature);
             
-            // Filter alerts that need acknowledgment (danger level turbidity and TDS)
+            // Filter alerts that need acknowledgment (danger level turbidity, TDS, and pH)
             const acknowledgmentAlerts = alerts.filter(alert => 
                 alert.type === 'danger' && 
-                (alert.message.includes('turbidity') || alert.message.includes('TDS'))
+                (alert.message.includes('turbidity') || alert.message.includes('TDS') || alert.message.includes('pH'))
             );
             
             // Update unacknowledged alerts - only add if not already acknowledged
             acknowledgmentAlerts.forEach(alert => {
-                const alertKey = alert.message.includes('turbidity') ? 'turbidity' : 'tds';
+                const alertKey = alert.message.includes('turbidity') ? 'turbidity' : 
+                                alert.message.includes('TDS') ? 'tds' : 'ph';
                 const now = new Date();
                 const lastCheck = lastAlertCheck.get(alertKey);
                 
@@ -1089,7 +1090,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             alertsContainer.innerHTML = alerts.map(alert => {
                 const alertKey = alert.message.includes('turbidity') ? 'turbidity' : 
-                                alert.message.includes('TDS') ? 'tds' : null;
+                                alert.message.includes('TDS') ? 'tds' :
+                                alert.message.includes('pH') ? 'ph' : null;
                 const isUnacknowledged = alertKey && unacknowledgedAlerts.has(alertKey);
                 const isAcknowledged = alertKey && acknowledgedAlerts.has(alertKey);
                 
@@ -1382,7 +1384,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         
                         const alertTypeLabels = {
                             'turbidity': 'Turbidity',
-                            'tds': 'TDS'
+                            'tds': 'TDS',
+                            'ph': 'pH'
                         };
                         
                         const actionLabel = actionLabels[report.action_taken] || report.action_taken;
@@ -1393,9 +1396,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                                         report.alert_type === 'turbidity' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' :
-                                        'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300'
+                                        report.alert_type === 'tds' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300' :
+                                        'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300'
                                     }">
-                                        <i class="fas ${report.alert_type === 'turbidity' ? 'fa-filter' : 'fa-flask'} mr-1"></i>
+                                        <i class="fas ${
+                                            report.alert_type === 'turbidity' ? 'fa-filter' : 
+                                            report.alert_type === 'tds' ? 'fa-flask' : 'fa-vial'
+                                        } mr-1"></i>
                                         ${alertTypeLabel}
                                     </span>
                                 </td>

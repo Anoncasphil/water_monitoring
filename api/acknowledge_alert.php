@@ -45,7 +45,7 @@ try {
     $values = isset($input['values']) ? $input['values'] : [];
     
     // Validate alert type
-    if (!in_array($alertType, ['turbidity', 'tds'])) {
+    if (!in_array($alertType, ['turbidity', 'tds', 'ph'])) {
         throw new Exception('Invalid alert type');
     }
     

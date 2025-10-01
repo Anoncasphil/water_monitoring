@@ -3,7 +3,7 @@
 
 CREATE TABLE IF NOT EXISTS alert_acknowledgments (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    alert_type ENUM('turbidity', 'tds') NOT NULL COMMENT 'Type of alert that was acknowledged',
+    alert_type ENUM('turbidity', 'tds', 'ph') NOT NULL COMMENT 'Type of alert that was acknowledged',
     alert_message TEXT NOT NULL COMMENT 'The original alert message',
     action_taken VARCHAR(50) NOT NULL COMMENT 'Action taken to address the alert',
     details TEXT NOT NULL COMMENT 'Detailed description of actions taken',

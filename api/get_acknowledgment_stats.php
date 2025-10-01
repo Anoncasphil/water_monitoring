@@ -71,7 +71,7 @@ try {
         GROUP BY alert_type
     ";
     $typeResult = $conn->query($typeQuery);
-    $byType = ['turbidity' => 0, 'tds' => 0];
+    $byType = ['turbidity' => 0, 'tds' => 0, 'ph' => 0];
     while ($row = $typeResult->fetch_assoc()) {
         $byType[$row['alert_type']] = (int)$row['count'];
     }

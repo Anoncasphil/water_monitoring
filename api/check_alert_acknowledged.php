@@ -37,7 +37,7 @@ try {
     $alertTimestamp = isset($input['alert_timestamp']) ? $input['alert_timestamp'] : null;
     
     // Validate alert type
-    if (!in_array($alertType, ['turbidity', 'tds'])) {
+    if (!in_array($alertType, ['turbidity', 'tds', 'ph'])) {
         throw new Exception('Invalid alert type');
     }
     
