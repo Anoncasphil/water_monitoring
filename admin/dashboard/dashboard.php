@@ -318,6 +318,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
             </div>
             
+            <!-- Total Acknowledgments Count -->
+            <div class="mb-4">
+                <div class="text-sm text-gray-600 dark:text-gray-400">
+                    <span class="font-medium">Total Acknowledgments:</span>
+                    <span id="totalAcknowledgmentCount" class="ml-2 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-full text-xs font-medium">
+                        0
+                    </span>
+                </div>
+            </div>
+
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                     <thead>
@@ -347,6 +357,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </tr>
                     </tbody>
                 </table>
+            </div>
+
+            <!-- Pagination Controls -->
+            <div class="mt-6 flex items-center justify-between">
+                <div class="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                    <span id="ackPaginationInfo">Showing 0 to 0 of 0 results</span>
+                </div>
+                
+                <div class="flex items-center space-x-2">
+                    <button id="ackPrevPage" class="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                        <i class="fas fa-chevron-left mr-1"></i>Previous
+                    </button>
+                    
+                    <div id="ackPageNumbers" class="flex items-center space-x-1">
+                        <!-- Page numbers will be generated here -->
+                    </div>
+                    
+                    <button id="ackNextPage" class="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                        Next<i class="fas fa-chevron-right ml-1"></i>
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -1086,6 +1117,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         let acknowledgedAlerts = new Set(); // Track acknowledged alerts to prevent re-showing
         let lastAlertCheck = new Map(); // Track when we last checked for alerts
 
+        // Pagination variables for acknowledgment reports
+        let acknowledgmentReports = [];
+        let currentAckPage = 1;
+        const ackItemsPerPage = 5;
+
         // Per-sensor acknowledgment persistence (5 hours)
         const ACK_DURATION_MINUTES = 300; // 5 hours
         const ACK_STORAGE_KEY = 'sensorAcknowledgments';
@@ -1525,80 +1561,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             })
             .then(data => {
                 if (data.success && data.data) {
-                    const tableBody = document.getElementById('acknowledgmentReportsTable');
+                    // Store all reports and reset to first page
+                    acknowledgmentReports = data.data;
+                    currentAckPage = 1;
                     
-                    if (data.data.length === 0) {
-                        tableBody.innerHTML = `
-                            <tr>
-                                <td colspan="5" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
-                                    <i class="fas fa-clipboard-list mr-2"></i>No acknowledgment reports found
-                                </td>
-                            </tr>
-                        `;
-                        return;
-                    }
+                    // Update total count
+                    document.getElementById('totalAcknowledgmentCount').textContent = acknowledgmentReports.length;
                     
-                    tableBody.innerHTML = data.data.map(report => {
-                        const actionLabels = {
-                            'filter_replacement': 'Filter Replacement',
-                            'system_maintenance': 'System Maintenance',
-                            'chemical_treatment': 'Chemical Treatment',
-                            'system_flush': 'System Flush',
-                            'investigation': 'Under Investigation',
-                            'manual_intervention': 'Manual Intervention',
-                            'other': 'Other'
-                        };
-                        
-                        const alertTypeLabels = {
-                            'turbidity': 'Turbidity',
-                            'tds': 'TDS',
-                            'ph': 'pH'
-                        };
-                        
-                        const actionLabel = actionLabels[report.action_taken] || report.action_taken;
-                        const alertTypeLabel = alertTypeLabels[report.alert_type] || report.alert_type;
-                        
-                        return `
-                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
-                                <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                        report.alert_type === 'turbidity' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' :
-                                        report.alert_type === 'tds' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300' :
-                                        'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300'
-                                    }">
-                                        <i class="fas ${
-                                            report.alert_type === 'turbidity' ? 'fa-filter' : 
-                                            report.alert_type === 'tds' ? 'fa-flask' : 'fa-vial'
-                                        } mr-1"></i>
-                                        ${alertTypeLabel}
-                                    </span>
-                                </td>
-                                <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">
-                                    <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300">
-                                        <i class="fas fa-tools mr-1"></i>
-                                        ${actionLabel}
-                                    </span>
-                                </td>
-                                <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">
-                                    <div class="flex items-center">
-                                        <i class="fas fa-user-circle mr-2 text-gray-400"></i>
-                                        ${report.responsible_person || 'Unknown'}
-                                    </div>
-                                </td>
-                                <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">
-                                    <div class="flex items-center">
-                                        <i class="fas fa-clock mr-2 text-gray-400"></i>
-                                        ${formatDate(report.acknowledged_at)}
-                                    </div>
-                                </td>
-                                <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300 max-w-xs">
-                                    <div class="truncate" title="${report.details}">
-                                        ${report.details}
-                                    </div>
-                                </td>
-                            </tr>
-                        `;
-                    }).join('');
+                    // Render paginated table
+                    renderAcknowledgmentReports();
                 } else {
                     throw new Error(data.error || 'Failed to load acknowledgment reports');
                 }
@@ -1613,7 +1584,174 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </td>
                     </tr>
                 `;
+                updateAcknowledgmentPaginationInfo();
             });
+        }
+
+        function renderAcknowledgmentReports() {
+            const tableBody = document.getElementById('acknowledgmentReportsTable');
+            
+            if (acknowledgmentReports.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                            <i class="fas fa-clipboard-list mr-2"></i>No acknowledgment reports found
+                        </td>
+                    </tr>
+                `;
+                updateAcknowledgmentPaginationInfo();
+                return;
+            }
+            
+            // Calculate pagination
+            const startIndex = (currentAckPage - 1) * ackItemsPerPage;
+            const endIndex = startIndex + ackItemsPerPage;
+            const paginatedReports = acknowledgmentReports.slice(startIndex, endIndex);
+            
+            tableBody.innerHTML = paginatedReports.map(report => {
+                const actionLabels = {
+                    'filter_replacement': 'Filter Replacement',
+                    'system_maintenance': 'System Maintenance',
+                    'chemical_treatment': 'Chemical Treatment',
+                    'system_flush': 'System Flush',
+                    'investigation': 'Under Investigation',
+                    'manual_intervention': 'Manual Intervention',
+                    'other': 'Other'
+                };
+                
+                const alertTypeLabels = {
+                    'turbidity': 'Turbidity',
+                    'tds': 'TDS',
+                    'ph': 'pH'
+                };
+                
+                const actionLabel = actionLabels[report.action_taken] || report.action_taken;
+                const alertTypeLabel = alertTypeLabels[report.alert_type] || report.alert_type;
+                
+                return `
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                report.alert_type === 'turbidity' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' :
+                                report.alert_type === 'tds' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300' :
+                                'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300'
+                            }">
+                                <i class="fas ${
+                                    report.alert_type === 'turbidity' ? 'fa-filter' : 
+                                    report.alert_type === 'tds' ? 'fa-flask' : 'fa-vial'
+                                } mr-1"></i>
+                                ${alertTypeLabel}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">
+                            <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300">
+                                <i class="fas fa-tools mr-1"></i>
+                                ${actionLabel}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">
+                            <div class="flex items-center">
+                                <i class="fas fa-user-circle mr-2 text-gray-400"></i>
+                                ${report.responsible_person || 'Unknown'}
+                            </div>
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">
+                            <div class="flex items-center">
+                                <i class="fas fa-clock mr-2 text-gray-400"></i>
+                                ${formatDate(report.acknowledged_at)}
+                            </div>
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300 max-w-xs">
+                            <div class="truncate" title="${report.details}">
+                                ${report.details}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            
+            updateAcknowledgmentPaginationInfo();
+            updateAcknowledgmentPaginationButtons();
+        }
+
+        function updateAcknowledgmentPaginationInfo() {
+            const totalPages = Math.ceil(acknowledgmentReports.length / ackItemsPerPage);
+            const startIndex = (currentAckPage - 1) * ackItemsPerPage + 1;
+            const endIndex = Math.min(currentAckPage * ackItemsPerPage, acknowledgmentReports.length);
+            
+            const paginationInfo = document.getElementById('ackPaginationInfo');
+            if (acknowledgmentReports.length === 0) {
+                paginationInfo.textContent = 'Showing 0 to 0 of 0 results';
+            } else {
+                paginationInfo.textContent = `Showing ${startIndex} to ${endIndex} of ${acknowledgmentReports.length} results`;
+            }
+        }
+
+        function updateAcknowledgmentPaginationButtons() {
+            const totalPages = Math.ceil(acknowledgmentReports.length / ackItemsPerPage);
+            const prevButton = document.getElementById('ackPrevPage');
+            const nextButton = document.getElementById('ackNextPage');
+            const pageNumbersContainer = document.getElementById('ackPageNumbers');
+            
+            // Update prev/next buttons
+            prevButton.disabled = currentAckPage <= 1;
+            nextButton.disabled = currentAckPage >= totalPages;
+            
+            // Generate page numbers
+            pageNumbersContainer.innerHTML = '';
+            
+            if (totalPages <= 7) {
+                // Show all pages if 7 or fewer
+                for (let i = 1; i <= totalPages; i++) {
+                    pageNumbersContainer.appendChild(createAcknowledgmentPageNumberButton(i));
+                }
+            } else {
+                // Show first page, last page, current page, and pages around current
+                if (currentAckPage > 3) {
+                    pageNumbersContainer.appendChild(createAcknowledgmentPageNumberButton(1));
+                    if (currentAckPage > 4) {
+                        pageNumbersContainer.appendChild(createAcknowledgmentPageNumberButton('...'));
+                    }
+                }
+                
+                const start = Math.max(1, currentAckPage - 2);
+                const end = Math.min(totalPages, currentAckPage + 2);
+                
+                for (let i = start; i <= end; i++) {
+                    pageNumbersContainer.appendChild(createAcknowledgmentPageNumberButton(i));
+                }
+                
+                if (currentAckPage < totalPages - 2) {
+                    if (currentAckPage < totalPages - 3) {
+                        pageNumbersContainer.appendChild(createAcknowledgmentPageNumberButton('...'));
+                    }
+                    pageNumbersContainer.appendChild(createAcknowledgmentPageNumberButton(totalPages));
+                }
+            }
+        }
+
+        function createAcknowledgmentPageNumberButton(page) {
+            const button = document.createElement('button');
+            button.className = `px-3 py-1 text-sm rounded-lg transition-colors ${
+                page === currentAckPage 
+                    ? 'bg-blue-500 text-white' 
+                    : page === '...'
+                        ? 'text-gray-500 dark:text-gray-400 cursor-default'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+            }`;
+            button.textContent = page;
+            button.disabled = page === '...';
+            
+            if (page !== '...') {
+                button.addEventListener('click', () => goToAcknowledgmentPage(page));
+            }
+            
+            return button;
+        }
+
+        function goToAcknowledgmentPage(page) {
+            currentAckPage = page;
+            renderAcknowledgmentReports();
         }
 
         // Export acknowledgment reports to CSV
@@ -1709,12 +1847,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }, 5000);
         }
         
-        // Add event listener for export button
+        // Add event listeners for export button and pagination
         document.addEventListener('DOMContentLoaded', function() {
             const exportBtn = document.getElementById('exportAcknowledgmentReports');
             if (exportBtn) {
                 exportBtn.addEventListener('click', exportAcknowledgmentReports);
             }
+            
+            // Pagination event listeners
+            document.getElementById('ackPrevPage').addEventListener('click', () => {
+                if (currentAckPage > 1) {
+                    currentAckPage--;
+                    renderAcknowledgmentReports();
+                }
+            });
+            
+            document.getElementById('ackNextPage').addEventListener('click', () => {
+                const totalPages = Math.ceil(acknowledgmentReports.length / ackItemsPerPage);
+                if (currentAckPage < totalPages) {
+                    currentAckPage++;
+                    renderAcknowledgmentReports();
+                }
+            });
         });
     </script>
         </div>
