@@ -46,6 +46,10 @@ try {
     
     switch ($method) {
         case 'GET':
+            // First, deactivate expired acknowledgments
+            $deactivateExpired = "UPDATE acknowledgment_tracker SET is_active = FALSE WHERE expires_at <= NOW() AND is_active = TRUE";
+            $conn->query($deactivateExpired);
+            
             // Get current acknowledgment status
             $query = "
                 SELECT 

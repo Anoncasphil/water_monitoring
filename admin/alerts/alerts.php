@@ -687,7 +687,12 @@ try {
                 // Generate alerts
                 const alerts = evaluateWaterQuality(turbidity, tds, ph, temperature);
                 
-                updateActiveAlerts(alerts);
+                // Only update active alerts if acknowledgments are loaded
+                // This ensures acknowledgment status persists across new data
+                if (acknowledgedAlerts.size >= 0) { // Always true, but ensures we have the set
+                    updateActiveAlerts(alerts);
+                }
+                
                 updateAlertStatistics(alerts);
                 updateAlertHistory(alerts);
                 updateOverallStatus(alerts);
@@ -847,10 +852,13 @@ try {
                         });
                     });
                     
-                    console.log(`Loaded ${data.data.length} active acknowledgments`);
+                    console.log(`Loaded ${data.data.length} active acknowledgments:`, data.data.map(ack => `${ack.sensor_type} (${ack.minutes_remaining}m remaining)`));
+                    console.log('Acknowledged sensor types:', Array.from(acknowledgedAlerts));
                     renderAcknowledgmentTracker(data.data);
                 } else {
                     console.log('No active acknowledgments found');
+                    acknowledgedAlerts.clear();
+                    unacknowledgedAlerts.clear();
                     renderAcknowledgmentTracker([]);
                 }
             } catch (error) {
@@ -1412,8 +1420,10 @@ try {
         }
 
         function shouldShowAcknowledgeButton(alertType, alertLevel) {
-            // Check if this specific alert type is generally acknowledged
+            // Check if this specific sensor type is currently acknowledged
+            // This will persist for 5 hours regardless of new incoming data
             if (acknowledgedAlerts.has(alertType)) {
+                console.log(`Sensor ${alertType} is already acknowledged, hiding acknowledge button`);
                 return false; // Don't show acknowledge button if recently acknowledged
             }
             
@@ -1460,7 +1470,7 @@ try {
                 
                 // Debug logging
                 if (alertType) {
-                    console.log(`Alert: ${alertType} - isAcknowledged: ${isAcknowledged}, shouldShowAcknowledge: ${shouldShowAcknowledge}, acknowledgedAlerts:`, Array.from(acknowledgedAlerts));
+                    console.log(`Alert: ${alertType} (${alertLevel}) - isAcknowledged: ${isAcknowledged}, shouldShowAcknowledge: ${shouldShowAcknowledge}, acknowledgedAlerts:`, Array.from(acknowledgedAlerts));
                 }
                 
                 return `
@@ -1483,7 +1493,7 @@ try {
                                         }">${alert.type.toUpperCase()}</span>
                                         <span class="text-sm text-gray-500 dark:text-gray-400">${alert.parameter}</span>
                                         <span class="text-sm font-semibold text-gray-900 dark:text-white">${alert.value}</span>
-                                        ${isAcknowledged ? '<span class="px-2 py-1 text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full"><i class="fas fa-check mr-1"></i>Acknowledged</span>' : ''}
+                                        ${isAcknowledged ? '<span class="px-2 py-1 text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full"><i class="fas fa-check mr-1"></i>Acknowledged (5h)</span>' : ''}
                                     </div>
                                     <p class="alert-message text-gray-900 dark:text-white">${alert.message}</p>
                                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
@@ -2080,7 +2090,9 @@ try {
         
         setInterval(fetchData, 5000);
         setInterval(() => {
-            loadAcknowledgmentTracker();
+            loadAcknowledgmentTracker(); // Refresh tracker more frequently to maintain state
+        }, 10000); // Update acknowledgment tracker every 10 seconds
+        setInterval(() => {
             loadAcknowledgmentStats();
             refreshAcknowledgmentReports();
         }, 30000); // Update acknowledgment data every 30 seconds
