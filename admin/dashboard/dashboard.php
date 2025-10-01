@@ -1189,7 +1189,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             });
             
-            // Update unacknowledged count
+            // Clean up unacknowledged alerts that are now acknowledged
+            unacknowledgedAlerts.forEach((alertData, alertKey) => {
+                const alertType = alertData.alertType;
+                if (acknowledgedAlerts.has(alertType) || isSensorAcknowledged(alertType)) {
+                    unacknowledgedAlerts.delete(alertKey);
+                    console.log(`Removed acknowledged alert from unacknowledged: ${alertKey}`);
+                }
+            });
+            
+            // Update unacknowledged count after processing all alerts
             updateUnacknowledgedCount();
             
             alertsContainer.innerHTML = alerts.map(alert => {
@@ -1244,7 +1253,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         function updateUnacknowledgedCount() {
-            const count = unacknowledgedAlerts.size;
+            // Count only unacknowledged alerts that are not acknowledged
+            let count = 0;
+            unacknowledgedAlerts.forEach((alertData, alertKey) => {
+                const alertType = alertData.alertType;
+                // Only count if the alert type is not acknowledged (either in server or local storage)
+                if (!acknowledgedAlerts.has(alertType) && !isSensorAcknowledged(alertType)) {
+                    count++;
+                }
+            });
+            
             const countElement = document.getElementById('unackCount');
             const containerElement = document.getElementById('unacknowledgedCount');
             
@@ -1254,6 +1272,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 containerElement.classList.add('hidden');
             }
+            
+            console.log(`Unacknowledged count updated: ${count} (total unacknowledged: ${unacknowledgedAlerts.size}, acknowledged: ${acknowledgedAlerts.size})`);
         }
 
         function openAcknowledgeModal(alertKey) {
@@ -1334,7 +1354,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (data.success) {
                     // Remove from unacknowledged alerts and add to acknowledged
                     unacknowledgedAlerts.delete(currentAlertData.key);
-                    acknowledgedAlerts.add(currentAlertData.key);
+                    acknowledgedAlerts.add(currentAlertData.data.alertType); // Use alertType, not key
                     
                     // Persist per-sensor acknowledgment for 5 hours locally
                     setSensorAcknowledged(currentAlertData.data.alertType);
