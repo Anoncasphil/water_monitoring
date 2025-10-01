@@ -272,16 +272,16 @@ try {
                     </div>
                     <div class="space-y-3">
                         <div class="flex justify-between text-sm">
-                            <span class="text-gray-500 dark:text-gray-400">Optimal</span>
-                            <span class="text-green-600 dark:text-green-400 font-medium">26-28°C</span>
+                            <span class="text-gray-500 dark:text-gray-400">Good</span>
+                            <span class="text-green-600 dark:text-green-400 font-medium">15-25°C</span>
                         </div>
                         <div class="flex justify-between text-sm">
-                            <span class="text-gray-500 dark:text-gray-400">Acceptable</span>
-                            <span class="text-yellow-600 dark:text-yellow-400 font-medium">24-30°C</span>
+                            <span class="text-gray-500 dark:text-gray-400">Medium</span>
+                            <span class="text-yellow-600 dark:text-yellow-400 font-medium">10-30°C</span>
                         </div>
                         <div class="flex justify-between text-sm">
                             <span class="text-gray-500 dark:text-gray-400">Critical</span>
-                            <span class="text-red-600 dark:text-red-400 font-medium">< 24°C or > 30°C</span>
+                            <span class="text-red-600 dark:text-red-400 font-medium">< 10°C or > 30°C</span>
                         </div>
                     </div>
                 </div>
@@ -347,9 +347,9 @@ try {
         }
 
         function getTemperatureStatus(value) {
-            // Pool temperature standards
-            if (value >= 26 && value <= 28) return { status: 'Optimal', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' };
-            if (value >= 24 && value <= 30) return { status: 'Acceptable', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' };
+            // Realistic water temperature standards
+            if (value >= 15 && value <= 25) return { status: 'Good', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' };
+            if (value >= 10 && value <= 30) return { status: 'Medium', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' };
             return { status: 'Critical', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' };
         }
 
@@ -437,9 +437,9 @@ try {
             else if ((ph >= 4 && ph < 6) || (ph > 8 && ph <= 10)) { alerts.push({ type: 'warning', title: 'pH Level', message: 'Medium pH - monitor and adjust as needed', icon: 'fa-exclamation-triangle' }); overallScore += 0.5; }
             else { alerts.push({ type: 'danger', title: 'pH Level', message: 'Critical pH - immediate adjustment needed', icon: 'fa-exclamation-circle' }); }
 
-            if (temperature >= 26 && temperature <= 28) { alerts.push({ type: 'success', title: 'Temperature', message: 'Optimal pool temperature', icon: 'fa-check-circle' }); overallScore++; }
-            else if (temperature >= 24 && temperature <= 30) { alerts.push({ type: 'warning', title: 'Temperature', message: 'Acceptable temperature - monitor trends', icon: 'fa-exclamation-triangle' }); overallScore += 0.5; }
-            else { alerts.push({ type: 'danger', title: 'Temperature', message: 'Critical temperature - check system', icon: 'fa-exclamation-circle' }); }
+            if (temperature >= 15 && temperature <= 25) { alerts.push({ type: 'success', title: 'Temperature', message: 'Good water temperature', icon: 'fa-check-circle' }); overallScore++; }
+            else if (temperature >= 10 && temperature <= 30) { alerts.push({ type: 'warning', title: 'Temperature', message: 'Medium temperature - monitor closely', icon: 'fa-exclamation-triangle' }); overallScore += 0.5; }
+            else { alerts.push({ type: 'danger', title: 'Temperature', message: 'Critical temperature - immediate attention needed', icon: 'fa-exclamation-circle' }); }
 
             // Determine overall status
             const overallPercentage = (overallScore / totalParameters) * 100;

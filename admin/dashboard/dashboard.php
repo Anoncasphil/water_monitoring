@@ -1052,9 +1052,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 danger: { min: 0, max: 14 }      // Critical range (below 4 and above 10)
             },
             temperature: {
-                good: { min: 26, max: 28 },    // °C (Pool optimal)
-                warning: { min: 24, max: 30 }, // °C (Pool acceptable)
-                danger: { min: 22, max: 32 }   // °C (Pool critical)
+                good: { min: 15, max: 25 },    // °C (Optimal for most water systems)
+                warning: { min: 10, max: 30 }, // °C (Acceptable range)
+                danger: { min: 5, max: 35 }    // °C (Critical range)
             }
         };
 
@@ -1130,21 +1130,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 });
             }
 
-            // Evaluate Temperature (Pool standards)
+            // Evaluate Temperature (Realistic water quality standards)
             if (temperature < thresholds.temperature.danger.min || temperature > thresholds.temperature.danger.max) {
                 alerts.push({
                     type: 'danger',
-                    message: `Critical temperature (${temperature.toFixed(1)}°C) - Pool water temperature is unsafe`
+                    message: `Critical temperature (${temperature.toFixed(1)}°C) - Water temperature is outside safe range`
                 });
             } else if (temperature < thresholds.temperature.warning.min || temperature > thresholds.temperature.warning.max) {
                 alerts.push({
                     type: 'warning',
-                    message: `Unusual temperature (${temperature.toFixed(1)}°C) - Monitor pool water temperature`
+                    message: `Unusual temperature (${temperature.toFixed(1)}°C) - Monitor water temperature closely`
                 });
             } else if (temperature >= thresholds.temperature.good.min && temperature <= thresholds.temperature.good.max) {
                 alerts.push({
                     type: 'success',
-                    message: `Optimal temperature (${temperature.toFixed(1)}°C) - Pool water is at ideal temperature`
+                    message: `Good temperature (${temperature.toFixed(1)}°C) - Water is at optimal temperature`
                 });
             }
 
