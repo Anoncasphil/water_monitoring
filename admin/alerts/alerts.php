@@ -389,6 +389,30 @@ try {
                     </div>
                 </div>
 
+                <!-- Pagination Info -->
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center space-x-2 text-sm text-gray-700 dark:text-gray-300">
+                        <span>Showing</span>
+                        <span id="ackShowingStart">1</span>
+                        <span>to</span>
+                        <span id="ackShowingEnd">10</span>
+                        <span>of</span>
+                        <span id="ackTotalItems">0</span>
+                        <span>acknowledgments</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button id="ackPrevPage" class="px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                            <i class="fas fa-chevron-left mr-1"></i>Previous
+                        </button>
+                        <div class="flex items-center space-x-1" id="ackPageNumbers">
+                            <!-- Page numbers will be dynamically inserted here -->
+                        </div>
+                        <button id="ackNextPage" class="px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                            Next<i class="fas fa-chevron-right ml-1"></i>
+                        </button>
+                    </div>
+                </div>
+
                 <div class="overflow-x-auto">
                     <table class="w-full text-left">
                         <thead class="bg-gray-50 dark:bg-gray-700">
@@ -505,6 +529,11 @@ try {
         let alertHistory = [];
         let currentPage = 1;
         const itemsPerPage = 10;
+        
+        // Acknowledgment pagination variables
+        let acknowledgmentReports = [];
+        let currentAckPage = 1;
+        const ackItemsPerPage = 10;
 
         function formatDate(dateStr) {
             const date = new Date(dateStr);
@@ -1400,7 +1429,7 @@ try {
         // Refresh acknowledgment reports
         async function refreshAcknowledgmentReports() {
             try {
-                const response = await fetch('../../api/get_acknowledgments.php?limit=20', {
+                const response = await fetch('../../api/get_acknowledgments.php?limit=1000', {
                     method: 'GET',
                     headers: {
                         'Accept': 'application/json',
@@ -1410,7 +1439,9 @@ try {
                 
                 const data = await response.json();
                 if (data.success && data.data) {
-                    renderAcknowledgmentReports(data.data);
+                    acknowledgmentReports = data.data;
+                    currentAckPage = 1; // Reset to first page
+                    renderAcknowledgmentReports();
                 }
             } catch (error) {
                 console.error('Error loading acknowledgment reports:', error);
@@ -1439,10 +1470,10 @@ try {
         }
 
         // Render acknowledgment reports table
-        function renderAcknowledgmentReports(reports) {
+        function renderAcknowledgmentReports() {
             const tableBody = document.getElementById('acknowledgmentReportsTable');
             
-            if (reports.length === 0) {
+            if (acknowledgmentReports.length === 0) {
                 tableBody.innerHTML = `
                     <tr>
                         <td colspan="5" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
@@ -1451,10 +1482,31 @@ try {
                         </td>
                     </tr>
                 `;
+                updateAcknowledgmentPaginationInfo(0);
                 return;
             }
             
-            tableBody.innerHTML = reports.map(report => {
+            // Calculate pagination
+            const totalItems = acknowledgmentReports.length;
+            const totalPages = Math.ceil(totalItems / ackItemsPerPage);
+            
+            // Ensure current page is valid
+            if (currentAckPage > totalPages) {
+                currentAckPage = totalPages || 1;
+            }
+            
+            // Calculate pagination
+            const startIndex = (currentAckPage - 1) * ackItemsPerPage;
+            const endIndex = Math.min(startIndex + ackItemsPerPage, totalItems);
+            const currentReports = acknowledgmentReports.slice(startIndex, endIndex);
+            
+            // Update pagination info
+            updateAcknowledgmentPaginationInfo(totalItems, startIndex, endIndex);
+            
+            // Update pagination buttons
+            updateAcknowledgmentPaginationButtons(totalPages);
+            
+            tableBody.innerHTML = currentReports.map(report => {
                 const alertType = report.alert_type;
                 const typeIcon = alertType === 'turbidity' ? 'fas fa-filter text-blue-500' :
                                 alertType === 'tds' ? 'fas fa-flask text-emerald-500' :
@@ -1479,6 +1531,83 @@ try {
                     </tr>
                 `;
             }).join('');
+        }
+
+        // Update acknowledgment pagination info
+        function updateAcknowledgmentPaginationInfo(totalItems, startIndex = 0, endIndex = 0) {
+            document.getElementById('ackShowingStart').textContent = totalItems > 0 ? startIndex + 1 : 0;
+            document.getElementById('ackShowingEnd').textContent = endIndex;
+            document.getElementById('ackTotalItems').textContent = totalItems;
+        }
+
+        // Update acknowledgment pagination buttons
+        function updateAcknowledgmentPaginationButtons(totalPages) {
+            const prevBtn = document.getElementById('ackPrevPage');
+            const nextBtn = document.getElementById('ackNextPage');
+            const pageNumbersContainer = document.getElementById('ackPageNumbers');
+            
+            // Update Previous/Next buttons
+            prevBtn.disabled = currentAckPage <= 1;
+            nextBtn.disabled = currentAckPage >= totalPages;
+            
+            // Generate page numbers
+            let pageNumbersHTML = '';
+            const maxVisiblePages = 5;
+            
+            if (totalPages <= maxVisiblePages) {
+                // Show all pages if total is small
+                for (let i = 1; i <= totalPages; i++) {
+                    pageNumbersHTML += createAcknowledgmentPageNumberButton(i, i === currentAckPage);
+                }
+            } else {
+                // Show smart pagination with ellipsis
+                if (currentAckPage <= 3) {
+                    // Show first 3 pages + ellipsis + last page
+                    for (let i = 1; i <= 3; i++) {
+                        pageNumbersHTML += createAcknowledgmentPageNumberButton(i, i === currentAckPage);
+                    }
+                    pageNumbersHTML += '<span class="px-2 py-1 text-gray-500">...</span>';
+                    pageNumbersHTML += createAcknowledgmentPageNumberButton(totalPages, false);
+                } else if (currentAckPage >= totalPages - 2) {
+                    // Show first page + ellipsis + last 3 pages
+                    pageNumbersHTML += createAcknowledgmentPageNumberButton(1, false);
+                    pageNumbersHTML += '<span class="px-2 py-1 text-gray-500">...</span>';
+                    for (let i = totalPages - 2; i <= totalPages; i++) {
+                        pageNumbersHTML += createAcknowledgmentPageNumberButton(i, i === currentAckPage);
+                    }
+                } else {
+                    // Show first page + ellipsis + current page + ellipsis + last page
+                    pageNumbersHTML += createAcknowledgmentPageNumberButton(1, false);
+                    pageNumbersHTML += '<span class="px-2 py-1 text-gray-500">...</span>';
+                    for (let i = currentAckPage - 1; i <= currentAckPage + 1; i++) {
+                        pageNumbersHTML += createAcknowledgmentPageNumberButton(i, i === currentAckPage);
+                    }
+                    pageNumbersHTML += '<span class="px-2 py-1 text-gray-500">...</span>';
+                    pageNumbersHTML += createAcknowledgmentPageNumberButton(totalPages, false);
+                }
+            }
+            
+            pageNumbersContainer.innerHTML = pageNumbersHTML;
+        }
+
+        // Create acknowledgment page number button
+        function createAcknowledgmentPageNumberButton(pageNum, isActive) {
+            return `
+                <button onclick="goToAcknowledgmentPage(${pageNum})" 
+                        class="px-3 py-2 text-sm rounded-lg transition-colors ${
+                            isActive 
+                                ? 'bg-blue-500 text-white' 
+                                : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'
+                        }">
+                    ${pageNum}
+                </button>
+            `;
+        }
+
+        // Go to acknowledgment page
+        function goToAcknowledgmentPage(page) {
+            currentAckPage = page;
+            renderAcknowledgmentReports();
         }
 
         function acknowledgeAlert(time) {
@@ -1521,6 +1650,22 @@ try {
         // Event listeners
         document.getElementById('refreshReadings').addEventListener('click', fetchData);
         document.getElementById('refreshAcknowledgmentReports').addEventListener('click', refreshAcknowledgmentReports);
+        
+        // Acknowledgment pagination event listeners
+        document.getElementById('ackPrevPage').addEventListener('click', () => {
+            if (currentAckPage > 1) {
+                currentAckPage--;
+                renderAcknowledgmentReports();
+            }
+        });
+
+        document.getElementById('ackNextPage').addEventListener('click', () => {
+            const totalPages = Math.ceil(acknowledgmentReports.length / ackItemsPerPage);
+            if (currentAckPage < totalPages) {
+                currentAckPage++;
+                renderAcknowledgmentReports();
+            }
+        });
         document.getElementById('clearAllAlerts').addEventListener('click', () => {
             if (confirm('Are you sure you want to clear all alerts?')) {
                 alertHistory = [];
