@@ -266,6 +266,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
         </div>
 
+        <!-- Acknowledgment Reports -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 mb-8">
+            <div class="flex items-center justify-between mb-6">
+                <h5 class="text-lg font-semibold text-gray-800 dark:text-white">
+                    <i class="fas fa-clipboard-check mr-2 text-amber-500"></i>
+                    Acknowledgment Reports
+                </h5>
+                <div class="flex items-center space-x-4">
+                    <!-- Summary Statistics -->
+                    <div class="flex items-center space-x-4 text-sm">
+                        <div class="flex items-center space-x-2">
+                            <div class="w-3 h-3 rounded-full bg-amber-500"></div>
+                            <span class="text-gray-600 dark:text-gray-400">Total:</span>
+                            <span class="font-semibold text-gray-900 dark:text-white" id="totalAcknowledged">--</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
+                            <span class="text-gray-600 dark:text-gray-400">Today:</span>
+                            <span class="font-semibold text-gray-900 dark:text-white" id="todayAcknowledged">--</span>
+                        </div>
+                    </div>
+                    <button onclick="refreshAcknowledgmentReports()" class="text-sm text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300">
+                        <i class="fas fa-sync-alt mr-1"></i>Refresh
+                    </button>
+                </div>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead>
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                <i class="fas fa-exclamation-triangle mr-1"></i>Alert Type
+                            </th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                <i class="fas fa-tools mr-1"></i>Action Taken
+                            </th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                <i class="fas fa-user mr-1"></i>Responsible Person
+                            </th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                <i class="fas fa-clock mr-1"></i>Acknowledged At
+                            </th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                <i class="fas fa-info-circle mr-1"></i>Details
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="acknowledgmentReportsTable" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                        <tr>
+                            <td colspan="5" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                                <i class="fas fa-spinner fa-spin mr-2"></i>Loading acknowledgment reports...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <!-- Chart and Table Row -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
             <!-- Chart -->
@@ -328,52 +387,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </tbody>
                     </table>
                 </div>
-            </div>
-        </div>
-
-        <!-- Acknowledgment Reports -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 mb-8">
-            <div class="flex items-center justify-between mb-6">
-                <h5 class="text-lg font-semibold text-gray-800 dark:text-white">
-                    <i class="fas fa-clipboard-check mr-2 text-amber-500"></i>
-                    Acknowledgment Reports
-                </h5>
-                <div class="flex items-center space-x-2">
-                    <button onclick="refreshAcknowledgmentReports()" class="text-sm text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300">
-                        <i class="fas fa-sync-alt mr-1"></i>Refresh
-                    </button>
-                </div>
-            </div>
-            
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                    <thead>
-                        <tr>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                <i class="fas fa-exclamation-triangle mr-1"></i>Alert Type
-                            </th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                <i class="fas fa-tools mr-1"></i>Action Taken
-                            </th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                <i class="fas fa-user mr-1"></i>Responsible Person
-                            </th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                <i class="fas fa-clock mr-1"></i>Acknowledged At
-                            </th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                <i class="fas fa-info-circle mr-1"></i>Details
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody id="acknowledgmentReportsTable" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                        <tr>
-                            <td colspan="5" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
-                                <i class="fas fa-spinner fa-spin mr-2"></i>Loading acknowledgment reports...
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
             </div>
         </div>
 
@@ -833,6 +846,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Update data and relay states every second with 500ms initial delay
         setTimeout(async () => {
             await loadAcknowledgedAlerts();
+            await loadAcknowledgmentStats();
             updateData();
             fetchRelayStates();
             refreshAcknowledgmentReports();
@@ -1254,7 +1268,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
+        // Load acknowledgment statistics
+        async function loadAcknowledgmentStats() {
+            try {
+                const response = await fetch('../../api/get_acknowledgment_stats.php', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                if (data.success && data.data) {
+                    // Update statistics display
+                    document.getElementById('totalAcknowledged').textContent = data.data.total_acknowledged;
+                    document.getElementById('todayAcknowledged').textContent = data.data.today_acknowledged;
+                }
+            } catch (error) {
+                console.error('Error loading acknowledgment stats:', error);
+                document.getElementById('totalAcknowledged').textContent = '--';
+                document.getElementById('todayAcknowledged').textContent = '--';
+            }
+        }
+
         function refreshAcknowledgmentReports() {
+            // Load stats first
+            loadAcknowledgmentStats();
+            
+            // Then load reports
             fetch('../../api/get_acknowledgments.php', {
                 method: 'GET',
                 headers: {
