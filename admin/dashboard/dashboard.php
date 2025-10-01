@@ -870,7 +870,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Update data and relay states every second with 500ms initial delay
         setTimeout(async () => {
+            // Clean expired local per-sensor acknowledgments first
+            clearExpiredAcknowledgments();
+            
+            // Load server-side acknowledgments
             await loadAcknowledgedAlerts();
+            
+            // Also sync any local acknowledgments that might be valid
+            const localAcks = readAckStorage();
+            Object.keys(localAcks).forEach(sensorType => {
+                if (!acknowledgedAlerts.has(sensorType)) {
+                    acknowledgedAlerts.add(sensorType);
+                    console.log(`Restored local acknowledgment for ${sensorType}`);
+                }
+            });
+            
+            console.log('Acknowledgments loaded:', {
+                server: Array.from(acknowledgedAlerts),
+                local: Object.keys(localAcks)
+            });
+            
             await loadAcknowledgmentStats();
             updateData();
             fetchRelayStates();
@@ -881,6 +900,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             updateData();
             fetchRelayStates();
         }, 1000); // Update every 1 second instead of 5 seconds
+        
+        setInterval(() => {
+            clearExpiredAcknowledgments();
+            loadAcknowledgedAlerts(); // Reload acknowledgments periodically
+            loadAcknowledgmentStats();
+            refreshAcknowledgmentReports();
+        }, 30000); // Update acknowledgment data every 30 seconds
 
         // Add current time update
         function updateCurrentTime() {
@@ -1047,6 +1073,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         let acknowledgedAlerts = new Set(); // Track acknowledged alerts to prevent re-showing
         let lastAlertCheck = new Map(); // Track when we last checked for alerts
 
+        // Per-sensor acknowledgment persistence (5 hours)
+        const ACK_DURATION_MINUTES = 300; // 5 hours
+        const ACK_STORAGE_KEY = 'sensorAcknowledgments';
+
+        function readAckStorage() {
+            try {
+                const raw = localStorage.getItem(ACK_STORAGE_KEY);
+                return raw ? JSON.parse(raw) : {};
+            } catch (_) {
+                return {};
+            }
+        }
+
+        function writeAckStorage(map) {
+            try {
+                localStorage.setItem(ACK_STORAGE_KEY, JSON.stringify(map));
+            } catch (_) { /* ignore */ }
+        }
+
+        function clearExpiredAcknowledgments() {
+            const now = Date.now();
+            const map = readAckStorage();
+            let changed = false;
+            Object.keys(map).forEach(sensor => {
+                if (!map[sensor] || typeof map[sensor].expiresAt !== 'number' || map[sensor].expiresAt <= now) {
+                    delete map[sensor];
+                    changed = true;
+                }
+            });
+            if (changed) writeAckStorage(map);
+        }
+
+        function isSensorAcknowledged(sensorType) {
+            clearExpiredAcknowledgments();
+            const map = readAckStorage();
+            return Boolean(map[sensorType]);
+        }
+
+        function setSensorAcknowledged(sensorType) {
+            const now = Date.now();
+            const expiresAt = now + ACK_DURATION_MINUTES * 60 * 1000;
+            const map = readAckStorage();
+            map[sensorType] = { acknowledgedAt: now, expiresAt };
+            writeAckStorage(map);
+        }
+
         function updateWaterQualityAlerts(turbidity, tds, ph, temperature) {
             const alertsContainer = document.getElementById('waterQualityAlerts');
             const alerts = evaluateWaterQuality(turbidity, tds, ph, temperature);
@@ -1099,7 +1171,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 
                 // If it's already acknowledged, make sure it stays acknowledged
-                if (acknowledgedAlerts.has(alertType)) {
+                if (acknowledgedAlerts.has(alertType) || isSensorAcknowledged(alertType)) {
                     acknowledgedAlerts.add(alertKey);
                 }
             });
@@ -1114,7 +1186,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 const alertLevel = alert.type;
                 const alertKey = alertType ? `${alertType}_${alertLevel}` : null;
                 const isUnacknowledged = alertKey && unacknowledgedAlerts.has(alertKey);
-                const isAcknowledged = alertKey && acknowledgedAlerts.has(alertKey);
+                const isAcknowledged = alertKey && (acknowledgedAlerts.has(alertKey) || isSensorAcknowledged(alertType));
                 
                 return `
                     <div class="flex items-center justify-between p-4 rounded-lg ${
@@ -1137,7 +1209,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </button>
                         ` : isAcknowledged ? `
                             <span class="ml-4 px-4 py-2 text-sm font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700 rounded-lg">
-                                <i class="fas fa-check-circle mr-2"></i>Acknowledged
+                                <i class="fas fa-check-circle mr-2"></i>Acknowledged (5h)
                             </span>
                         ` : ''}
                     </div>
@@ -1237,6 +1309,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     // Remove from unacknowledged alerts and add to acknowledged
                     unacknowledgedAlerts.delete(currentAlertData.key);
                     acknowledgedAlerts.add(currentAlertData.key);
+                    
+                    // Persist per-sensor acknowledgment for 5 hours locally
+                    setSensorAcknowledged(currentAlertData.data.alertType);
+                    console.log(`Acknowledged ${currentAlertData.data.alertType} - now persisting locally and on server`);
+                    
                     updateUnacknowledgedCount();
                     
                     // Close modal
@@ -1306,6 +1383,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         if (timeDiff < fiveHoursInMs) {
                             acknowledgedAlerts.add(report.alert_type);
                             console.log(`Loaded acknowledged alert: ${report.alert_type} from ${report.acknowledged_at} (${Math.round(timeDiff / (60 * 1000))} minutes ago)`);
+                            // Mirror into local storage with expiry at ackTime + 5h
+                            try {
+                                const map = readAckStorage();
+                                const expiresAt = ackTime.getTime() + fiveHoursInMs;
+                                if (!map[report.alert_type] || (typeof map[report.alert_type].expiresAt === 'number' && map[report.alert_type].expiresAt < expiresAt)) {
+                                    map[report.alert_type] = { acknowledgedAt: ackTime.getTime(), expiresAt };
+                                    writeAckStorage(map);
+                                }
+                            } catch (_) { /* ignore */ }
                         }
                     });
                     
