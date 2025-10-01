@@ -273,22 +273,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <i class="fas fa-clipboard-check mr-2 text-amber-500"></i>
                     Acknowledgment Reports
                 </h5>
-                <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-6">
                     <!-- Summary Statistics -->
-                    <div class="flex items-center space-x-4 text-sm">
-                        <div class="flex items-center space-x-2">
-                            <div class="w-3 h-3 rounded-full bg-amber-500"></div>
-                            <span class="text-gray-600 dark:text-gray-400">Total:</span>
-                            <span class="font-semibold text-gray-900 dark:text-white" id="totalAcknowledged">--</span>
+                    <div class="flex items-center space-x-4">
+                        <!-- Total Acknowledged -->
+                        <div class="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200 dark:border-amber-800 rounded-xl px-4 py-3 shadow-sm">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                                    <i class="fas fa-clipboard-check text-amber-600 dark:text-amber-400 text-lg"></i>
+                                </div>
+                                <div>
+                                    <div class="text-xs font-medium text-amber-700 dark:text-amber-300 uppercase tracking-wide">
+                                        Total Acknowledged
+                                    </div>
+                                    <div class="text-2xl font-bold text-amber-900 dark:text-amber-100 transition-all duration-300" id="totalAcknowledged">--</div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="flex items-center space-x-2">
-                            <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
-                            <span class="text-gray-600 dark:text-gray-400">Today:</span>
-                            <span class="font-semibold text-gray-900 dark:text-white" id="todayAcknowledged">--</span>
+
+                        <!-- Today's Acknowledged -->
+                        <div class="bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl px-4 py-3 shadow-sm">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                                    <i class="fas fa-calendar-day text-emerald-600 dark:text-emerald-400 text-lg"></i>
+                                </div>
+                                <div>
+                                    <div class="text-xs font-medium text-emerald-700 dark:text-emerald-300 uppercase tracking-wide">
+                                        Today's Acknowledged
+                                    </div>
+                                    <div class="text-2xl font-bold text-emerald-900 dark:text-emerald-100 transition-all duration-300" id="todayAcknowledged">--</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <button onclick="refreshAcknowledgmentReports()" class="text-sm text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300">
-                        <i class="fas fa-sync-alt mr-1"></i>Refresh
+
+                    <!-- Refresh Button -->
+                    <button onclick="refreshAcknowledgmentReports()" class="bg-amber-600 hover:bg-amber-700 dark:bg-amber-700 dark:hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm">
+                        <i class="fas fa-sync-alt mr-2"></i>Refresh
                     </button>
                 </div>
             </div>
@@ -1268,6 +1289,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
+        // Update stat with animation
+        function updateStatWithAnimation(elementId, newValue) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                // Add pulse animation
+                element.classList.add('animate-pulse');
+                element.style.transform = 'scale(1.1)';
+                
+                // Update value
+                element.textContent = newValue;
+                
+                // Remove animation after a short delay
+                setTimeout(() => {
+                    element.classList.remove('animate-pulse');
+                    element.style.transform = 'scale(1)';
+                }, 600);
+            }
+        }
+
         // Load acknowledgment statistics
         async function loadAcknowledgmentStats() {
             try {
@@ -1285,9 +1325,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 const data = await response.json();
                 if (data.success && data.data) {
-                    // Update statistics display
-                    document.getElementById('totalAcknowledged').textContent = data.data.total_acknowledged;
-                    document.getElementById('todayAcknowledged').textContent = data.data.today_acknowledged;
+                    // Update statistics display with animation
+                    updateStatWithAnimation('totalAcknowledged', data.data.total_acknowledged);
+                    updateStatWithAnimation('todayAcknowledged', data.data.today_acknowledged);
                 }
             } catch (error) {
                 console.error('Error loading acknowledgment stats:', error);
