@@ -1531,12 +1531,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <i class="fas fa-shield-alt mr-2"></i>Acknowledge
                             </button>
                         ` : needsAcknowledgment && isAcknowledged ? `
-                            <span class="ml-4 px-4 py-2 text-sm font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700 rounded-lg">
-                                <i class="fas fa-check-circle mr-2"></i>Acknowledged (5h)
+                            <span class="ml-4 inline-flex items-center space-x-2">
+                                <span class="px-4 py-2 text-sm font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700 rounded-lg">
+                                    <i class="fas fa-check-circle mr-2"></i>Acknowledged (5h)
+                                </span>
+                                <button title="Reset acknowledgment" onclick="clearAcknowledgment('${alertType}')" class="px-3 py-2 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                                    Reset
+                                </button>
                             </span>
-                            <button title="Reset acknowledgment" onclick="clearAcknowledgment('${alertType}')" class="ml-2 px-3 py-2 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
-                                Reset
-                            </button>
                         ` : ''}
                     </div>
                 `;
