@@ -331,6 +331,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
         </div>
 
+        <!-- Acknowledgment Reports -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 mb-8">
+            <div class="flex items-center justify-between mb-6">
+                <h5 class="text-lg font-semibold text-gray-800 dark:text-white">
+                    <i class="fas fa-clipboard-check mr-2 text-amber-500"></i>
+                    Acknowledgment Reports
+                </h5>
+                <div class="flex items-center space-x-2">
+                    <button onclick="refreshAcknowledgmentReports()" class="text-sm text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300">
+                        <i class="fas fa-sync-alt mr-1"></i>Refresh
+                    </button>
+                </div>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead>
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                <i class="fas fa-exclamation-triangle mr-1"></i>Alert Type
+                            </th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                <i class="fas fa-tools mr-1"></i>Action Taken
+                            </th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                <i class="fas fa-user mr-1"></i>Responsible Person
+                            </th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                <i class="fas fa-clock mr-1"></i>Acknowledged At
+                            </th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                <i class="fas fa-info-circle mr-1"></i>Details
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="acknowledgmentReportsTable" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                        <tr>
+                            <td colspan="5" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                                <i class="fas fa-spinner fa-spin mr-2"></i>Loading acknowledgment reports...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <!-- Relay Control Panel -->
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
             <div class="flex items-center justify-between mb-6">
@@ -788,6 +834,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         setTimeout(() => {
             updateData();
             fetchRelayStates();
+            refreshAcknowledgmentReports();
         }, 500); // Initial 500ms delay
         
         setInterval(() => {
@@ -957,6 +1004,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Track unacknowledged alerts
         let unacknowledgedAlerts = new Map();
         let currentAlertData = null;
+        let acknowledgedAlerts = new Set(); // Track acknowledged alerts to prevent re-showing
 
         function updateWaterQualityAlerts(turbidity, tds, ph, temperature) {
             const alertsContainer = document.getElementById('waterQualityAlerts');
@@ -968,10 +1016,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 (alert.message.includes('turbidity') || alert.message.includes('TDS'))
             );
             
-            // Update unacknowledged alerts
+            // Update unacknowledged alerts - only add if not already acknowledged
             acknowledgmentAlerts.forEach(alert => {
                 const alertKey = alert.message.includes('turbidity') ? 'turbidity' : 'tds';
-                if (!unacknowledgedAlerts.has(alertKey)) {
+                if (!unacknowledgedAlerts.has(alertKey) && !acknowledgedAlerts.has(alertKey)) {
                     unacknowledgedAlerts.set(alertKey, {
                         alert: alert,
                         timestamp: new Date(),
@@ -987,6 +1035,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 const alertKey = alert.message.includes('turbidity') ? 'turbidity' : 
                                 alert.message.includes('TDS') ? 'tds' : null;
                 const isUnacknowledged = alertKey && unacknowledgedAlerts.has(alertKey);
+                const isAcknowledged = alertKey && acknowledgedAlerts.has(alertKey);
                 
                 return `
                     <div class="flex items-center justify-between p-4 rounded-lg ${
@@ -1007,6 +1056,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     class="ml-4 px-4 py-2 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 dark:bg-amber-700 dark:hover:bg-amber-600 rounded-lg transition-colors shadow-sm">
                                 <i class="fas fa-shield-alt mr-2"></i>Acknowledge
                             </button>
+                        ` : isAcknowledged ? `
+                            <span class="ml-4 px-4 py-2 text-sm font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700 rounded-lg">
+                                <i class="fas fa-check-circle mr-2"></i>Acknowledged
+                            </span>
                         ` : ''}
                     </div>
                 `;
@@ -1102,8 +1155,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Remove from unacknowledged alerts
+                    // Remove from unacknowledged alerts and add to acknowledged
                     unacknowledgedAlerts.delete(currentAlertData.key);
+                    acknowledgedAlerts.add(currentAlertData.key);
                     updateUnacknowledgedCount();
                     
                     // Close modal
@@ -1112,8 +1166,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     // Show success message
                     showNotification('Alert acknowledged successfully', 'success');
                     
-                    // Refresh alerts to update UI
+                    // Refresh alerts and reports to update UI
                     updateData();
+                    refreshAcknowledgmentReports();
                 } else {
                     showNotification('Failed to acknowledge alert: ' + (data.error || 'Unknown error'), 'error');
                 }
@@ -1123,6 +1178,108 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 showNotification('Error acknowledging alert', 'error');
             });
         });
+
+        function refreshAcknowledgmentReports() {
+            fetch('../../api/get_acknowledgments.php', {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success && data.data) {
+                    const tableBody = document.getElementById('acknowledgmentReportsTable');
+                    
+                    if (data.data.length === 0) {
+                        tableBody.innerHTML = `
+                            <tr>
+                                <td colspan="5" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                                    <i class="fas fa-clipboard-list mr-2"></i>No acknowledgment reports found
+                                </td>
+                            </tr>
+                        `;
+                        return;
+                    }
+                    
+                    tableBody.innerHTML = data.data.map(report => {
+                        const actionLabels = {
+                            'filter_replacement': 'Filter Replacement',
+                            'system_maintenance': 'System Maintenance',
+                            'chemical_treatment': 'Chemical Treatment',
+                            'system_flush': 'System Flush',
+                            'investigation': 'Under Investigation',
+                            'manual_intervention': 'Manual Intervention',
+                            'other': 'Other'
+                        };
+                        
+                        const alertTypeLabels = {
+                            'turbidity': 'Turbidity',
+                            'tds': 'TDS'
+                        };
+                        
+                        const actionLabel = actionLabels[report.action_taken] || report.action_taken;
+                        const alertTypeLabel = alertTypeLabels[report.alert_type] || report.alert_type;
+                        
+                        return `
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                        report.alert_type === 'turbidity' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' :
+                                        'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300'
+                                    }">
+                                        <i class="fas ${report.alert_type === 'turbidity' ? 'fa-filter' : 'fa-flask'} mr-1"></i>
+                                        ${alertTypeLabel}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">
+                                    <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300">
+                                        <i class="fas fa-tools mr-1"></i>
+                                        ${actionLabel}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">
+                                    <div class="flex items-center">
+                                        <i class="fas fa-user-circle mr-2 text-gray-400"></i>
+                                        ${report.responsible_person || 'Unknown'}
+                                    </div>
+                                </td>
+                                <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">
+                                    <div class="flex items-center">
+                                        <i class="fas fa-clock mr-2 text-gray-400"></i>
+                                        ${formatDate(report.acknowledged_at)}
+                                    </div>
+                                </td>
+                                <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300 max-w-xs">
+                                    <div class="truncate" title="${report.details}">
+                                        ${report.details}
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                } else {
+                    throw new Error(data.error || 'Failed to load acknowledgment reports');
+                }
+            })
+            .catch(error => {
+                console.error('Error loading acknowledgment reports:', error);
+                const tableBody = document.getElementById('acknowledgmentReportsTable');
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="px-4 py-8 text-center text-sm text-red-500 dark:text-red-400">
+                            <i class="fas fa-exclamation-circle mr-2"></i>Error loading acknowledgment reports
+                        </td>
+                    </tr>
+                `;
+            });
+        }
 
         function showNotification(message, type = 'info') {
             // Create notification element
