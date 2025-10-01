@@ -555,6 +555,62 @@ try {
             } catch (_) { /* ignore */ }
         }
 
+        // Local overrides to ignore server-side acknowledgments temporarily
+        const ACK_RESET_KEY = 'sensorAckResetOverrides';
+        function readAckReset() {
+            try {
+                const raw = localStorage.getItem(ACK_RESET_KEY);
+                return raw ? JSON.parse(raw) : {};
+            } catch (_) {
+                return {};
+            }
+        }
+        function writeAckReset(map) {
+            try {
+                localStorage.setItem(ACK_RESET_KEY, JSON.stringify(map));
+            } catch (_) { /* ignore */ }
+        }
+        function isResetActive(sensorType) {
+            const map = readAckReset();
+            const now = Date.now();
+            if (map[sensorType] && typeof map[sensorType].expiresAt === 'number') {
+                if (map[sensorType].expiresAt > now) return true;
+                // cleanup expired
+                delete map[sensorType];
+                writeAckReset(map);
+            }
+            return false;
+        }
+        function setReset(sensorType, minutes = ACK_DURATION_MINUTES) {
+            const now = Date.now();
+            const expiresAt = now + Math.max(1, minutes) * 60 * 1000;
+            const map = readAckReset();
+            map[sensorType] = { setAt: now, expiresAt };
+            writeAckReset(map);
+        }
+        function clearAcknowledgment(sensorType) {
+            try {
+                // Remove local acknowledgment persistence
+                const ackMap = readAckStorage();
+                if (ackMap[sensorType]) {
+                    delete ackMap[sensorType];
+                    writeAckStorage(ackMap);
+                }
+                // Remove from in-memory acknowledged set (both type and composite keys)
+                acknowledgedAlerts.delete(sensorType);
+                ['critical','warning','danger'].forEach(level => {
+                    acknowledgedAlerts.delete(`${sensorType}_${level}`);
+                });
+                // Set override to ignore server-side acks for the same window (5h)
+                setReset(sensorType);
+                // Refresh UI
+                updateActiveAlerts(alertHistory.filter(a => a.type === 'critical' || a.type === 'warning'));
+                showNotification(`Acknowledgment reset for ${sensorType.toUpperCase()}`, 'info');
+            } catch (e) {
+                console.error('Failed to clear acknowledgment:', e);
+            }
+        }
+
         function clearExpiredAcknowledgments() {
             const now = Date.now();
             const map = readAckStorage();
@@ -870,6 +926,10 @@ try {
                         const fiveHoursInMs = 5 * 60 * 60 * 1000; // 5 hours in milliseconds
                         
                         if (timeDiff < fiveHoursInMs) {
+                            // Respect local reset override
+                            if (isResetActive(report.alert_type)) {
+                                return;
+                            }
                             acknowledgedAlerts.add(report.alert_type);
                             console.log(`Loaded acknowledged alert: ${report.alert_type} from ${report.acknowledged_at} (${Math.round(timeDiff / (60 * 1000))} minutes ago)`);
                             // Mirror into local storage with expiry at ackTime + 5h
@@ -1402,7 +1462,10 @@ try {
                                         }">${alert.type.toUpperCase()}</span>
                                         <span class="text-sm text-gray-500 dark:text-gray-400">${alert.parameter}</span>
                                         <span class="text-sm font-semibold text-gray-900 dark:text-white">${alert.value}</span>
-                                        ${isAcknowledged ? '<span class="px-2 py-1 text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full"><i class="fas fa-check mr-1"></i>Acknowledged (5h)</span>' : ''}
+                                        ${isAcknowledged ? `<span class="px-2 py-1 text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full"><i class="fas fa-check mr-1"></i>Acknowledged (5h)</span>
+                                        <button title="Reset acknowledgment" onclick="clearAcknowledgment('${alertType}')" class="ml-2 px-2 py-0.5 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600">
+                                            Reset
+                                        </button>` : ''}
                                     </div>
                                     <p class="text-gray-900 dark:text-white">${alert.message}</p>
                                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">

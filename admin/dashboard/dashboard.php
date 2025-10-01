@@ -1334,6 +1334,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } catch (_) { /* ignore */ }
         }
 
+        // Local overrides to ignore server-side acknowledgments temporarily
+        const ACK_RESET_KEY = 'sensorAckResetOverrides';
+        function readAckReset() {
+            try {
+                const raw = localStorage.getItem(ACK_RESET_KEY);
+                return raw ? JSON.parse(raw) : {};
+            } catch (_) {
+                return {};
+            }
+        }
+        function writeAckReset(map) {
+            try {
+                localStorage.setItem(ACK_RESET_KEY, JSON.stringify(map));
+            } catch (_) { /* ignore */ }
+        }
+        function isResetActive(sensorType) {
+            const map = readAckReset();
+            const now = Date.now();
+            if (map[sensorType] && typeof map[sensorType].expiresAt === 'number') {
+                if (map[sensorType].expiresAt > now) return true;
+                delete map[sensorType];
+                writeAckReset(map);
+            }
+            return false;
+        }
+        function setReset(sensorType, minutes = ACK_DURATION_MINUTES) {
+            const now = Date.now();
+            const expiresAt = now + Math.max(1, minutes) * 60 * 1000;
+            const map = readAckReset();
+            map[sensorType] = { setAt: now, expiresAt };
+            writeAckReset(map);
+        }
+        function clearAcknowledgment(sensorType) {
+            try {
+                // Remove local acknowledgment persistence
+                const ackMap = readAckStorage();
+                if (ackMap[sensorType]) {
+                    delete ackMap[sensorType];
+                    writeAckStorage(ackMap);
+                }
+                // Remove from in-memory acknowledged set
+                acknowledgedAlerts.delete(sensorType);
+                ['critical','warning','danger'].forEach(level => {
+                    acknowledgedAlerts.delete(`${sensorType}_${level}`);
+                });
+                // Set override to ignore server-side acks for the same window (5h)
+                setReset(sensorType);
+                // Refresh UI
+                updateSensorValues();
+                updateChartData();
+                showNotification(`Acknowledgment reset for ${sensorType.toUpperCase()}`, 'info');
+            } catch (e) {
+                console.error('Failed to clear acknowledgment:', e);
+            }
+        }
+
         function clearExpiredAcknowledgments() {
             const now = Date.now();
             const map = readAckStorage();
@@ -1478,6 +1534,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <span class="ml-4 px-4 py-2 text-sm font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700 rounded-lg">
                                 <i class="fas fa-check-circle mr-2"></i>Acknowledged (5h)
                             </span>
+                            <button title="Reset acknowledgment" onclick="clearAcknowledgment('${alertType}')" class="ml-2 px-3 py-2 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                                Reset
+                            </button>
                         ` : ''}
                     </div>
                 `;
@@ -1658,8 +1717,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         const timeDiff = now - ackTime;
                         const fiveHoursInMs = 5 * 60 * 60 * 1000; // 5 hours in milliseconds
                         
-                        // Mark as acknowledged if acknowledged within last 5 hours
+                        // Mark as acknowledged if acknowledged within last 5 hours (unless locally reset)
                         if (timeDiff < fiveHoursInMs) {
+                            if (isResetActive(report.alert_type)) {
+                                return;
+                            }
                             acknowledgedAlerts.add(report.alert_type);
                             console.log(`Loaded acknowledged alert: ${report.alert_type} from ${report.acknowledged_at} (${Math.round(timeDiff / (60 * 1000))} minutes ago)`);
                             // Mirror into local storage with expiry at ackTime + 5h
