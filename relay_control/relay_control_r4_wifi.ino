@@ -1,6 +1,11 @@
 #include <WiFiS3.h>
 #include <ArduinoHttpClient.h>
 #include <ArduinoJson.h>
+// =========================
+// Libraries for DS18B20 Waterproof Temp Sensor
+// =========================
+#include <OneWire.h>
+#include <DallasTemperature.h>
 
 // ---------------- WiFi Config ----------------
 char ssid[] = "Converge_2.4GHz_3Fsb56";
@@ -19,6 +24,12 @@ WiFiClient wifi;
 HttpClient uploadClient = HttpClient(wifi, server, port);
 HttpClient relayClient  = HttpClient(wifi, server, port);
 
+// ---------------- Timers ----------------
+unsigned long lastUploadMs = 0;
+unsigned long lastRelayCheckMs = 0;
+const unsigned long UPLOAD_INTERVAL_MS = 5000;   // 5 seconds
+const unsigned long RELAY_INTERVAL_MS  = 1000;   // 1 second
+
 // ---------------- Pins ----------------
 const int relayPins[4] = {3, 4, 5, 6};  
 const int numRelays = 4;
@@ -26,10 +37,33 @@ const int numRelays = 4;
 #define RELAY_ON  LOW   // active LOW
 #define RELAY_OFF HIGH  // OFF = HIGH
 
-#define tempPin 2
-#define tdsPin A0
-#define turbidityPin A1
-#define phPin A2
+// =========================
+// Sensor Pins and Calibration (DO NOT CHANGE CALIBRATION)
+// =========================
+// DS18B20 on digital pin 2
+#define ONE_WIRE_BUS 2
+OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature sensors(&oneWire);
+
+// pH Sensor on A0
+const int PH_PIN = A0;
+const int ADC_MAX = 1023;      // 10-bit ADC on Uno R4
+const float VREF = 5.0;        // Reference voltage (5V on Uno R4)
+
+// Calibration values (as provided)
+float slope = -5.3;
+float offset = 21.34;
+
+// TDS Sensor on A2
+const int TDS_PIN = A2;
+
+// Turbidity Sensor on A1
+const int TURBIDITY_PIN = A1;
+
+// Turbidity calibration constants (provided)
+const float V_CLEAR = 2.33;   // Voltage in clear water
+const float V_MURKY = 0.26;   // Voltage in murky water
+const float MAX_NTU = 3000.0; // Arbitrary max NTU
 
 // Relay states
 bool relayStates[4] = {false, false, false, false};
@@ -53,44 +87,101 @@ void setup() {
     Serial.print(".");
   }
   Serial.println("\nWiFi connected!");
+
+  // Start DS18B20 sensor
+  sensors.begin();
 }
 
 // ---------------- Loop ----------------
 void loop() {
-  readAndUploadSensors();
-  checkRelayStates();
-  delay(5000); // run every 5s
+  unsigned long now = millis();
+
+  // Relay check every 1s
+  if (now - lastRelayCheckMs >= RELAY_INTERVAL_MS) {
+    lastRelayCheckMs = now;
+    checkRelayStates();
+  }
+
+  // Upload sensors every 5s
+  if (now - lastUploadMs >= UPLOAD_INTERVAL_MS) {
+    lastUploadMs = now;
+    readAndUploadSensors();
+  }
+
+  delay(10); // small yield to avoid tight loop
 }
 
 // ---------------- Functions ----------------
+// Map turbidity voltage to NTU using calibrated linear mapping
+float mapToNTU(float voltage) {
+  if (voltage >= V_CLEAR) return 0.0f;      // At/above clear → 0 NTU
+  if (voltage <= V_MURKY) return MAX_NTU;   // At/below murky → MAX_NTU
+  float ntu = (V_CLEAR - voltage) * (MAX_NTU / (V_CLEAR - V_MURKY));
+  return ntu;
+}
+
 void readAndUploadSensors() {
-  // Read sensors (dummy analog for now)
-  int tempVal = analogRead(tempPin);
-  int tdsVal = analogRead(tdsPin);
-  int turbidityVal = analogRead(turbidityPin);
-  int phVal = analogRead(phPin);
+  // =========================
+  // pH Measurement
+  // =========================
+  int rawPH = analogRead(PH_PIN);
+  float voltagePH = rawPH * (VREF / ADC_MAX);
+  float pHValue = (slope * voltagePH) + offset;
 
-  // Convert tempVal (replace with DS18B20/DHT if needed)
-  float temperature = (tempVal / 1023.0) * 100.0;
+  // =========================
+  // Turbidity Measurement
+  // =========================
+  int rawTurbidity = analogRead(TURBIDITY_PIN);
+  float voltageTurb = rawTurbidity * (VREF / ADC_MAX);
+  float NTU = mapToNTU(voltageTurb);
 
+  // =========================
+  // TDS Measurement
+  // =========================
+  int rawTDS = analogRead(TDS_PIN);
+  float voltageTDS = rawTDS * (VREF / ADC_MAX);
+  float tdsValue = (133.42 * voltageTDS * voltageTDS * voltageTDS
+                  - 255.86 * voltageTDS * voltageTDS
+                  + 857.39 * voltageTDS) * 0.5;
+
+  // =========================
+  // Temperature Measurement (DS18B20)
+  // =========================
+  sensors.requestTemperatures();
+  float temperatureC = sensors.getTempCByIndex(0);
+
+  // =========================
+  // Print Results
+  // =========================
   Serial.println("---- Sensor Data ----");
-  Serial.print("Temperature: "); Serial.println(temperature);
-  Serial.print("TDS: "); Serial.println(tdsVal);
-  Serial.print("Turbidity: "); Serial.println(turbidityVal);
-  Serial.print("pH: "); Serial.println(phVal);
+  Serial.print("pH: ");
+  Serial.print(pHValue, 2);
+  Serial.print(" | Turbidity: ");
+  Serial.print(NTU, 1);
+  Serial.print(" NTU");
+  Serial.print(" | TDS: ");
+  Serial.print(tdsValue, 0);
+  Serial.print(" ppm");
+  Serial.print(" | Temp: ");
+  if (temperatureC == DEVICE_DISCONNECTED_C) {
+    Serial.print("Error");
+  } else {
+    Serial.print(temperatureC, 2);
+    Serial.print(" °C");
+  }
+  Serial.println();
 
-  // Build JSON payload
-  String postData = "{";
-  postData += "\"temperature\":" + String(temperature) + ",";
-  postData += "\"tds\":" + String(tdsVal) + ",";
-  postData += "\"turbidity\":" + String(turbidityVal) + ",";
-  postData += "\"ph\":" + String(phVal);
-  postData += "}";
+  // Build URL-encoded form payload to match PHP $_POST expectations
+  String postData = "turbidity=" + String(NTU, 1);
+  postData += "&tds=" + String(tdsValue, 0);
+  postData += "&ph=" + String(pHValue, 2);
+  postData += "&temperature=" + String(temperatureC, 2);
+  postData += "&in=0";
 
   // Send POST
   uploadClient.beginRequest();
   uploadClient.post(uploadPath);
-  uploadClient.sendHeader("Content-Type", "application/json");
+  uploadClient.sendHeader("Content-Type", "application/x-www-form-urlencoded");
   uploadClient.sendHeader("Content-Length", postData.length());
   uploadClient.beginBody();
   uploadClient.print(postData);
@@ -123,15 +214,8 @@ void checkRelayStates() {
           if (relay >= 1 && relay <= numRelays) {
             relayStates[relay - 1] = (value == 1);
 
-            digitalWrite(
-              relayPins[relay - 1],
-              relayStates[relay - 1] ? RELAY_ON : RELAY_OFF
-            );
-
-              Serial.print("Relay ");
-              Serial.print(relay);
-            Serial.print(" set to ");
-            Serial.println(relayStates[relay - 1] ? "ON" : "OFF");
+            digitalWrite(relayPins[relay - 1], relayStates[relay - 1] ? RELAY_ON : RELAY_OFF);
+            Serial.println(String("Relay ") + relay + " set to " + (relayStates[relay - 1] ? "ON" : "OFF"));
           }
         }
       }
