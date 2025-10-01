@@ -162,20 +162,20 @@ try {
                     </div>
                     <div class="text-center mb-4">
                         <div class="value-display text-4xl text-gray-900 dark:text-white mb-2" id="turbidityValue">--</div>
-                        <div class="text-lg text-gray-500 dark:text-gray-400">NTU</div>
+                        <div class="text-lg text-gray-500 dark:text-gray-400">%</div>
                     </div>
                     <div class="space-y-3">
                         <div class="flex justify-between text-sm">
-                            <span class="text-gray-500 dark:text-gray-400">Excellent</span>
-                            <span class="text-green-600 dark:text-green-400 font-medium">≤ 5 NTU</span>
-                        </div>
-                        <div class="flex justify-between text-sm">
                             <span class="text-gray-500 dark:text-gray-400">Good</span>
-                            <span class="text-yellow-600 dark:text-yellow-400 font-medium">5-10 NTU</span>
+                            <span class="text-green-600 dark:text-green-400 font-medium">≤ 2%</span>
                         </div>
                         <div class="flex justify-between text-sm">
-                            <span class="text-gray-500 dark:text-gray-400">Poor</span>
-                            <span class="text-red-600 dark:text-red-400 font-medium">> 10 NTU</span>
+                            <span class="text-gray-500 dark:text-gray-400">Medium</span>
+                            <span class="text-yellow-600 dark:text-yellow-400 font-medium">2-5%</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-500 dark:text-gray-400">Critical</span>
+                            <span class="text-red-600 dark:text-red-400 font-medium">> 5%</span>
                         </div>
                     </div>
                 </div>
@@ -196,20 +196,20 @@ try {
                     </div>
                     <div class="text-center mb-4">
                         <div class="value-display text-4xl text-gray-900 dark:text-white mb-2" id="tdsValue">--</div>
-                        <div class="text-lg text-gray-500 dark:text-gray-400">ppm</div>
+                        <div class="text-lg text-gray-500 dark:text-gray-400">%</div>
                     </div>
                     <div class="space-y-3">
                         <div class="flex justify-between text-sm">
-                            <span class="text-gray-500 dark:text-gray-400">Excellent</span>
-                            <span class="text-green-600 dark:text-green-400 font-medium">≤ 300 ppm</span>
-                        </div>
-                        <div class="flex justify-between text-sm">
                             <span class="text-gray-500 dark:text-gray-400">Good</span>
-                            <span class="text-yellow-600 dark:text-yellow-400 font-medium">300-500 ppm</span>
+                            <span class="text-green-600 dark:text-green-400 font-medium">≤ 30%</span>
                         </div>
                         <div class="flex justify-between text-sm">
-                            <span class="text-gray-500 dark:text-gray-400">Poor</span>
-                            <span class="text-red-600 dark:text-red-400 font-medium">> 500 ppm</span>
+                            <span class="text-gray-500 dark:text-gray-400">Medium</span>
+                            <span class="text-yellow-600 dark:text-yellow-400 font-medium">30-60%</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-500 dark:text-gray-400">Critical</span>
+                            <span class="text-red-600 dark:text-red-400 font-medium">> 60%</span>
                         </div>
                     </div>
                 </div>
@@ -235,15 +235,15 @@ try {
                     <div class="space-y-3">
                         <div class="flex justify-between text-sm">
                             <span class="text-gray-500 dark:text-gray-400">Optimal</span>
-                            <span class="text-green-600 dark:text-green-400 font-medium">6.5-8.5</span>
+                            <span class="text-green-600 dark:text-green-400 font-medium">7.2-7.8</span>
                         </div>
                         <div class="flex justify-between text-sm">
                             <span class="text-gray-500 dark:text-gray-400">Acceptable</span>
-                            <span class="text-yellow-600 dark:text-yellow-400 font-medium">6.0-9.0</span>
+                            <span class="text-yellow-600 dark:text-yellow-400 font-medium">7.0-8.0</span>
                         </div>
                         <div class="flex justify-between text-sm">
                             <span class="text-gray-500 dark:text-gray-400">Critical</span>
-                            <span class="text-red-600 dark:text-red-400 font-medium">< 6.0 or > 9.0</span>
+                            <span class="text-red-600 dark:text-red-400 font-medium">< 7.0 or > 8.0</span>
                         </div>
                     </div>
                 </div>
@@ -269,15 +269,15 @@ try {
                     <div class="space-y-3">
                         <div class="flex justify-between text-sm">
                             <span class="text-gray-500 dark:text-gray-400">Optimal</span>
-                            <span class="text-green-600 dark:text-green-400 font-medium">15-30°C</span>
+                            <span class="text-green-600 dark:text-green-400 font-medium">26-28°C</span>
                         </div>
                         <div class="flex justify-between text-sm">
                             <span class="text-gray-500 dark:text-gray-400">Acceptable</span>
-                            <span class="text-yellow-600 dark:text-yellow-400 font-medium">10-35°C</span>
+                            <span class="text-yellow-600 dark:text-yellow-400 font-medium">24-30°C</span>
                         </div>
                         <div class="flex justify-between text-sm">
                             <span class="text-gray-500 dark:text-gray-400">Critical</span>
-                            <span class="text-red-600 dark:text-red-400 font-medium">< 10°C or > 35°C</span>
+                            <span class="text-red-600 dark:text-red-400 font-medium">< 24°C or > 30°C</span>
                         </div>
                     </div>
                 </div>
@@ -312,21 +312,34 @@ try {
             return date.toLocaleTimeString();
         }
 
+        // Conversion functions
+        function convertTurbidityToPercentage(rawValue) {
+            // Formula: (Raw Value - 1) / 2999 * 100
+            return Math.max(0, Math.min(100, ((rawValue - 1) / 2999) * 100));
+        }
+
+        function convertTDSToPercentage(ppmValue) {
+            // Convert TDS ppm to percentage (assuming max reasonable TDS is ~1000 ppm)
+            return Math.max(0, Math.min(100, (ppmValue / 1000) * 100));
+        }
+
         function getQualityStatus(value, thresholds) {
-            if (value <= thresholds.good) return { status: 'Excellent', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' };
-            if (value <= thresholds.warning) return { status: 'Good', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' };
-            return { status: 'Poor', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' };
+            if (value <= thresholds.good) return { status: 'Good', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' };
+            if (value <= thresholds.warning) return { status: 'Medium', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' };
+            return { status: 'Critical', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' };
         }
 
         function getPHStatus(value) {
-            if (value >= 6.5 && value <= 8.5) return { status: 'Optimal', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' };
-            if (value >= 6.0 && value <= 9.0) return { status: 'Acceptable', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' };
+            // Pool pH standards
+            if (value >= 7.2 && value <= 7.8) return { status: 'Optimal', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' };
+            if (value >= 7.0 && value <= 8.0) return { status: 'Acceptable', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' };
             return { status: 'Critical', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' };
         }
 
         function getTemperatureStatus(value) {
-            if (value >= 15 && value <= 30) return { status: 'Optimal', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' };
-            if (value >= 10 && value <= 35) return { status: 'Acceptable', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' };
+            // Pool temperature standards
+            if (value >= 26 && value <= 28) return { status: 'Optimal', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' };
+            if (value >= 24 && value <= 30) return { status: 'Acceptable', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' };
             return { status: 'Critical', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' };
         }
 
@@ -338,15 +351,19 @@ try {
 
                     const latest = data.latest;
                     if (latest) {
+                        // Convert raw values to percentages
+                        const turbidityPercent = convertTurbidityToPercentage(parseFloat(latest.turbidity_ntu));
+                        const tdsPercent = convertTDSToPercentage(parseFloat(latest.tds_ppm));
+                        
                         // Update sensor values
-                        document.getElementById('turbidityValue').textContent = parseFloat(latest.turbidity_ntu).toFixed(1);
-                        document.getElementById('tdsValue').textContent = parseFloat(latest.tds_ppm).toFixed(0);
+                        document.getElementById('turbidityValue').textContent = turbidityPercent.toFixed(1);
+                        document.getElementById('tdsValue').textContent = tdsPercent.toFixed(1);
                         document.getElementById('phValue').textContent = parseFloat(latest.ph).toFixed(1);
                         document.getElementById('temperatureValue').textContent = parseFloat(latest.temperature).toFixed(1);
 
-                        // Update quality badges
-                        const turbidityStatus = getQualityStatus(parseFloat(latest.turbidity_ntu), { good: 5, warning: 10 });
-                        const tdsStatus = getQualityStatus(parseFloat(latest.tds_ppm), { good: 300, warning: 500 });
+                        // Update quality badges with new thresholds
+                        const turbidityStatus = getQualityStatus(turbidityPercent, { good: 2, warning: 5 });
+                        const tdsStatus = getQualityStatus(tdsPercent, { good: 30, warning: 60 });
                         const phStatus = getPHStatus(parseFloat(latest.ph));
                         const tempStatus = getTemperatureStatus(parseFloat(latest.temperature));
 
@@ -365,10 +382,10 @@ try {
                         // Update last update time
                         document.getElementById('lastUpdate').textContent = formatDate(latest.reading_time);
 
-                        // Update water quality alerts
+                        // Update water quality alerts with percentage values
                         updateWaterQualityAlerts(
-                            parseFloat(latest.turbidity_ntu),
-                            parseFloat(latest.tds_ppm),
+                            turbidityPercent,
+                            tdsPercent,
                             parseFloat(latest.ph),
                             parseFloat(latest.temperature)
                         );
@@ -389,21 +406,21 @@ try {
             let overallScore = 0;
             let totalParameters = 4;
 
-            // Evaluate each parameter
-            if (turbidity <= 5) { alerts.push({ type: 'success', title: 'Turbidity', message: 'Excellent water clarity', icon: 'fa-check-circle' }); overallScore++; }
-            else if (turbidity <= 10) { alerts.push({ type: 'warning', title: 'Turbidity', message: 'Moderate clarity - monitor closely', icon: 'fa-exclamation-triangle' }); overallScore += 0.5; }
-            else { alerts.push({ type: 'danger', title: 'Turbidity', message: 'Poor clarity - requires attention', icon: 'fa-exclamation-circle' }); }
+            // Evaluate each parameter with new thresholds
+            if (turbidity <= 2) { alerts.push({ type: 'success', title: 'Turbidity', message: 'Good water clarity', icon: 'fa-check-circle' }); overallScore++; }
+            else if (turbidity <= 5) { alerts.push({ type: 'warning', title: 'Turbidity', message: 'Medium clarity - monitor closely', icon: 'fa-exclamation-triangle' }); overallScore += 0.5; }
+            else { alerts.push({ type: 'danger', title: 'Turbidity', message: 'Critical clarity - requires attention', icon: 'fa-exclamation-circle' }); }
 
-            if (tds <= 300) { alerts.push({ type: 'success', title: 'TDS', message: 'Low dissolved solids content', icon: 'fa-check-circle' }); overallScore++; }
-            else if (tds <= 500) { alerts.push({ type: 'warning', title: 'TDS', message: 'Moderate dissolved solids', icon: 'fa-exclamation-triangle' }); overallScore += 0.5; }
+            if (tds <= 30) { alerts.push({ type: 'success', title: 'TDS', message: 'Good dissolved solids content', icon: 'fa-check-circle' }); overallScore++; }
+            else if (tds <= 60) { alerts.push({ type: 'warning', title: 'TDS', message: 'Medium dissolved solids', icon: 'fa-exclamation-triangle' }); overallScore += 0.5; }
             else { alerts.push({ type: 'danger', title: 'TDS', message: 'High dissolved solids - treatment needed', icon: 'fa-exclamation-circle' }); }
 
-            if (ph >= 6.5 && ph <= 8.5) { alerts.push({ type: 'success', title: 'pH Level', message: 'Optimal pH range', icon: 'fa-check-circle' }); overallScore++; }
-            else if (ph >= 6.0 && ph <= 9.0) { alerts.push({ type: 'warning', title: 'pH Level', message: 'Acceptable pH - monitor for changes', icon: 'fa-exclamation-triangle' }); overallScore += 0.5; }
+            if (ph >= 7.2 && ph <= 7.8) { alerts.push({ type: 'success', title: 'pH Level', message: 'Optimal pool pH range', icon: 'fa-check-circle' }); overallScore++; }
+            else if (ph >= 7.0 && ph <= 8.0) { alerts.push({ type: 'warning', title: 'pH Level', message: 'Acceptable pH - monitor for changes', icon: 'fa-exclamation-triangle' }); overallScore += 0.5; }
             else { alerts.push({ type: 'danger', title: 'pH Level', message: 'Critical pH - immediate adjustment needed', icon: 'fa-exclamation-circle' }); }
 
-            if (temperature >= 15 && temperature <= 30) { alerts.push({ type: 'success', title: 'Temperature', message: 'Optimal temperature range', icon: 'fa-check-circle' }); overallScore++; }
-            else if (temperature >= 10 && temperature <= 35) { alerts.push({ type: 'warning', title: 'Temperature', message: 'Acceptable temperature - monitor trends', icon: 'fa-exclamation-triangle' }); overallScore += 0.5; }
+            if (temperature >= 26 && temperature <= 28) { alerts.push({ type: 'success', title: 'Temperature', message: 'Optimal pool temperature', icon: 'fa-check-circle' }); overallScore++; }
+            else if (temperature >= 24 && temperature <= 30) { alerts.push({ type: 'warning', title: 'Temperature', message: 'Acceptable temperature - monitor trends', icon: 'fa-exclamation-triangle' }); overallScore += 0.5; }
             else { alerts.push({ type: 'danger', title: 'Temperature', message: 'Critical temperature - check system', icon: 'fa-exclamation-circle' }); }
 
             // Determine overall status

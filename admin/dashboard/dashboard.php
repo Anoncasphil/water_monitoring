@@ -170,7 +170,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     <div class="text-right">
                         <div class="text-3xl font-bold text-gray-800 dark:text-white" id="turbidityValue">--</div>
-                        <div class="text-sm text-gray-500 dark:text-gray-400">NTU</div>
+                        <div class="text-sm text-gray-500 dark:text-gray-400">%</div>
                     </div>
                 </div>
                 <div class="text-xs text-gray-500 dark:text-gray-400" id="turbidityTime">
@@ -192,7 +192,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     <div class="text-right">
                         <div class="text-3xl font-bold text-gray-800 dark:text-white" id="tdsValue">--</div>
-                        <div class="text-sm text-gray-500 dark:text-gray-400">ppm</div>
+                        <div class="text-sm text-gray-500 dark:text-gray-400">%</div>
                     </div>
                 </div>
                 <div class="text-xs text-gray-500 dark:text-gray-400" id="tdsTime">
@@ -423,10 +423,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <i class="fas fa-clock mr-1"></i>Time
                                 </th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                    <i class="fas fa-filter mr-1"></i>Turb
+                                    <i class="fas fa-filter mr-1"></i>Turb %
                                 </th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                    <i class="fas fa-flask mr-1"></i>TDS
+                                    <i class="fas fa-flask mr-1"></i>TDS %
                                 </th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                     <i class="fas fa-vial mr-1"></i>pH
@@ -666,8 +666,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     // Update sensor cards
                     const latest = data.latest;
                     if (latest) {
-                        document.getElementById('turbidityValue').textContent = parseFloat(latest.turbidity_ntu).toFixed(1);
-                        document.getElementById('tdsValue').textContent = parseFloat(latest.tds_ppm).toFixed(1);
+                        // Convert and display percentages
+                        const turbidityPercent = convertTurbidityToPercentage(parseFloat(latest.turbidity_ntu));
+                        const tdsPercent = convertTDSToPercentage(parseFloat(latest.tds_ppm));
+                        
+                        document.getElementById('turbidityValue').textContent = turbidityPercent.toFixed(1);
+                        document.getElementById('tdsValue').textContent = tdsPercent.toFixed(1);
                         document.getElementById('phValue').textContent = parseFloat(latest.ph).toFixed(2);
                         document.getElementById('temperatureValue').textContent = parseFloat(latest.temperature).toFixed(2);
                         document.getElementById('turbidityTime').textContent = `Last updated: ${formatDate(latest.reading_time)}`;
@@ -678,15 +682,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     // Update table
                     if (data.recent && data.recent.length > 0) {
-                        const tableHtml = data.recent.map(reading => `
-                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
-                                <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${formatDate(reading.reading_time)}</td>
-                                <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${parseFloat(reading.turbidity_ntu).toFixed(1)}</td>
-                                <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${parseFloat(reading.tds_ppm).toFixed(1)}</td>
-                                <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${parseFloat(reading.ph).toFixed(2)}</td>
-                                <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${parseFloat(reading.temperature).toFixed(2)}</td>
-                            </tr>
-                        `).join('');
+                        const tableHtml = data.recent.map(reading => {
+                            const turbidityPercent = convertTurbidityToPercentage(parseFloat(reading.turbidity_ntu));
+                            const tdsPercent = convertTDSToPercentage(parseFloat(reading.tds_ppm));
+                            
+                            return `
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${formatDate(reading.reading_time)}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${turbidityPercent.toFixed(1)}%</td>
+                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${tdsPercent.toFixed(1)}%</td>
+                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${parseFloat(reading.ph).toFixed(2)}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${parseFloat(reading.temperature).toFixed(2)}</td>
+                                </tr>
+                            `;
+                        }).join('');
                         document.getElementById('readingsTable').innerHTML = tableHtml;
                     }
 
@@ -746,8 +755,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 data: {
                     labels: data.map(d => formatDate(d.reading_time)),
                     datasets: [{
-                        label: 'Turbidity (NTU)',
-                        data: data.map(d => parseFloat(d.turbidity_ntu)),
+                        label: 'Turbidity (%)',
+                        data: data.map(d => convertTurbidityToPercentage(parseFloat(d.turbidity_ntu))),
                         borderColor: 'rgb(59, 130, 246)',
                         backgroundColor: turbidityGradient,
                         borderWidth: 2,
@@ -763,8 +772,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         pointHoverBorderWidth: 2,
                         pointStyle: 'circle'
                     }, {
-                        label: 'TDS (ppm)',
-                        data: data.map(d => parseFloat(d.tds_ppm)),
+                        label: 'TDS (%)',
+                        data: data.map(d => convertTDSToPercentage(parseFloat(d.tds_ppm))),
                         borderColor: 'rgb(16, 185, 129)',
                         backgroundColor: tdsGradient,
                         borderWidth: 2,
@@ -1012,99 +1021,114 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Water quality thresholds
         const thresholds = {
             turbidity: {
-                good: 5,      // NTU
-                warning: 10,  // NTU
-                danger: 20    // NTU
+                good: 2,      // % (0-2% = good)
+                warning: 5,   // % (2-5% = medium)
+                danger: 5     // % (>5% = critical)
             },
             tds: {
-                good: 300,    // ppm
-                warning: 500, // ppm
-                danger: 1000  // ppm
+                good: 30,     // % (0-30% = good)
+                warning: 60,  // % (30-60% = medium)
+                danger: 60    // % (>60% = critical)
             },
             ph: {
-                good: { min: 6.5, max: 8.5 },
-                warning: { min: 6.0, max: 9.0 },
-                danger: { min: 5.0, max: 10.0 }
+                good: { min: 7.2, max: 7.8 },    // Pool optimal range
+                warning: { min: 7.0, max: 8.0 }, // Pool acceptable range
+                danger: { min: 6.8, max: 8.2 }   // Pool critical range
             },
             temperature: {
-                good: { min: 15, max: 30 },    // °C
-                warning: { min: 10, max: 35 }, // °C
-                danger: { min: 5, max: 40 }    // °C
+                good: { min: 26, max: 28 },    // °C (Pool optimal)
+                warning: { min: 24, max: 30 }, // °C (Pool acceptable)
+                danger: { min: 22, max: 32 }   // °C (Pool critical)
             }
         };
+
+        // Conversion functions
+        function convertTurbidityToPercentage(rawValue) {
+            // Formula: (Raw Value - 1) / 2999 * 100
+            return Math.max(0, Math.min(100, ((rawValue - 1) / 2999) * 100));
+        }
+
+        function convertTDSToPercentage(ppmValue) {
+            // Convert TDS ppm to percentage (assuming max reasonable TDS is ~1000 ppm)
+            return Math.max(0, Math.min(100, (ppmValue / 1000) * 100));
+        }
 
         function evaluateWaterQuality(turbidity, tds, ph, temperature) {
             const alerts = [];
             
+            // Convert raw values to percentages
+            const turbidityPercent = convertTurbidityToPercentage(turbidity);
+            const tdsPercent = convertTDSToPercentage(tds);
+            
             // Evaluate Turbidity
-            if (turbidity >= thresholds.turbidity.danger) {
+            if (turbidityPercent >= thresholds.turbidity.danger) {
                 alerts.push({
                     type: 'danger',
-                    message: `High turbidity (${turbidity.toFixed(1)} NTU) - Water is very cloudy and may contain harmful particles`
+                    message: `High turbidity (${turbidityPercent.toFixed(1)}%) - Water is very cloudy and may contain harmful particles`
                 });
-            } else if (turbidity >= thresholds.turbidity.warning) {
+            } else if (turbidityPercent >= thresholds.turbidity.warning) {
                 alerts.push({
                     type: 'warning',
-                    message: `Elevated turbidity (${turbidity.toFixed(1)} NTU) - Water clarity is reduced`
+                    message: `Medium turbidity (${turbidityPercent.toFixed(1)}%) - Water clarity is reduced`
                 });
-            } else if (turbidity <= thresholds.turbidity.good) {
+            } else if (turbidityPercent <= thresholds.turbidity.good) {
                 alerts.push({
                     type: 'success',
-                    message: `Good turbidity (${turbidity.toFixed(1)} NTU) - Water is clear`
+                    message: `Good turbidity (${turbidityPercent.toFixed(1)}%) - Water is clear`
                 });
             }
 
             // Evaluate TDS
-            if (tds >= thresholds.tds.danger) {
+            if (tdsPercent >= thresholds.tds.danger) {
                 alerts.push({
                     type: 'danger',
-                    message: `High TDS (${tds.toFixed(0)} ppm) - Water contains excessive dissolved solids`
+                    message: `High TDS (${tdsPercent.toFixed(1)}%) - Water contains excessive dissolved solids`
                 });
-            } else if (tds >= thresholds.tds.warning) {
+            } else if (tdsPercent >= thresholds.tds.warning) {
                 alerts.push({
                     type: 'warning',
-                    message: `Elevated TDS (${tds.toFixed(0)} ppm) - Water may need treatment`
+                    message: `Medium TDS (${tdsPercent.toFixed(1)}%) - Water may need treatment`
                 });
-            } else if (tds <= thresholds.tds.good) {
+            } else if (tdsPercent <= thresholds.tds.good) {
                 alerts.push({
                     type: 'success',
-                    message: `Good TDS (${tds.toFixed(0)} ppm) - Water is within acceptable range`
+                    message: `Good TDS (${tdsPercent.toFixed(1)}%) - Water is within acceptable range`
                 });
             }
 
-            // Evaluate pH
+            // Evaluate pH (Pool standards)
             if (ph < thresholds.ph.danger.min || ph > thresholds.ph.danger.max) {
                 alerts.push({
                     type: 'danger',
-                    message: `Extreme pH (${ph.toFixed(1)}) - Water is too acidic or alkaline`
+                    message: `Critical pH (${ph.toFixed(1)}) - Pool water pH is outside safe range`
                 });
             } else if (ph < thresholds.ph.warning.min || ph > thresholds.ph.warning.max) {
                 alerts.push({
                     type: 'warning',
-                    message: `Unbalanced pH (${ph.toFixed(1)}) - Water may need pH adjustment`
+                    message: `Unbalanced pH (${ph.toFixed(1)}) - Pool water may need pH adjustment`
                 });
             } else if (ph >= thresholds.ph.good.min && ph <= thresholds.ph.good.max) {
                 alerts.push({
                     type: 'success',
-                    message: `Good pH (${ph.toFixed(1)}) - Water is within ideal range`
+                    message: `Optimal pH (${ph.toFixed(1)}) - Pool water is within ideal range`
                 });
             }
 
-            // Evaluate Temperature
+            // Evaluate Temperature (Pool standards)
             if (temperature < thresholds.temperature.danger.min || temperature > thresholds.temperature.danger.max) {
                 alerts.push({
                     type: 'danger',
-                    message: `Extreme temperature (${temperature.toFixed(1)}°C) - Water is too hot or cold`
+                    message: `Critical temperature (${temperature.toFixed(1)}°C) - Pool water temperature is unsafe`
                 });
             } else if (temperature < thresholds.temperature.warning.min || temperature > thresholds.temperature.warning.max) {
                 alerts.push({
                     type: 'warning',
-                    message: `Unusual temperature (${temperature.toFixed(1)}°C) - Monitor water temperature`
+                    message: `Unusual temperature (${temperature.toFixed(1)}°C) - Monitor pool water temperature`
                 });
             } else if (temperature >= thresholds.temperature.good.min && temperature <= thresholds.temperature.good.max) {
                 alerts.push({
                     type: 'success',
-                    message: `Good temperature (${temperature.toFixed(1)}°C) - Water is at ideal temperature`
+                    message: `Optimal temperature (${temperature.toFixed(1)}°C) - Pool water is at ideal temperature`
                 });
             }
 
