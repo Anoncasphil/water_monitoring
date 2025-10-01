@@ -1036,10 +1036,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             const modalDetails = document.getElementById('modalAlertDetails');
             modalDetails.innerHTML = `
                 <div class="text-sm">
-                    <div class="font-medium mb-2">Alert Details:</div>
-                    <div class="mb-1">${alertData.alert.message}</div>
-                    <div class="text-xs text-gray-600 dark:text-gray-400">
-                        Detected at: ${alertData.timestamp.toLocaleString()}
+                    <div class="font-semibold text-amber-800 dark:text-amber-200 mb-3 flex items-center">
+                        <i class="fas fa-info-circle mr-2"></i>Alert Details
+                    </div>
+                    <div class="mb-3 p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg border border-amber-200 dark:border-amber-700">
+                        <div class="text-amber-900 dark:text-amber-100 font-medium leading-relaxed">
+                            ${alertData.alert.message}
+                        </div>
+                    </div>
+                    <div class="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded border border-amber-200 dark:border-amber-800">
+                        <i class="fas fa-clock mr-1"></i>Detected at: ${alertData.timestamp.toLocaleString()}
                     </div>
                 </div>
             `;
