@@ -1093,6 +1093,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         values: { turbidity, tds, ph, temperature }
                     });
                 }
+                
+                // If it's already acknowledged, make sure it stays acknowledged
+                if (acknowledgedAlerts.has(alertType)) {
+                    acknowledgedAlerts.add(alertKey);
+                }
             });
             
             // Update unacknowledged count
@@ -1286,16 +1291,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 const data = await response.json();
                 if (data.success && data.data) {
-                    // Mark recent acknowledgments as acknowledged (only very recent ones)
+                    // Mark recent acknowledgments as acknowledged
                     const now = new Date();
                     data.data.forEach(report => {
                         const ackTime = new Date(report.acknowledged_at);
                         
-                        // Only mark as acknowledged if acknowledged within last 2 hours
-                        // This ensures new alerts are properly detected
-                        if ((now - ackTime) < 2 * 60 * 60 * 1000) {
-                            // Create key with alert type only (since we don't have level info from DB)
+                        // Mark as acknowledged if acknowledged within last 24 hours
+                        // This provides better persistence while still allowing new alerts
+                        if ((now - ackTime) < 24 * 60 * 60 * 1000) {
+                            // Store both the alert type and the specific acknowledgment data
                             acknowledgedAlerts.add(report.alert_type);
+                            console.log(`Loaded acknowledged alert: ${report.alert_type} from ${report.acknowledged_at}`);
                         }
                     });
                 }

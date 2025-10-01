@@ -56,34 +56,33 @@ try {
         exit();
     }
     
-    // Check if there's an acknowledgment for this specific alert message within the last 2 hours
-    // This is more restrictive to ensure new alerts are properly tracked
+    // Check if there's an acknowledgment for this alert type within the last 24 hours
+    // This provides better persistence while still allowing new alerts to be detected
     $query = "
         SELECT COUNT(*) as count 
         FROM alert_acknowledgments 
         WHERE alert_type = ? 
-        AND alert_message = ?
-        AND acknowledged_at >= DATE_SUB(NOW(), INTERVAL 2 HOUR)
+        AND acknowledged_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
         ORDER BY acknowledged_at DESC 
         LIMIT 1
     ";
     
     $stmt = $conn->prepare($query);
-    $stmt->bind_param("ss", $alertType, $alertMessage);
+    $stmt->bind_param("s", $alertType);
     $stmt->execute();
     $result = $stmt->get_result();
     $row = $result->fetch_assoc();
     
     $acknowledged = ($row['count'] > 0);
     
-    // If not acknowledged and we have a specific timestamp, check for recent acknowledgments
-    if (!$acknowledged && $alertTimestamp) {
+    // If we have a specific timestamp, also check if there are newer acknowledgments
+    if ($alertTimestamp && $acknowledged) {
         $timestampQuery = "
             SELECT COUNT(*) as count 
             FROM alert_acknowledgments 
             WHERE alert_type = ? 
-            AND alert_timestamp >= ?
-            AND acknowledged_at >= DATE_SUB(NOW(), INTERVAL 2 HOUR)
+            AND alert_timestamp > ?
+            AND acknowledged_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
             ORDER BY acknowledged_at DESC 
             LIMIT 1
         ";
@@ -94,7 +93,11 @@ try {
         $result = $stmt->get_result();
         $row = $result->fetch_assoc();
         
-        $acknowledged = ($row['count'] > 0);
+        // If there's a newer acknowledgment, keep it acknowledged
+        // Otherwise, it's a new alert instance
+        if ($row['count'] == 0) {
+            $acknowledged = false;
+        }
     }
     
     echo json_encode([
