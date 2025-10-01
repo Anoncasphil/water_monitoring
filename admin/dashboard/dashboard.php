@@ -1205,9 +1205,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 danger: { min: 0, max: 14 }      // Critical range (below 4 and above 10)
             },
             temperature: {
-                cold: { min: 0, max: 15 },     // °C (Cold water)
-                good: { min: 15, max: 25 },    // °C (Good temperature)
-                warm: { min: 25, max: 50 }     // °C (Warm water)
+                cold: { min: 0, max: 20 },     // °C (Cold water)
+                good: { min: 20, max: 30 },    // °C (Good temperature)
+                warm: { min: 30, max: 40 }     // °C (Warm water)
             }
         };
 

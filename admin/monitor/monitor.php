@@ -275,15 +275,15 @@ try {
                     <div class="space-y-3">
                         <div class="flex justify-between text-sm">
                             <span class="text-gray-500 dark:text-gray-400">Cold</span>
-                            <span class="text-blue-600 dark:text-blue-400 font-medium">0-15°C</span>
+                            <span class="text-blue-600 dark:text-blue-400 font-medium">0-20°C</span>
                         </div>
                         <div class="flex justify-between text-sm">
                             <span class="text-gray-500 dark:text-gray-400">Good</span>
-                            <span class="text-green-600 dark:text-green-400 font-medium">15-25°C</span>
+                            <span class="text-green-600 dark:text-green-400 font-medium">20-30°C</span>
                         </div>
                         <div class="flex justify-between text-sm">
                             <span class="text-gray-500 dark:text-gray-400">Warm</span>
-                            <span class="text-orange-600 dark:text-orange-400 font-medium">25-50°C</span>
+                            <span class="text-orange-600 dark:text-orange-400 font-medium">30-40°C</span>
                         </div>
                     </div>
                 </div>
@@ -350,9 +350,9 @@ try {
 
         function getTemperatureStatus(value) {
             // Temperature categories: Cold, Good, Warm
-            if (value >= 0 && value < 15) return { status: 'Cold', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' };
-            if (value >= 15 && value < 25) return { status: 'Good', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' };
-            if (value >= 25 && value <= 50) return { status: 'Warm', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' };
+            if (value >= 0 && value < 20) return { status: 'Cold', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' };
+            if (value >= 20 && value < 30) return { status: 'Good', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' };
+            if (value >= 30 && value <= 40) return { status: 'Warm', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' };
             return { status: 'Unknown', color: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400' };
         }
 
@@ -440,9 +440,9 @@ try {
             else if ((ph >= 4 && ph < 6) || (ph > 8 && ph <= 10)) { alerts.push({ type: 'warning', title: 'pH Level', message: 'Medium pH - monitor and adjust as needed', icon: 'fa-exclamation-triangle' }); overallScore += 0.5; }
             else { alerts.push({ type: 'danger', title: 'pH Level', message: 'Critical pH - immediate adjustment needed', icon: 'fa-exclamation-circle' }); }
 
-            if (temperature >= 0 && temperature < 15) { alerts.push({ type: 'warning', title: 'Temperature', message: 'Cold water - temperature is cool', icon: 'fa-snowflake' }); overallScore += 0.5; }
-            else if (temperature >= 15 && temperature < 25) { alerts.push({ type: 'success', title: 'Temperature', message: 'Good water temperature', icon: 'fa-check-circle' }); overallScore++; }
-            else if (temperature >= 25 && temperature <= 50) { alerts.push({ type: 'warning', title: 'Temperature', message: 'Warm water - temperature is warm', icon: 'fa-fire' }); overallScore += 0.5; }
+            if (temperature >= 0 && temperature < 20) { alerts.push({ type: 'warning', title: 'Temperature', message: 'Cold water - temperature is cool', icon: 'fa-snowflake' }); overallScore += 0.5; }
+            else if (temperature >= 20 && temperature < 30) { alerts.push({ type: 'success', title: 'Temperature', message: 'Good water temperature', icon: 'fa-check-circle' }); overallScore++; }
+            else if (temperature >= 30 && temperature <= 40) { alerts.push({ type: 'warning', title: 'Temperature', message: 'Warm water - temperature is warm', icon: 'fa-fire' }); overallScore += 0.5; }
 
             // Determine overall status
             const overallPercentage = (overallScore / totalParameters) * 100;
