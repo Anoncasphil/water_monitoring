@@ -170,7 +170,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     <div class="text-right">
                         <div class="text-3xl font-bold text-gray-800 dark:text-white" id="turbidityValue">--</div>
-                        <div class="text-sm text-gray-500 dark:text-gray-400">%</div>
+                        <div class="text-sm text-gray-500 dark:text-gray-400">NTU</div>
                         <div class="text-xs text-gray-400 dark:text-gray-500 mt-1" id="turbidityRaw">Raw: --</div>
                     </div>
                 </div>
@@ -425,7 +425,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <i class="fas fa-clock mr-1"></i>Time
                                 </th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                    <i class="fas fa-filter mr-1"></i>Turb %
+                                    <i class="fas fa-filter mr-1"></i>Turb NTU
                                 </th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                     <i class="fas fa-flask mr-1"></i>TDS %
@@ -672,12 +672,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         const turbidityPercent = convertTurbidityToPercentage(parseFloat(latest.turbidity_ntu));
                         const tdsPercent = convertTDSToPercentage(parseFloat(latest.tds_ppm));
                         
-                        document.getElementById('turbidityValue').textContent = turbidityPercent.toFixed(1);
+                        // Convert raw turbidity to real NTU
+                        const realNTU = convertRawToRealNTU(parseFloat(latest.turbidity_ntu));
+                        
+                        document.getElementById('turbidityValue').textContent = realNTU.toFixed(1);
                         document.getElementById('tdsValue').textContent = tdsPercent.toFixed(1);
                         document.getElementById('phValue').textContent = parseFloat(latest.ph).toFixed(2);
                         document.getElementById('temperatureValue').textContent = parseFloat(latest.temperature).toFixed(2);
                         
-                        // Update raw data displays
+                        // Update raw data displays (turbidity shows raw value, TDS shows ppm)
                         document.getElementById('turbidityRaw').textContent = `Raw: ${parseFloat(latest.turbidity_ntu).toFixed(0)}`;
                         document.getElementById('tdsRaw').textContent = `Raw: ${parseFloat(latest.tds_ppm).toFixed(0)} ppm`;
                         document.getElementById('turbidityTime').textContent = `Last updated: ${formatDate(latest.reading_time)}`;
@@ -689,14 +692,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     // Update table
                     if (data.recent && data.recent.length > 0) {
                         const tableHtml = data.recent.map(reading => {
-                            const turbidityPercent = convertTurbidityToPercentage(parseFloat(reading.turbidity_ntu));
+                            const realNTU = convertRawToRealNTU(parseFloat(reading.turbidity_ntu));
                             const tdsPercent = convertTDSToPercentage(parseFloat(reading.tds_ppm));
                             
                             return `
                                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
                                     <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${formatDate(reading.reading_time)}</td>
                                     <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">
-                                        <div class="font-medium">${turbidityPercent.toFixed(1)}%</div>
+                                        <div class="font-medium">${realNTU.toFixed(1)} NTU</div>
                                         <div class="text-xs text-gray-500 dark:text-gray-400">Raw: ${parseFloat(reading.turbidity_ntu).toFixed(0)}</div>
                                     </td>
                                     <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">
@@ -767,8 +770,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 data: {
                     labels: data.map(d => formatDate(d.reading_time)),
                     datasets: [{
-                        label: 'Turbidity (%)',
-                        data: data.map(d => convertTurbidityToPercentage(parseFloat(d.turbidity_ntu))),
+                        label: 'Turbidity (NTU)',
+                        data: data.map(d => convertRawToRealNTU(parseFloat(d.turbidity_ntu))),
                         borderColor: 'rgb(59, 130, 246)',
                         backgroundColor: turbidityGradient,
                         borderWidth: 2,
@@ -1055,6 +1058,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         };
 
         // Conversion functions
+        function convertRawToRealNTU(rawValue) {
+            // Convert raw sensor values (0-3000) to real NTU values
+            // Raw 0 = 0 NTU (crystal clear)
+            // Raw 3000 = 4000 NTU (very murky)
+            // Linear conversion: NTU = (rawValue / 3000) * 4000
+            return Math.max(0, (rawValue / 3000) * 4000);
+        }
+
         function convertTurbidityToPercentage(rawValue) {
             // Formula: (Raw Value - 1) / 2999 * 100
             return Math.max(0, Math.min(100, ((rawValue - 1) / 2999) * 100));
@@ -1068,25 +1079,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         function evaluateWaterQuality(turbidity, tds, ph, temperature) {
             const alerts = [];
             
-            // Convert raw values to percentages for display
+            // Convert raw values to real NTU and percentages for display
+            const realNTU = convertRawToRealNTU(turbidity);
             const turbidityPercent = convertTurbidityToPercentage(turbidity);
             const tdsPercent = convertTDSToPercentage(tds);
             
-            // Evaluate Turbidity (using raw NTU values for thresholds)
-            if (turbidity >= thresholds.turbidity.danger) {
+            // Evaluate Turbidity (using real NTU values for thresholds)
+            if (realNTU >= thresholds.turbidity.danger) {
                 alerts.push({
                     type: 'danger',
-                    message: `High turbidity (${turbidity.toFixed(1)} NTU, ${turbidityPercent.toFixed(1)}%) - Water is very cloudy and may contain harmful particles`
+                    message: `High turbidity (${realNTU.toFixed(1)} NTU, Raw: ${turbidity.toFixed(0)}) - Water is very cloudy and may contain harmful particles`
                 });
-            } else if (turbidity >= thresholds.turbidity.warning) {
+            } else if (realNTU >= thresholds.turbidity.warning) {
                 alerts.push({
                     type: 'warning',
-                    message: `Medium turbidity (${turbidity.toFixed(1)} NTU, ${turbidityPercent.toFixed(1)}%) - Water clarity is reduced`
+                    message: `Medium turbidity (${realNTU.toFixed(1)} NTU, Raw: ${turbidity.toFixed(0)}) - Water clarity is reduced`
                 });
-            } else if (turbidity <= thresholds.turbidity.good) {
+            } else if (realNTU <= thresholds.turbidity.good) {
                 alerts.push({
                     type: 'success',
-                    message: `Good turbidity (${turbidity.toFixed(1)} NTU, ${turbidityPercent.toFixed(1)}%) - Water is clear`
+                    message: `Good turbidity (${realNTU.toFixed(1)} NTU, Raw: ${turbidity.toFixed(0)}) - Water is clear`
                 });
             }
 

@@ -162,8 +162,8 @@ try {
                     </div>
                     <div class="text-center mb-4">
                         <div class="value-display text-4xl text-gray-900 dark:text-white mb-2" id="turbidityValue">--</div>
-                        <div class="text-lg text-gray-500 dark:text-gray-400">%</div>
-                        <div class="text-xs text-gray-400 dark:text-gray-500 mt-1" id="turbidityRaw">Raw: --</div>
+                        <div class="text-lg text-gray-500 dark:text-gray-400">NTU</div>
+                        <div class="text-xs text-gray-400 dark:text-gray-500 mt-1" id="turbidityRaw">%: --</div>
                     </div>
                     <div class="space-y-3">
                         <div class="flex justify-between text-sm">
@@ -315,6 +315,14 @@ try {
         }
 
         // Conversion functions
+        function convertRawToRealNTU(rawValue) {
+            // Convert raw sensor values (0-3000) to real NTU values
+            // Raw 0 = 0 NTU (crystal clear)
+            // Raw 3000 = 4000 NTU (very murky)
+            // Linear conversion: NTU = (rawValue / 3000) * 4000
+            return Math.max(0, (rawValue / 3000) * 4000);
+        }
+
         function convertTurbidityToPercentage(rawValue) {
             // Formula: (Raw Value - 1) / 2999 * 100
             return Math.max(0, Math.min(100, ((rawValue - 1) / 2999) * 100));
@@ -325,9 +333,10 @@ try {
             return Math.max(0, Math.min(100, (ppmValue / 1000) * 100));
         }
 
-        function getTurbidityStatus(ntuValue) {
-            if (ntuValue <= 2) return { status: 'Good', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' };
-            if (ntuValue <= 5) return { status: 'Medium', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' };
+        function getTurbidityStatus(rawValue) {
+            const realNTU = convertRawToRealNTU(rawValue);
+            if (realNTU <= 2) return { status: 'Good', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' };
+            if (realNTU <= 5) return { status: 'Medium', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' };
             return { status: 'Critical', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' };
         }
 
@@ -363,13 +372,16 @@ try {
                         const turbidityPercent = convertTurbidityToPercentage(parseFloat(latest.turbidity_ntu));
                         const tdsPercent = convertTDSToPercentage(parseFloat(latest.tds_ppm));
                         
+                        // Convert raw turbidity to real NTU
+                        const realNTU = convertRawToRealNTU(parseFloat(latest.turbidity_ntu));
+                        
                         // Update sensor values
-                        document.getElementById('turbidityValue').textContent = turbidityPercent.toFixed(1);
+                        document.getElementById('turbidityValue').textContent = realNTU.toFixed(1);
                         document.getElementById('tdsValue').textContent = tdsPercent.toFixed(1);
                         document.getElementById('phValue').textContent = parseFloat(latest.ph).toFixed(1);
                         document.getElementById('temperatureValue').textContent = parseFloat(latest.temperature).toFixed(1);
                         
-                        // Update raw data displays
+                        // Update raw data displays (turbidity shows raw value, TDS shows ppm)
                         document.getElementById('turbidityRaw').textContent = `Raw: ${parseFloat(latest.turbidity_ntu).toFixed(0)}`;
                         document.getElementById('tdsRaw').textContent = `Raw: ${parseFloat(latest.tds_ppm).toFixed(0)} ppm`;
 
@@ -418,14 +430,15 @@ try {
             let overallScore = 0;
             let totalParameters = 4;
 
-            // Convert to percentage for display
+            // Convert to real NTU and percentage for display
+            const realNTU = convertRawToRealNTU(turbidity);
             const turbidityPercent = convertTurbidityToPercentage(turbidity);
             const tdsPercent = convertTDSToPercentage(tds);
             
             // Evaluate each parameter with new thresholds
-            if (turbidity <= 2) { alerts.push({ type: 'success', title: 'Turbidity', message: `Good water clarity (${turbidity.toFixed(1)} NTU, ${turbidityPercent.toFixed(1)}%)`, icon: 'fa-check-circle' }); overallScore++; }
-            else if (turbidity <= 5) { alerts.push({ type: 'warning', title: 'Turbidity', message: `Medium clarity - monitor closely (${turbidity.toFixed(1)} NTU, ${turbidityPercent.toFixed(1)}%)`, icon: 'fa-exclamation-triangle' }); overallScore += 0.5; }
-            else { alerts.push({ type: 'danger', title: 'Turbidity', message: `Critical clarity - requires attention (${turbidity.toFixed(1)} NTU, ${turbidityPercent.toFixed(1)}%)`, icon: 'fa-exclamation-circle' }); }
+            if (realNTU <= 2) { alerts.push({ type: 'success', title: 'Turbidity', message: `Good water clarity (${realNTU.toFixed(1)} NTU, Raw: ${turbidity.toFixed(0)})`, icon: 'fa-check-circle' }); overallScore++; }
+            else if (realNTU <= 5) { alerts.push({ type: 'warning', title: 'Turbidity', message: `Medium clarity - monitor closely (${realNTU.toFixed(1)} NTU, Raw: ${turbidity.toFixed(0)})`, icon: 'fa-exclamation-triangle' }); overallScore += 0.5; }
+            else { alerts.push({ type: 'danger', title: 'Turbidity', message: `Critical clarity - requires attention (${realNTU.toFixed(1)} NTU, Raw: ${turbidity.toFixed(0)})`, icon: 'fa-exclamation-circle' }); }
 
             if (tdsPercent <= 30) { alerts.push({ type: 'success', title: 'TDS', message: `Good dissolved solids content (${tds.toFixed(0)} ppm, ${tdsPercent.toFixed(1)}%)`, icon: 'fa-check-circle' }); overallScore++; }
             else if (tdsPercent <= 60) { alerts.push({ type: 'warning', title: 'TDS', message: `Medium dissolved solids (${tds.toFixed(0)} ppm, ${tdsPercent.toFixed(1)}%)`, icon: 'fa-exclamation-triangle' }); overallScore += 0.5; }
