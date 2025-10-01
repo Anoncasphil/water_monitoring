@@ -40,6 +40,9 @@ if (isset($_SESSION['user_id'])) {
         // Keep default values if database error occurs
     }
 }
+// Normalize role and compute permissions
+$normalized_role = strtolower($current_user_role);
+$is_staff = ($normalized_role === 'staff');
 ?>
 <div class="fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 shadow-lg transform transition-transform duration-300 ease-in-out" id="sidebar">
     <!-- Sidebar Header -->
@@ -69,10 +72,12 @@ if (isset($_SESSION['user_id'])) {
             </a>
 
             <!-- Data Overview -->
+            <?php if (!$is_staff): ?>
             <a href="../analytics" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200 <?php echo $is_analytics_page ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'; ?>">
                 <i class="fas fa-chart-line w-5 h-5 mr-3"></i>
                 <span>Data Overview</span>
             </a>
+            <?php endif; ?>
 
             <!-- Controls -->
             <a href="../controls" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200 <?php echo $is_controls_page ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'; ?>">
@@ -93,16 +98,20 @@ if (isset($_SESSION['user_id'])) {
             </a>
 
             <!-- User -->
+            <?php if (!$is_staff): ?>
             <a href="../user" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200 <?php echo $is_user_page ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'; ?>">
                 <i class="fas fa-user w-5 h-5 mr-3"></i>
                 <span>User</span>
             </a>
+            <?php endif; ?>
 
             <!-- Activity Logs -->
+            <?php if (!$is_staff): ?>
             <a href="../actlogs" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200 <?php echo $is_actlogs_page ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'; ?>">
                 <i class="fas fa-history w-5 h-5 mr-3"></i>
                 <span>Activity Logs</span>
             </a>
+            <?php endif; ?>
 
         </div>
 
