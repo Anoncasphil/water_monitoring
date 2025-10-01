@@ -807,13 +807,27 @@ try {
                         const fiveHoursInMs = 5 * 60 * 60 * 1000; // 5 hours in milliseconds
                         
                         if (timeDiff < fiveHoursInMs) {
+                            // Store by alert type for general acknowledgment tracking
                             acknowledgedAlerts.add(report.alert_type);
+                            
+                            // Also store the specific acknowledgment for detailed tracking
+                            const alertKey = `${report.alert_type}_${report.alert_message}`;
+                            unacknowledgedAlerts.set(alertKey, {
+                                type: report.alert_type,
+                                message: report.alert_message,
+                                acknowledged: true,
+                                acknowledgedAt: report.acknowledged_at,
+                                actionTaken: report.action_taken,
+                                responsiblePerson: report.responsible_person
+                            });
+                            
                             console.log(`Loaded acknowledged alert: ${report.alert_type} from ${report.acknowledged_at} (${Math.round(timeDiff / (60 * 1000))} minutes ago)`);
                         }
                     });
                     
                     console.log(`Total acknowledged alerts loaded: ${acknowledgedAlerts.size}`);
                     console.log('Acknowledged alert types:', Array.from(acknowledgedAlerts));
+                    console.log('Unacknowledged alerts map size:', unacknowledgedAlerts.size);
                 }
             } catch (error) {
                 console.error('Error loading acknowledged alerts:', error);
@@ -956,6 +970,18 @@ try {
                 
                 if (success) {
                     acknowledgedAlerts.add(alertType);
+                    
+                    // Store in unacknowledgedAlerts map with acknowledged status
+                    const alertKey = `${alertType}_${alert.message}`;
+                    unacknowledgedAlerts.set(alertKey, {
+                        type: alertType,
+                        message: alert.message,
+                        acknowledged: true,
+                        acknowledgedAt: new Date().toISOString(),
+                        actionTaken: formData.get('action_taken'),
+                        responsiblePerson: formData.get('responsible_person')
+                    });
+                    
                     modal.remove();
                     updateActiveAlerts(alertHistory.filter(a => a.type === 'critical' || a.type === 'warning'));
                     showNotification('Alert acknowledged successfully!', 'success');
@@ -1065,6 +1091,18 @@ try {
                     
                     if (success) {
                         acknowledgedAlerts.add(alertType);
+                        
+                        // Store in unacknowledgedAlerts map with acknowledged status
+                        const alertKey = `${alertType}_${alert.message}`;
+                        unacknowledgedAlerts.set(alertKey, {
+                            type: alertType,
+                            message: alert.message,
+                            acknowledged: true,
+                            acknowledgedAt: new Date().toISOString(),
+                            actionTaken: actionTaken,
+                            responsiblePerson: responsiblePerson
+                        });
+                        
                         successCount++;
                     } else {
                         failCount++;
@@ -1105,6 +1143,17 @@ try {
             
             if (success) {
                 acknowledgedAlerts.add(alertType);
+                
+                // Store in unacknowledgedAlerts map with acknowledged status
+                const alertKey = `${alertType}_${alert.message}`;
+                unacknowledgedAlerts.set(alertKey, {
+                    type: alertType,
+                    message: alert.message,
+                    acknowledged: true,
+                    acknowledgedAt: new Date().toISOString(),
+                    actionTaken: actionTaken,
+                    responsiblePerson: responsiblePerson
+                });
             }
             
             return success;
@@ -1193,12 +1242,8 @@ try {
         }
 
         function shouldShowAcknowledgeButton(alertType, alertLevel) {
-            const sensorState = sensorStates[alertType];
-            if (!sensorState) return true;
-            
-            // Check if there's a recent acknowledgment for this sensor type
+            // Check if this specific alert type is generally acknowledged
             if (acknowledgedAlerts.has(alertType)) {
-                // Check if acknowledgment is still valid (within 5 hours)
                 return false; // Don't show acknowledge button if recently acknowledged
             }
             
@@ -1244,10 +1289,10 @@ try {
                 const shouldShowAcknowledge = alertType ? shouldShowAcknowledgeButton(alertType, alertLevel) : false;
                 
                 return `
-                    <div class="alert-card p-6 rounded-xl border-l-4 ${
+                    <div class="alert-card alert-item p-6 rounded-xl border-l-4 ${
                         alert.type === 'critical' ? 'border-red-500 bg-red-50 dark:bg-red-900/20' :
                         'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20'
-                    }">
+                    }" data-alert-type="${alertType || ''}" data-alert-level="${alertLevel || ''}">
                         <div class="flex items-start justify-between">
                             <div class="flex items-start space-x-4">
                                 <div class="flex-shrink-0">
@@ -1265,7 +1310,7 @@ try {
                                         <span class="text-sm font-semibold text-gray-900 dark:text-white">${alert.value}</span>
                                         ${isAcknowledged ? '<span class="px-2 py-1 text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full"><i class="fas fa-check mr-1"></i>Acknowledged</span>' : ''}
                                     </div>
-                                    <p class="text-gray-900 dark:text-white">${alert.message}</p>
+                                    <p class="alert-message text-gray-900 dark:text-white">${alert.message}</p>
                                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
                                         <i class="fas fa-clock mr-1"></i>${formatDate(alert.time)}
                                     </p>
@@ -1274,7 +1319,7 @@ try {
                             <div class="flex space-x-2">
                                 ${alertType && shouldShowAcknowledge ? `
                                     <button onclick="showAcknowledgmentModal(${JSON.stringify(alert).replace(/"/g, '&quot;')})" 
-                                            class="px-3 py-1 text-sm bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors">
+                                            class="acknowledge-btn px-3 py-1 text-sm bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors">
                                         <i class="fas fa-check mr-1"></i>Acknowledge
                                     </button>
                                 ` : ''}
@@ -1749,20 +1794,41 @@ try {
             }
         });
         document.getElementById('acknowledgeAll').addEventListener('click', () => {
-            const activeAlerts = alertHistory.filter(a => a.type === 'critical' || a.type === 'warning');
-            const acknowledgmentAlerts = activeAlerts.filter(alert => 
-                (alert.type === 'critical' && alert.message.includes('turbidity')) ||
-                (alert.type === 'critical' && alert.message.includes('TDS')) ||
-                (alert.type === 'critical' && alert.message.includes('pH')) ||
-                (alert.type === 'warning' && alert.message.includes('TDS')) ||
-                (alert.type === 'warning' && alert.message.includes('pH'))
-            );
+            // Get currently visible alerts from the DOM instead of alertHistory
+            const activeAlertsContainer = document.getElementById('activeAlertsContainer');
+            const alertElements = activeAlertsContainer.querySelectorAll('.alert-item');
+            
+            const acknowledgmentAlerts = [];
+            
+            alertElements.forEach(alertElement => {
+                const alertType = alertElement.dataset.alertType;
+                const alertLevel = alertElement.dataset.alertLevel;
+                const alertMessage = alertElement.querySelector('.alert-message').textContent;
+                const acknowledgeButton = alertElement.querySelector('.acknowledge-btn');
+                
+                // Only include alerts that:
+                // 1. Are for turbidity, TDS, or pH
+                // 2. Have an acknowledge button (not already acknowledged)
+                // 3. Are currently visible
+                if (acknowledgeButton && !acknowledgeButton.disabled && 
+                    (alertType === 'turbidity' || alertType === 'tds' || alertType === 'ph')) {
+                    
+                    acknowledgmentAlerts.push({
+                        type: alertLevel,
+                        parameter: alertType,
+                        message: alertMessage,
+                        timestamp: new Date().toISOString()
+                    });
+                }
+            });
 
             if (acknowledgmentAlerts.length === 0) {
-                showNotification('No alerts available for acknowledgment', 'info');
+                showNotification('No unacknowledged alerts available for acknowledgment', 'info');
                 return;
             }
 
+            console.log(`Acknowledging ${acknowledgmentAlerts.length} visible alerts:`, acknowledgmentAlerts);
+            
             // Show bulk acknowledgment modal
             showBulkAcknowledgmentModal(acknowledgmentAlerts);
         });
