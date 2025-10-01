@@ -374,6 +374,9 @@ try {
                                 <h3 class="text-lg font-semibold text-green-800 dark:text-green-200">Total Acknowledged</h3>
                                 <p class="text-3xl font-bold text-green-600 dark:text-green-400" id="totalAcknowledged">0</p>
                                 <p class="text-sm text-green-600 dark:text-green-300">All time</p>
+                                <p class="text-xs text-green-500 dark:text-green-500 mt-1" id="dbStatusIndicator" style="display: none;">
+                                    Database not connected
+                                </p>
                             </div>
                             <div class="w-12 h-12 rounded-xl bg-green-200 dark:bg-green-800 flex items-center justify-center">
                                 <i class="fas fa-check-circle text-green-600 dark:text-green-300 text-xl"></i>
@@ -1473,11 +1476,26 @@ try {
                 
                 const data = await response.json();
                 if (data.success && data.data) {
-                    document.getElementById('totalAcknowledged').textContent = data.data.total;
-                    document.getElementById('todayAcknowledged').textContent = data.data.today;
+                    document.getElementById('totalAcknowledged').textContent = data.data.total_acknowledged || 0;
+                    document.getElementById('todayAcknowledged').textContent = data.data.today_acknowledged || 0;
+                    console.log('Acknowledgment stats loaded:', data.data);
+                    
+                    // Show warning if there's a database error
+                    if (data.error) {
+                        console.warn('Database connection issue:', data.error);
+                        document.getElementById('dbStatusIndicator').style.display = 'block';
+                    } else {
+                        document.getElementById('dbStatusIndicator').style.display = 'none';
+                    }
+                } else {
+                    console.error('Failed to load acknowledgment stats:', data);
+                    document.getElementById('totalAcknowledged').textContent = '0';
+                    document.getElementById('todayAcknowledged').textContent = '0';
                 }
             } catch (error) {
                 console.error('Error loading acknowledgment stats:', error);
+                document.getElementById('totalAcknowledged').textContent = '0';
+                document.getElementById('todayAcknowledged').textContent = '0';
             }
         }
 

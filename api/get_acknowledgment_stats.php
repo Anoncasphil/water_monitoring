@@ -27,6 +27,7 @@ try {
     // Check if table exists
     $checkTable = $conn->query("SHOW TABLES LIKE 'alert_acknowledgments'");
     if ($checkTable->num_rows == 0) {
+        // Table doesn't exist, return zero stats
         echo json_encode([
             'success' => true,
             'data' => [
@@ -36,7 +37,8 @@ try {
                 'this_month_acknowledged' => 0,
                 'by_type' => [
                     'turbidity' => 0,
-                    'tds' => 0
+                    'tds' => 0,
+                    'ph' => 0
                 ],
                 'by_action' => []
             ]
@@ -129,10 +131,22 @@ try {
 } catch (Exception $e) {
     error_log("Get acknowledgment stats error: " . $e->getMessage());
     
-    http_response_code(500);
+    // Return zero stats on error instead of failing
     echo json_encode([
-        'success' => false,
-        'error' => $e->getMessage()
+        'success' => true,
+        'data' => [
+            'total_acknowledged' => 0,
+            'today_acknowledged' => 0,
+            'this_week_acknowledged' => 0,
+            'this_month_acknowledged' => 0,
+            'by_type' => [
+                'turbidity' => 0,
+                'tds' => 0,
+                'ph' => 0
+            ],
+            'by_action' => []
+        ],
+        'error' => $e->getMessage() // Include error for debugging
     ]);
 }
 ?>

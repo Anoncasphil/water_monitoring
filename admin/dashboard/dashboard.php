@@ -1354,8 +1354,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 const data = await response.json();
                 if (data.success && data.data) {
                     // Update statistics display with animation
-                    updateStatWithAnimation('totalAcknowledged', data.data.total_acknowledged);
-                    updateStatWithAnimation('todayAcknowledged', data.data.today_acknowledged);
+                    updateStatWithAnimation('totalAcknowledged', data.data.total_acknowledged || 0);
+                    updateStatWithAnimation('todayAcknowledged', data.data.today_acknowledged || 0);
+                    
+                    // Show warning if there's a database error
+                    if (data.error) {
+                        console.warn('Database connection issue:', data.error);
+                    }
+                } else {
+                    console.error('Failed to load acknowledgment stats:', data);
+                    updateStatWithAnimation('totalAcknowledged', 0);
+                    updateStatWithAnimation('todayAcknowledged', 0);
                 }
             } catch (error) {
                 console.error('Error loading acknowledgment stats:', error);
