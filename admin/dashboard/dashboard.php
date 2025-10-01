@@ -831,7 +831,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // Update data and relay states every second with 500ms initial delay
-        setTimeout(() => {
+        setTimeout(async () => {
+            await loadAcknowledgedAlerts();
             updateData();
             fetchRelayStates();
             refreshAcknowledgmentReports();
@@ -1005,6 +1006,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         let unacknowledgedAlerts = new Map();
         let currentAlertData = null;
         let acknowledgedAlerts = new Set(); // Track acknowledged alerts to prevent re-showing
+        let lastAlertCheck = new Map(); // Track when we last checked for alerts
 
         function updateWaterQualityAlerts(turbidity, tds, ph, temperature) {
             const alertsContainer = document.getElementById('waterQualityAlerts');
@@ -1019,6 +1021,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Update unacknowledged alerts - only add if not already acknowledged
             acknowledgmentAlerts.forEach(alert => {
                 const alertKey = alert.message.includes('turbidity') ? 'turbidity' : 'tds';
+                const now = new Date();
+                const lastCheck = lastAlertCheck.get(alertKey);
+                
+                // Only check database every 30 seconds to avoid too many requests
+                if (!lastCheck || (now - lastCheck) > 30000) {
+                    lastAlertCheck.set(alertKey, now);
+                    
+                    // Check if already acknowledged in database
+                    checkAlertAcknowledged(alertKey, alert.message, now.toISOString()).then(isAcknowledged => {
+                        if (isAcknowledged) {
+                            acknowledgedAlerts.add(alertKey);
+                            unacknowledgedAlerts.delete(alertKey);
+                            updateUnacknowledgedCount();
+                            // Re-render alerts to update UI
+                            updateWaterQualityAlerts(turbidity, tds, ph, temperature);
+                        }
+                    });
+                }
+                
                 if (!unacknowledgedAlerts.has(alertKey) && !acknowledgedAlerts.has(alertKey)) {
                     unacknowledgedAlerts.set(alertKey, {
                         alert: alert,
@@ -1178,6 +1199,60 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 showNotification('Error acknowledging alert', 'error');
             });
         });
+
+        // Check if alert has been acknowledged in the database
+        async function checkAlertAcknowledged(alertKey, alertMessage, timestamp) {
+            try {
+                const response = await fetch('../../api/check_alert_acknowledged.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        alert_type: alertKey,
+                        alert_message: alertMessage,
+                        alert_timestamp: timestamp
+                    })
+                });
+                
+                const data = await response.json();
+                return data.success && data.acknowledged;
+            } catch (error) {
+                console.error('Error checking alert acknowledgment:', error);
+                return false;
+            }
+        }
+
+        // Load already acknowledged alerts on page load
+        async function loadAcknowledgedAlerts() {
+            try {
+                const response = await fetch('../../api/get_acknowledgments.php?limit=100', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                if (data.success && data.data) {
+                    // Mark recent acknowledgments as acknowledged
+                    const now = new Date();
+                    data.data.forEach(report => {
+                        const ackTime = new Date(report.acknowledged_at);
+                        const alertTime = new Date(report.alert_timestamp);
+                        
+                        // If acknowledged within last 24 hours, mark as acknowledged
+                        if ((now - ackTime) < 24 * 60 * 60 * 1000) {
+                            acknowledgedAlerts.add(report.alert_type);
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading acknowledged alerts:', error);
+            }
+        }
 
         function refreshAcknowledgmentReports() {
             fetch('../../api/get_acknowledgments.php', {
