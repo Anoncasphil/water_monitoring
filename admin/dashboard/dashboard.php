@@ -171,6 +171,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="text-right">
                         <div class="text-3xl font-bold text-gray-800 dark:text-white" id="turbidityValue">--</div>
                         <div class="text-sm text-gray-500 dark:text-gray-400">%</div>
+                        <div class="text-xs text-gray-400 dark:text-gray-500 mt-1" id="turbidityRaw">Raw: --</div>
                     </div>
                 </div>
                 <div class="text-xs text-gray-500 dark:text-gray-400" id="turbidityTime">
@@ -193,6 +194,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="text-right">
                         <div class="text-3xl font-bold text-gray-800 dark:text-white" id="tdsValue">--</div>
                         <div class="text-sm text-gray-500 dark:text-gray-400">%</div>
+                        <div class="text-xs text-gray-400 dark:text-gray-500 mt-1" id="tdsRaw">Raw: -- ppm</div>
                     </div>
                 </div>
                 <div class="text-xs text-gray-500 dark:text-gray-400" id="tdsTime">
@@ -674,6 +676,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         document.getElementById('tdsValue').textContent = tdsPercent.toFixed(1);
                         document.getElementById('phValue').textContent = parseFloat(latest.ph).toFixed(2);
                         document.getElementById('temperatureValue').textContent = parseFloat(latest.temperature).toFixed(2);
+                        
+                        // Update raw data displays
+                        document.getElementById('turbidityRaw').textContent = `Raw: ${parseFloat(latest.turbidity_ntu).toFixed(0)}`;
+                        document.getElementById('tdsRaw').textContent = `Raw: ${parseFloat(latest.tds_ppm).toFixed(0)} ppm`;
                         document.getElementById('turbidityTime').textContent = `Last updated: ${formatDate(latest.reading_time)}`;
                         document.getElementById('tdsTime').textContent = `Last updated: ${formatDate(latest.reading_time)}`;
                         document.getElementById('phTime').textContent = `Last updated: ${formatDate(latest.reading_time)}`;
@@ -689,8 +695,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             return `
                                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
                                     <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${formatDate(reading.reading_time)}</td>
-                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${turbidityPercent.toFixed(1)}%</td>
-                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${tdsPercent.toFixed(1)}%</td>
+                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">
+                                        <div class="font-medium">${turbidityPercent.toFixed(1)}%</div>
+                                        <div class="text-xs text-gray-500 dark:text-gray-400">Raw: ${parseFloat(reading.turbidity_ntu).toFixed(0)}</div>
+                                    </td>
+                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">
+                                        <div class="font-medium">${tdsPercent.toFixed(1)}%</div>
+                                        <div class="text-xs text-gray-500 dark:text-gray-400">Raw: ${parseFloat(reading.tds_ppm).toFixed(0)} ppm</div>
+                                    </td>
                                     <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${parseFloat(reading.ph).toFixed(2)}</td>
                                     <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${parseFloat(reading.temperature).toFixed(2)}</td>
                                 </tr>
@@ -704,12 +716,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         updateChart(data.historical);
                     }
 
-            // Update water quality alerts
+            // Update water quality alerts (pass raw values for proper threshold evaluation)
             updateWaterQualityAlerts(
-                parseFloat(document.getElementById('turbidityValue').textContent),
-                parseFloat(document.getElementById('tdsValue').textContent),
-                parseFloat(document.getElementById('phValue').textContent),
-                parseFloat(document.getElementById('temperatureValue').textContent)
+                parseFloat(latest.turbidity_ntu),
+                parseFloat(latest.tds_ppm),
+                parseFloat(latest.ph),
+                parseFloat(latest.temperature)
             );
             
             // Debug: Log current acknowledgment state
@@ -1021,9 +1033,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Water quality thresholds
         const thresholds = {
             turbidity: {
-                good: 2,      // % (0-2% = good)
-                warning: 5,   // % (2-5% = medium)
-                danger: 5     // % (>5% = critical)
+                good: 2,      // NTU (0-2 NTU = good)
+                warning: 5,   // NTU (2-5 NTU = medium)
+                danger: 5     // NTU (>5 NTU = critical)
             },
             tds: {
                 good: 30,     // % (0-30% = good)
@@ -1031,9 +1043,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 danger: 60    // % (>60% = critical)
             },
             ph: {
-                good: { min: 7.2, max: 7.8 },    // Pool optimal range
-                warning: { min: 7.0, max: 8.0 }, // Pool acceptable range
-                danger: { min: 6.8, max: 8.2 }   // Pool critical range
+                good: { min: 6, max: 8 },        // Good range
+                warning: { min: 4, max: 10 },    // Medium range (4-6 and 8-10)
+                danger: { min: 0, max: 14 }      // Critical range (below 4 and above 10)
             },
             temperature: {
                 good: { min: 26, max: 28 },    // °C (Pool optimal)
@@ -1056,25 +1068,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         function evaluateWaterQuality(turbidity, tds, ph, temperature) {
             const alerts = [];
             
-            // Convert raw values to percentages
+            // Convert raw values to percentages for display
             const turbidityPercent = convertTurbidityToPercentage(turbidity);
             const tdsPercent = convertTDSToPercentage(tds);
             
-            // Evaluate Turbidity
-            if (turbidityPercent >= thresholds.turbidity.danger) {
+            // Evaluate Turbidity (using raw NTU values for thresholds)
+            if (turbidity >= thresholds.turbidity.danger) {
                 alerts.push({
                     type: 'danger',
-                    message: `High turbidity (${turbidityPercent.toFixed(1)}%) - Water is very cloudy and may contain harmful particles`
+                    message: `High turbidity (${turbidity.toFixed(1)} NTU, ${turbidityPercent.toFixed(1)}%) - Water is very cloudy and may contain harmful particles`
                 });
-            } else if (turbidityPercent >= thresholds.turbidity.warning) {
+            } else if (turbidity >= thresholds.turbidity.warning) {
                 alerts.push({
                     type: 'warning',
-                    message: `Medium turbidity (${turbidityPercent.toFixed(1)}%) - Water clarity is reduced`
+                    message: `Medium turbidity (${turbidity.toFixed(1)} NTU, ${turbidityPercent.toFixed(1)}%) - Water clarity is reduced`
                 });
-            } else if (turbidityPercent <= thresholds.turbidity.good) {
+            } else if (turbidity <= thresholds.turbidity.good) {
                 alerts.push({
                     type: 'success',
-                    message: `Good turbidity (${turbidityPercent.toFixed(1)}%) - Water is clear`
+                    message: `Good turbidity (${turbidity.toFixed(1)} NTU, ${turbidityPercent.toFixed(1)}%) - Water is clear`
                 });
             }
 
@@ -1096,21 +1108,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 });
             }
 
-            // Evaluate pH (Pool standards)
-            if (ph < thresholds.ph.danger.min || ph > thresholds.ph.danger.max) {
+            // Evaluate pH (New standards)
+            if (ph < 4 || ph > 10) {
                 alerts.push({
                     type: 'danger',
-                    message: `Critical pH (${ph.toFixed(1)}) - Pool water pH is outside safe range`
+                    message: `Critical pH (${ph.toFixed(1)}) - Water pH is extremely outside safe range`
                 });
-            } else if (ph < thresholds.ph.warning.min || ph > thresholds.ph.warning.max) {
+            } else if ((ph >= 4 && ph < 6) || (ph > 8 && ph <= 10)) {
                 alerts.push({
                     type: 'warning',
-                    message: `Unbalanced pH (${ph.toFixed(1)}) - Pool water may need pH adjustment`
+                    message: `Medium pH (${ph.toFixed(1)}) - Water pH needs monitoring and adjustment`
                 });
-            } else if (ph >= thresholds.ph.good.min && ph <= thresholds.ph.good.max) {
+            } else if (ph >= 6 && ph <= 8) {
                 alerts.push({
                     type: 'success',
-                    message: `Optimal pH (${ph.toFixed(1)}) - Pool water is within ideal range`
+                    message: `Good pH (${ph.toFixed(1)}) - Water pH is within ideal range`
                 });
             }
 
@@ -1195,6 +1207,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         function updateWaterQualityAlerts(turbidity, tds, ph, temperature) {
             const alertsContainer = document.getElementById('waterQualityAlerts');
             const alerts = evaluateWaterQuality(turbidity, tds, ph, temperature);
+            
+            // Convert TDS to percentage for acknowledgment logic
+            const tdsPercent = convertTDSToPercentage(tds);
             
             // Filter alerts that need acknowledgment (danger level turbidity, TDS, and pH; warning level TDS and pH)
             const acknowledgmentAlerts = alerts.filter(alert => 
