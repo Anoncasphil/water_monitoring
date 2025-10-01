@@ -596,29 +596,31 @@ try {
         function updateSensorReadings(data) {
             if (data.latest) {
                 const latest = data.latest;
+                const turbidity = parseFloat(latest.turbidity_ntu);
+                const tds = parseFloat(latest.tds_ppm);
+                const ph = parseFloat(latest.ph);
+                const temperature = parseFloat(latest.temperature);
+                
+                // Update sensor states first
+                updateSensorStates(turbidity, tds, ph);
                 
                 // Update quick status values
-                document.getElementById('quickTurbidity').textContent = parseFloat(latest.turbidity_ntu).toFixed(1) + ' NTU';
-                document.getElementById('quickTDS').textContent = parseFloat(latest.tds_ppm).toFixed(0) + ' ppm';
-                document.getElementById('quickPH').textContent = parseFloat(latest.ph).toFixed(1);
-                document.getElementById('quickTemp').textContent = parseFloat(latest.temperature).toFixed(1) + '°C';
+                document.getElementById('quickTurbidity').textContent = turbidity.toFixed(1) + ' NTU';
+                document.getElementById('quickTDS').textContent = tds.toFixed(0) + ' ppm';
+                document.getElementById('quickPH').textContent = ph.toFixed(1);
+                document.getElementById('quickTemp').textContent = temperature.toFixed(1) + '°C';
                 
                 // Update quick status indicators
-                updateQuickStatus('quickTurbidityStatus', parseFloat(latest.turbidity_ntu), 'turbidity');
-                updateQuickStatus('quickTDSStatus', parseFloat(latest.tds_ppm), 'tds');
-                updateQuickStatus('quickPHStatus', parseFloat(latest.ph), 'ph');
-                updateQuickStatus('quickTempStatus', parseFloat(latest.temperature), 'temperature');
+                updateQuickStatus('quickTurbidityStatus', turbidity, 'turbidity');
+                updateQuickStatus('quickTDSStatus', tds, 'tds');
+                updateQuickStatus('quickPHStatus', ph, 'ph');
+                updateQuickStatus('quickTempStatus', temperature, 'temperature');
                 
                 // Update last update time
                 document.getElementById('lastUpdate').textContent = formatDate(latest.reading_time);
                 
                 // Generate alerts
-                const alerts = evaluateWaterQuality(
-                    parseFloat(latest.turbidity_ntu),
-                    parseFloat(latest.tds_ppm),
-                    parseFloat(latest.ph),
-                    parseFloat(latest.temperature)
-                );
+                const alerts = evaluateWaterQuality(turbidity, tds, ph, temperature);
                 
                 updateActiveAlerts(alerts);
                 updateAlertStatistics(alerts);
@@ -917,15 +919,45 @@ try {
             });
         }
 
+        // Acknowledge alert in bulk (for acknowledge all functionality)
+        async function acknowledgeAlertInBulk(alert) {
+            const alertType = alert.parameter.toLowerCase().replace(' ', '');
+            const actionTaken = 'investigated'; // Default action for bulk acknowledgment
+            const details = 'Acknowledged via bulk acknowledgment';
+            const responsiblePerson = 'System User'; // You can modify this to get from session
+            
+            const success = await submitAcknowledgment(
+                alertType,
+                alert.message,
+                alert.time,
+                actionTaken,
+                details,
+                responsiblePerson,
+                { value: alert.value }
+            );
+            
+            if (success) {
+                acknowledgedAlerts.add(alertType);
+            }
+            
+            return success;
+        }
+
         // Show notification
         function showNotification(message, type) {
             const notification = document.createElement('div');
             notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
-                type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+                type === 'success' ? 'bg-green-500 text-white' : 
+                type === 'error' ? 'bg-red-500 text-white' :
+                type === 'info' ? 'bg-blue-500 text-white' : 'bg-yellow-500 text-white'
             }`;
             notification.innerHTML = `
                 <div class="flex items-center">
-                    <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} mr-2"></i>
+                    <i class="fas ${
+                        type === 'success' ? 'fa-check-circle' : 
+                        type === 'error' ? 'fa-exclamation-circle' :
+                        type === 'info' ? 'fa-info-circle' : 'fa-exclamation-triangle'
+                    } mr-2"></i>
                     ${message}
                 </div>
             `;
@@ -937,12 +969,70 @@ try {
             }, 3000);
         }
 
+        // Track sensor states for better acknowledgment logic
+        let sensorStates = {
+            turbidity: { current: null, lastAcknowledged: null, lastStable: null },
+            tds: { current: null, lastAcknowledged: null, lastStable: null },
+            ph: { current: null, lastAcknowledged: null, lastStable: null }
+        };
+
+        function updateSensorStates(turbidity, tds, ph) {
+            const now = new Date();
+            
+            // Update current sensor states
+            sensorStates.turbidity.current = turbidity;
+            sensorStates.tds.current = tds;
+            sensorStates.ph.current = ph;
+            
+            // Check if sensors are stable (within good ranges)
+            const turbidityStable = turbidity < thresholds.turbidity.warning;
+            const tdsStable = tds < thresholds.tds.warning;
+            const phStable = ph >= thresholds.ph.warning.min && ph <= thresholds.ph.warning.max;
+            
+            // Update last stable timestamps
+            if (turbidityStable && !sensorStates.turbidity.lastStable) {
+                sensorStates.turbidity.lastStable = now;
+            } else if (!turbidityStable) {
+                sensorStates.turbidity.lastStable = null;
+            }
+            
+            if (tdsStable && !sensorStates.tds.lastStable) {
+                sensorStates.tds.lastStable = now;
+            } else if (!tdsStable) {
+                sensorStates.tds.lastStable = null;
+            }
+            
+            if (phStable && !sensorStates.ph.lastStable) {
+                sensorStates.ph.lastStable = now;
+            } else if (!phStable) {
+                sensorStates.ph.lastStable = null;
+            }
+        }
+
+        function shouldShowAcknowledgeButton(alertType, alertLevel) {
+            const sensorState = sensorStates[alertType];
+            if (!sensorState) return true;
+            
+            // If sensor is stable, reset acknowledgment status
+            if (sensorState.lastStable) {
+                acknowledgedAlerts.delete(alertType);
+                return true;
+            }
+            
+            // If already acknowledged and sensor is still critical, don't show button
+            if (acknowledgedAlerts.has(alertType)) {
+                return false;
+            }
+            
+            return true;
+        }
+
         function updateActiveAlerts(alerts) {
             const container = document.getElementById('activeAlertsContainer');
             const criticalAlerts = alerts.filter(a => a.type === 'critical');
             const warningAlerts = alerts.filter(a => a.type === 'warning');
             
-            // Filter alerts that need acknowledgment (danger level turbidity, TDS, and pH; warning level TDS and pH)
+            // Filter alerts that need acknowledgment (only for the 3 specific sensors)
             const acknowledgmentAlerts = alerts.filter(alert => 
                 (alert.type === 'critical' && alert.message.includes('turbidity')) ||
                 (alert.type === 'critical' && alert.message.includes('TDS')) ||
@@ -973,6 +1063,7 @@ try {
                 const alertKey = alertType ? `${alertType}_${alertLevel}` : null;
                 const isUnacknowledged = alertKey && unacknowledgedAlerts.has(alertKey);
                 const isAcknowledged = alertType && acknowledgedAlerts.has(alertType);
+                const shouldShowAcknowledge = alertType ? shouldShowAcknowledgeButton(alertType, alertLevel) : false;
                 
                 return `
                     <div class="alert-card p-6 rounded-xl border-l-4 ${
@@ -1003,7 +1094,7 @@ try {
                                 </div>
                             </div>
                             <div class="flex space-x-2">
-                                ${alertType && !isAcknowledged ? `
+                                ${alertType && shouldShowAcknowledge ? `
                                     <button onclick="showAcknowledgmentModal(${JSON.stringify(alert).replace(/"/g, '&quot;')})" 
                                             class="px-3 py-1 text-sm bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors">
                                         <i class="fas fa-check mr-1"></i>Acknowledge
@@ -1305,12 +1396,32 @@ try {
                 updateAlertStatistics([]);
             }
         });
-        document.getElementById('acknowledgeAll').addEventListener('click', () => {
-            alertHistory = alertHistory.filter(alert => alert.type === 'good');
-            currentPage = 1;
-            updateActiveAlerts([]);
-            renderAlertHistory();
-            updateAlertStatistics(alertHistory);
+        document.getElementById('acknowledgeAll').addEventListener('click', async () => {
+            if (confirm('Are you sure you want to acknowledge all active alerts?')) {
+                const activeAlerts = alertHistory.filter(a => a.type === 'critical' || a.type === 'warning');
+                const acknowledgmentAlerts = activeAlerts.filter(alert => 
+                    (alert.type === 'critical' && alert.message.includes('turbidity')) ||
+                    (alert.type === 'critical' && alert.message.includes('TDS')) ||
+                    (alert.type === 'critical' && alert.message.includes('pH')) ||
+                    (alert.type === 'warning' && alert.message.includes('TDS')) ||
+                    (alert.type === 'warning' && alert.message.includes('pH'))
+                );
+
+                if (acknowledgmentAlerts.length === 0) {
+                    showNotification('No alerts available for acknowledgment', 'info');
+                    return;
+                }
+
+                // Show acknowledgment modal for each alert
+                for (const alert of acknowledgmentAlerts) {
+                    await acknowledgeAlertInBulk(alert);
+                }
+
+                showNotification(`Successfully acknowledged ${acknowledgmentAlerts.length} alerts`, 'success');
+                updateActiveAlerts(alertHistory.filter(a => a.type === 'critical' || a.type === 'warning'));
+                loadAcknowledgmentStats();
+                refreshAcknowledgmentReports();
+            }
         });
         document.getElementById('filterType').addEventListener('change', () => {
             currentPage = 1; // Reset to first page when filter changes
