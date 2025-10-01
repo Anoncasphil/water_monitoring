@@ -342,6 +342,71 @@ try {
                 </div>
             </div>
 
+            <!-- Acknowledgment Reports -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 mb-8">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                            <i class="fas fa-clipboard-check text-amber-500 mr-3"></i>
+                            Acknowledgment Reports
+                        </h2>
+                        <p class="text-gray-600 dark:text-gray-400">Recent alert acknowledgments and actions taken</p>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <button id="refreshAcknowledgmentReports" class="px-4 py-2 bg-amber-100 dark:bg-amber-900 text-amber-600 dark:text-amber-300 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-800 transition-colors">
+                            <i class="fas fa-sync-alt mr-2"></i>Refresh
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <!-- Total Acknowledged -->
+                    <div class="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-xl p-6 border-l-4 border-green-500">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-lg font-semibold text-green-800 dark:text-green-200">Total Acknowledged</h3>
+                                <p class="text-3xl font-bold text-green-600 dark:text-green-400" id="totalAcknowledged">0</p>
+                                <p class="text-sm text-green-600 dark:text-green-300">All time</p>
+                            </div>
+                            <div class="w-12 h-12 rounded-xl bg-green-200 dark:bg-green-800 flex items-center justify-center">
+                                <i class="fas fa-check-circle text-green-600 dark:text-green-300 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Today's Acknowledged -->
+                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-xl p-6 border-l-4 border-blue-500">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-lg font-semibold text-blue-800 dark:text-blue-200">Today's Acknowledged</h3>
+                                <p class="text-3xl font-bold text-blue-600 dark:text-blue-400" id="todayAcknowledged">0</p>
+                                <p class="text-sm text-blue-600 dark:text-blue-300">Last 24 hours</p>
+                            </div>
+                            <div class="w-12 h-12 rounded-xl bg-blue-200 dark:bg-blue-800 flex items-center justify-center">
+                                <i class="fas fa-calendar-day text-blue-600 dark:text-blue-300 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="bg-gray-50 dark:bg-gray-700">
+                            <tr>
+                                <th class="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">Time</th>
+                                <th class="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">Alert Type</th>
+                                <th class="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">Action Taken</th>
+                                <th class="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">Responsible Person</th>
+                                <th class="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">Details</th>
+                            </tr>
+                        </thead>
+                        <tbody id="acknowledgmentReportsTable" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                            <!-- Acknowledgment reports will be dynamically inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- Alert History -->
             <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8">
                 <div class="flex items-center justify-between mb-6">
@@ -352,17 +417,18 @@ try {
                         </h2>
                         <p class="text-gray-600 dark:text-gray-400">Historical water quality alerts and events</p>
                     </div>
-                                     <div class="flex space-x-3">
-                     <select id="filterType" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
-                         <option value="all">All Types</option>
-                         <option value="critical">Critical</option>
-                         <option value="warning">Warning</option>
-                         <option value="good">Good</option>
-                     </select>
-                     <button id="exportHistory" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors">
-                         <i class="fas fa-download mr-2"></i>Export
-                     </button>
-                 </div>
+                    <div class="flex space-x-3">
+                        <select id="filterType" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                            <option value="all">All Types</option>
+                            <option value="critical">Critical</option>
+                            <option value="warning">Warning</option>
+                            <option value="good">Good</option>
+                        </select>
+                        <button id="exportHistory" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors">
+                            <i class="fas fa-download mr-2"></i>Export
+                        </button>
+                    </div>
+                </div>
 
 
              <!-- Pagination -->
@@ -465,14 +531,6 @@ try {
                     message: `Elevated turbidity (${turbidity.toFixed(1)} NTU) - Water clarity is reduced`,
                     time: new Date().toISOString()
                 });
-            } else if (turbidity <= thresholds.turbidity.good) {
-                alerts.push({
-                    type: 'good',
-                    parameter: 'Turbidity',
-                    value: turbidity.toFixed(1) + ' NTU',
-                    message: `Good turbidity (${turbidity.toFixed(1)} NTU) - Water is clear`,
-                    time: new Date().toISOString()
-                });
             }
 
             // Evaluate TDS
@@ -490,14 +548,6 @@ try {
                     parameter: 'TDS',
                     value: tds.toFixed(0) + ' ppm',
                     message: `Elevated TDS (${tds.toFixed(0)} ppm) - Water may need treatment`,
-                    time: new Date().toISOString()
-                });
-            } else if (tds <= thresholds.tds.good) {
-                alerts.push({
-                    type: 'good',
-                    parameter: 'TDS',
-                    value: tds.toFixed(0) + ' ppm',
-                    message: `Good TDS (${tds.toFixed(0)} ppm) - Water is within acceptable range`,
                     time: new Date().toISOString()
                 });
             }
@@ -519,14 +569,6 @@ try {
                     message: `Unbalanced pH (${ph.toFixed(1)}) - Water may need pH adjustment`,
                     time: new Date().toISOString()
                 });
-            } else if (ph >= thresholds.ph.good.min && ph <= thresholds.ph.good.max) {
-                alerts.push({
-                    type: 'good',
-                    parameter: 'pH',
-                    value: ph.toFixed(1),
-                    message: `Good pH (${ph.toFixed(1)}) - Water is within ideal range`,
-                    time: new Date().toISOString()
-                });
             }
 
             // Evaluate Temperature
@@ -544,14 +586,6 @@ try {
                     parameter: 'Temperature',
                     value: temperature.toFixed(1) + '°C',
                     message: `Unusual temperature (${temperature.toFixed(1)}°C) - Monitor water temperature`,
-                    time: new Date().toISOString()
-                });
-            } else if (temperature >= thresholds.temperature.good.min && temperature <= thresholds.temperature.good.max) {
-                alerts.push({
-                    type: 'good',
-                    parameter: 'Temperature',
-                    value: temperature.toFixed(1) + '°C',
-                    message: `Good temperature (${temperature.toFixed(1)}°C) - Water is at ideal temperature`,
                     time: new Date().toISOString()
                 });
             }
@@ -707,10 +741,215 @@ try {
             element.textContent = text;
         }
 
+        // Acknowledgment system variables
+        let acknowledgedAlerts = new Set();
+        let unacknowledgedAlerts = new Map();
+        let lastAlertCheck = new Map();
+
+        // Load acknowledged alerts from database
+        async function loadAcknowledgedAlerts() {
+            try {
+                const response = await fetch('../../api/get_acknowledgments.php?limit=100', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                if (data.success && data.data) {
+                    const now = new Date();
+                    data.data.forEach(report => {
+                        const ackTime = new Date(report.acknowledged_at);
+                        if ((now - ackTime) < 24 * 60 * 60 * 1000) {
+                            acknowledgedAlerts.add(report.alert_type);
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading acknowledged alerts:', error);
+            }
+        }
+
+        // Check if alert is acknowledged
+        async function checkAlertAcknowledged(alertType, alertMessage, alertTimestamp) {
+            try {
+                const response = await fetch('../../api/check_alert_acknowledged.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        alert_type: alertType,
+                        alert_message: alertMessage,
+                        alert_timestamp: alertTimestamp
+                    })
+                });
+                
+                const data = await response.json();
+                return data.success && data.acknowledged;
+            } catch (error) {
+                console.error('Error checking alert acknowledgment:', error);
+                return false;
+            }
+        }
+
+        // Submit acknowledgment
+        async function submitAcknowledgment(alertType, alertMessage, alertTimestamp, actionTaken, details, responsiblePerson, values) {
+            try {
+                const response = await fetch('../../api/acknowledge_alert.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        alert_type: alertType,
+                        alert_message: alertMessage,
+                        action_taken: actionTaken,
+                        details: details,
+                        responsible_person: responsiblePerson,
+                        timestamp: alertTimestamp,
+                        values: values
+                    })
+                });
+                
+                const data = await response.json();
+                return data.success;
+            } catch (error) {
+                console.error('Error submitting acknowledgment:', error);
+                return false;
+            }
+        }
+
+        // Show acknowledgment modal
+        function showAcknowledgmentModal(alert) {
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            modal.innerHTML = `
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md mx-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                            <i class="fas fa-check-circle text-amber-500 mr-2"></i>
+                            Acknowledge Alert
+                        </h3>
+                        <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="mb-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <h4 class="font-medium text-gray-900 dark:text-white mb-2">Alert Details:</h4>
+                        <p class="text-sm text-gray-700 dark:text-gray-300 mb-1">${alert.message}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                            <i class="fas fa-clock mr-1"></i>Detected at: ${new Date(alert.time).toLocaleString()}
+                        </p>
+                    </div>
+                    
+                    <form id="acknowledgeForm">
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Action Taken <span class="text-red-500">*</span>
+                            </label>
+                            <select name="action_taken" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+                                <option value="">Select action...</option>
+                                <option value="investigated">Investigated Issue</option>
+                                <option value="corrected">Corrected Problem</option>
+                                <option value="monitoring">Monitoring Closely</option>
+                                <option value="maintenance">Scheduled Maintenance</option>
+                                <option value="reported">Reported to Supervisor</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Additional Details
+                            </label>
+                            <textarea name="details" rows="3" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500" placeholder="Describe what was done to address this alert..."></textarea>
+                        </div>
+                        
+                        <div class="mb-6">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Responsible Person <span class="text-red-500">*</span>
+                            </label>
+                            <input type="text" name="responsible_person" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500" placeholder="Enter your name">
+                        </div>
+                        
+                        <div class="flex space-x-3">
+                            <button type="submit" class="flex-1 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                                <i class="fas fa-check mr-2"></i>Acknowledge
+                            </button>
+                            <button type="button" onclick="this.closest('.fixed').remove()" class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                                Cancel
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // Handle form submission
+            modal.querySelector('#acknowledgeForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const formData = new FormData(e.target);
+                const alertType = alert.parameter.toLowerCase().replace(' ', '');
+                const success = await submitAcknowledgment(
+                    alertType,
+                    alert.message,
+                    alert.time,
+                    formData.get('action_taken'),
+                    formData.get('details'),
+                    formData.get('responsible_person'),
+                    { value: alert.value }
+                );
+                
+                if (success) {
+                    acknowledgedAlerts.add(alertType);
+                    modal.remove();
+                    updateActiveAlerts(alertHistory.filter(a => a.type === 'critical' || a.type === 'warning'));
+                    showNotification('Alert acknowledged successfully!', 'success');
+                } else {
+                    showNotification('Failed to acknowledge alert. Please try again.', 'error');
+                }
+            });
+        }
+
+        // Show notification
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
+                type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+            }`;
+            notification.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} mr-2"></i>
+                    ${message}
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
         function updateActiveAlerts(alerts) {
             const container = document.getElementById('activeAlertsContainer');
             const criticalAlerts = alerts.filter(a => a.type === 'critical');
             const warningAlerts = alerts.filter(a => a.type === 'warning');
+            
+            // Filter alerts that need acknowledgment (danger level turbidity, TDS, and pH; warning level TDS and pH)
+            const acknowledgmentAlerts = alerts.filter(alert => 
+                (alert.type === 'critical' && alert.message.includes('turbidity')) ||
+                (alert.type === 'critical' && alert.message.includes('TDS')) ||
+                (alert.type === 'critical' && alert.message.includes('pH')) ||
+                (alert.type === 'warning' && alert.message.includes('TDS')) ||
+                (alert.type === 'warning' && alert.message.includes('pH'))
+            );
             
             // Show critical alerts first, then warnings
             const activeAlerts = [...criticalAlerts, ...warningAlerts];
@@ -726,44 +965,58 @@ try {
                 return;
             }
             
-            container.innerHTML = activeAlerts.map(alert => `
-                <div class="alert-card p-6 rounded-xl border-l-4 ${
-                    alert.type === 'critical' ? 'border-red-500 bg-red-50 dark:bg-red-900/20' :
-                    'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20'
-                }">
-                    <div class="flex items-start justify-between">
-                        <div class="flex items-start space-x-4">
-                            <div class="flex-shrink-0">
-                                <i class="fas ${
-                                    alert.type === 'critical' ? 'fa-exclamation-circle text-red-500' :
-                                    'fa-exclamation-triangle text-yellow-500'
-                                } text-xl"></i>
-                            </div>
-                            <div class="flex-1">
-                                <div class="flex items-center space-x-2 mb-2">
-                                    <span class="status-badge ${
-                                        alert.type === 'critical' ? 'status-critical' : 'status-warning'
-                                    }">${alert.type.toUpperCase()}</span>
-                                    <span class="text-sm text-gray-500 dark:text-gray-400">${alert.parameter}</span>
-                                    <span class="text-sm font-semibold text-gray-900 dark:text-white">${alert.value}</span>
+            container.innerHTML = activeAlerts.map(alert => {
+                const alertType = alert.message.includes('turbidity') ? 'turbidity' : 
+                                 alert.message.includes('TDS') ? 'tds' :
+                                 alert.message.includes('pH') ? 'ph' : null;
+                const alertLevel = alert.type === 'critical' ? 'danger' : 'warning';
+                const alertKey = alertType ? `${alertType}_${alertLevel}` : null;
+                const isUnacknowledged = alertKey && unacknowledgedAlerts.has(alertKey);
+                const isAcknowledged = alertType && acknowledgedAlerts.has(alertType);
+                
+                return `
+                    <div class="alert-card p-6 rounded-xl border-l-4 ${
+                        alert.type === 'critical' ? 'border-red-500 bg-red-50 dark:bg-red-900/20' :
+                        'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20'
+                    }">
+                        <div class="flex items-start justify-between">
+                            <div class="flex items-start space-x-4">
+                                <div class="flex-shrink-0">
+                                    <i class="fas ${
+                                        alert.type === 'critical' ? 'fa-exclamation-circle text-red-500' :
+                                        'fa-exclamation-triangle text-yellow-500'
+                                    } text-xl"></i>
                                 </div>
-                                <p class="text-gray-900 dark:text-white">${alert.message}</p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                                    <i class="fas fa-clock mr-1"></i>${formatDate(alert.time)}
-                                </p>
+                                <div class="flex-1">
+                                    <div class="flex items-center space-x-2 mb-2">
+                                        <span class="status-badge ${
+                                            alert.type === 'critical' ? 'status-critical' : 'status-warning'
+                                        }">${alert.type.toUpperCase()}</span>
+                                        <span class="text-sm text-gray-500 dark:text-gray-400">${alert.parameter}</span>
+                                        <span class="text-sm font-semibold text-gray-900 dark:text-white">${alert.value}</span>
+                                        ${isAcknowledged ? '<span class="px-2 py-1 text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full"><i class="fas fa-check mr-1"></i>Acknowledged</span>' : ''}
+                                    </div>
+                                    <p class="text-gray-900 dark:text-white">${alert.message}</p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                                        <i class="fas fa-clock mr-1"></i>${formatDate(alert.time)}
+                                    </p>
+                                </div>
                             </div>
-                        </div>
-                        <div class="flex space-x-2">
-                            <button onclick="acknowledgeAlert('${alert.time}')" class="p-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors">
-                                <i class="fas fa-check"></i>
-                            </button>
-                            <button onclick="dismissAlert('${alert.time}')" class="p-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300 transition-colors">
-                                <i class="fas fa-times"></i>
-                            </button>
+                            <div class="flex space-x-2">
+                                ${alertType && !isAcknowledged ? `
+                                    <button onclick="showAcknowledgmentModal(${JSON.stringify(alert).replace(/"/g, '&quot;')})" 
+                                            class="px-3 py-1 text-sm bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors">
+                                        <i class="fas fa-check mr-1"></i>Acknowledge
+                                    </button>
+                                ` : ''}
+                                <button onclick="dismissAlert('${alert.time}')" class="p-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300 transition-colors">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         function updateAlertStatistics(alerts) {
@@ -919,6 +1172,90 @@ try {
             renderAlertHistory();
         }
 
+        // Refresh acknowledgment reports
+        async function refreshAcknowledgmentReports() {
+            try {
+                const response = await fetch('../../api/get_acknowledgments.php?limit=20', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                if (data.success && data.data) {
+                    renderAcknowledgmentReports(data.data);
+                }
+            } catch (error) {
+                console.error('Error loading acknowledgment reports:', error);
+            }
+        }
+
+        // Load acknowledgment statistics
+        async function loadAcknowledgmentStats() {
+            try {
+                const response = await fetch('../../api/get_acknowledgment_stats.php', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                if (data.success && data.data) {
+                    document.getElementById('totalAcknowledged').textContent = data.data.total;
+                    document.getElementById('todayAcknowledged').textContent = data.data.today;
+                }
+            } catch (error) {
+                console.error('Error loading acknowledgment stats:', error);
+            }
+        }
+
+        // Render acknowledgment reports table
+        function renderAcknowledgmentReports(reports) {
+            const tableBody = document.getElementById('acknowledgmentReportsTable');
+            
+            if (reports.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                            <i class="fas fa-inbox text-2xl mb-2"></i>
+                            <p>No acknowledgment reports found</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tableBody.innerHTML = reports.map(report => {
+                const alertType = report.alert_type;
+                const typeIcon = alertType === 'turbidity' ? 'fas fa-filter text-blue-500' :
+                                alertType === 'tds' ? 'fas fa-flask text-emerald-500' :
+                                alertType === 'ph' ? 'fas fa-vial text-purple-500' : 'fas fa-thermometer-half text-red-500';
+                
+                const typeBadge = alertType === 'turbidity' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                                 alertType === 'tds' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200' :
+                                 alertType === 'ph' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+                
+                return `
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                        <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">${formatDate(report.acknowledged_at)}</td>
+                        <td class="px-6 py-4">
+                            <div class="flex items-center space-x-2">
+                                <i class="${typeIcon}"></i>
+                                <span class="px-2 py-1 text-xs rounded-full ${typeBadge}">${alertType.toUpperCase()}</span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">${report.action_taken}</td>
+                        <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">${report.responsible_person}</td>
+                        <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">${report.details || 'No additional details'}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
         function acknowledgeAlert(time) {
             // Remove alert from active alerts
             alertHistory = alertHistory.filter(alert => alert.time !== time);
@@ -958,6 +1295,7 @@ try {
 
         // Event listeners
         document.getElementById('refreshReadings').addEventListener('click', fetchData);
+        document.getElementById('refreshAcknowledgmentReports').addEventListener('click', refreshAcknowledgmentReports);
         document.getElementById('clearAllAlerts').addEventListener('click', () => {
             if (confirm('Are you sure you want to clear all alerts?')) {
                 alertHistory = [];
@@ -1033,7 +1371,14 @@ try {
 
         // Initialize and update data every 5 seconds
         fetchData();
+        loadAcknowledgedAlerts();
+        loadAcknowledgmentStats();
+        refreshAcknowledgmentReports();
         setInterval(fetchData, 5000);
+        setInterval(() => {
+            loadAcknowledgmentStats();
+            refreshAcknowledgmentReports();
+        }, 30000); // Update acknowledgment data every 30 seconds
     </script>
 </body>
 </html>
