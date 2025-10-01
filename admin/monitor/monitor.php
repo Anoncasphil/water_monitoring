@@ -162,9 +162,9 @@ try {
                     </div>
                     <div class="text-center mb-4">
                         <div class="value-display text-4xl text-gray-900 dark:text-white mb-2" id="turbidityValue">--</div>
-                        <div class="text-lg text-gray-500 dark:text-gray-400 mb-2">NTU</div>
-                        <div class="text-xs text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-3 py-1 rounded-full inline-block" id="turbidityPercent">
-                            <i class="fas fa-percentage mr-1"></i>--%
+                        <div class="text-lg text-gray-500 dark:text-gray-400 mb-2">%</div>
+                        <div class="text-xs text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-3 py-1 rounded-full inline-block" id="turbidityNTU">
+                            <i class="fas fa-filter mr-1"></i>-- NTU
                         </div>
                     </div>
                     <div class="space-y-3">
@@ -199,8 +199,10 @@ try {
                     </div>
                     <div class="text-center mb-4">
                         <div class="value-display text-4xl text-gray-900 dark:text-white mb-2" id="tdsValue">--</div>
-                        <div class="text-lg text-gray-500 dark:text-gray-400">%</div>
-                        <div class="text-xs text-gray-400 dark:text-gray-500 mt-1" id="tdsRaw">Raw: -- ppm</div>
+                        <div class="text-lg text-gray-500 dark:text-gray-400 mb-2">%</div>
+                        <div class="text-xs text-emerald-500 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-1 rounded-full inline-block" id="tdsPPM">
+                            <i class="fas fa-flask mr-1"></i>-- ppm
+                        </div>
                     </div>
                     <div class="space-y-3">
                         <div class="flex justify-between text-sm">
@@ -272,16 +274,16 @@ try {
                     </div>
                     <div class="space-y-3">
                         <div class="flex justify-between text-sm">
+                            <span class="text-gray-500 dark:text-gray-400">Cold</span>
+                            <span class="text-blue-600 dark:text-blue-400 font-medium">0-15°C</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
                             <span class="text-gray-500 dark:text-gray-400">Good</span>
                             <span class="text-green-600 dark:text-green-400 font-medium">15-25°C</span>
                         </div>
                         <div class="flex justify-between text-sm">
-                            <span class="text-gray-500 dark:text-gray-400">Medium</span>
-                            <span class="text-yellow-600 dark:text-yellow-400 font-medium">10-30°C</span>
-                        </div>
-                        <div class="flex justify-between text-sm">
-                            <span class="text-gray-500 dark:text-gray-400">Critical</span>
-                            <span class="text-red-600 dark:text-red-400 font-medium">< 10°C or > 30°C</span>
+                            <span class="text-gray-500 dark:text-gray-400">Warm</span>
+                            <span class="text-orange-600 dark:text-orange-400 font-medium">25-50°C</span>
                         </div>
                     </div>
                 </div>
@@ -347,10 +349,11 @@ try {
         }
 
         function getTemperatureStatus(value) {
-            // Realistic water temperature standards
-            if (value >= 15 && value <= 25) return { status: 'Good', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' };
-            if (value >= 10 && value <= 30) return { status: 'Medium', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' };
-            return { status: 'Critical', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' };
+            // Temperature categories: Cold, Good, Warm
+            if (value >= 0 && value < 15) return { status: 'Cold', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' };
+            if (value >= 15 && value < 25) return { status: 'Good', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' };
+            if (value >= 25 && value <= 50) return { status: 'Warm', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' };
+            return { status: 'Unknown', color: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400' };
         }
 
         function updateData() {
@@ -366,14 +369,14 @@ try {
                         const tdsPercent = convertTDSToPercentage(parseFloat(latest.tds_ppm));
                         
                         // Update sensor values
-                        document.getElementById('turbidityValue').textContent = parseFloat(latest.turbidity_ntu).toFixed(0);
+                        document.getElementById('turbidityValue').textContent = turbidityPercent.toFixed(1);
                         document.getElementById('tdsValue').textContent = tdsPercent.toFixed(1);
                         document.getElementById('phValue').textContent = parseFloat(latest.ph).toFixed(1);
                         document.getElementById('temperatureValue').textContent = parseFloat(latest.temperature).toFixed(1);
                         
-                        // Update percentage display for turbidity
-                        document.getElementById('turbidityPercent').innerHTML = `<i class="fas fa-percentage mr-1"></i>${turbidityPercent.toFixed(1)}%`;
-                        document.getElementById('tdsRaw').textContent = `Raw: ${parseFloat(latest.tds_ppm).toFixed(0)} ppm`;
+                        // Update raw value displays
+                        document.getElementById('turbidityNTU').innerHTML = `<i class="fas fa-filter mr-1"></i>${parseFloat(latest.turbidity_ntu).toFixed(0)} NTU`;
+                        document.getElementById('tdsPPM').innerHTML = `<i class="fas fa-flask mr-1"></i>${parseFloat(latest.tds_ppm).toFixed(0)} ppm`;
 
                         // Update quality badges with new thresholds
                         const turbidityStatus = getTurbidityStatus(parseFloat(latest.turbidity_ntu));
@@ -425,21 +428,21 @@ try {
             const tdsPercent = convertTDSToPercentage(tds);
             
             // Evaluate each parameter with new thresholds
-            if (turbidity <= 2) { alerts.push({ type: 'success', title: 'Turbidity', message: `Good water clarity (${turbidity.toFixed(0)} NTU, ${turbidityPercent.toFixed(1)}%)`, icon: 'fa-check-circle' }); overallScore++; }
-            else if (turbidity <= 5) { alerts.push({ type: 'warning', title: 'Turbidity', message: `Medium clarity - monitor closely (${turbidity.toFixed(0)} NTU, ${turbidityPercent.toFixed(1)}%)`, icon: 'fa-exclamation-triangle' }); overallScore += 0.5; }
-            else { alerts.push({ type: 'danger', title: 'Turbidity', message: `Critical clarity - requires attention (${turbidity.toFixed(0)} NTU, ${turbidityPercent.toFixed(1)}%)`, icon: 'fa-exclamation-circle' }); }
+            if (turbidity <= 2) { alerts.push({ type: 'success', title: 'Turbidity', message: `Good water clarity (${turbidityPercent.toFixed(1)}%, ${turbidity.toFixed(0)} NTU)`, icon: 'fa-check-circle' }); overallScore++; }
+            else if (turbidity <= 5) { alerts.push({ type: 'warning', title: 'Turbidity', message: `Medium clarity - monitor closely (${turbidityPercent.toFixed(1)}%, ${turbidity.toFixed(0)} NTU)`, icon: 'fa-exclamation-triangle' }); overallScore += 0.5; }
+            else { alerts.push({ type: 'danger', title: 'Turbidity', message: `Critical clarity - requires attention (${turbidityPercent.toFixed(1)}%, ${turbidity.toFixed(0)} NTU)`, icon: 'fa-exclamation-circle' }); }
 
-            if (tdsPercent <= 30) { alerts.push({ type: 'success', title: 'TDS', message: `Good dissolved solids content (${tds.toFixed(0)} ppm, ${tdsPercent.toFixed(1)}%)`, icon: 'fa-check-circle' }); overallScore++; }
-            else if (tdsPercent <= 60) { alerts.push({ type: 'warning', title: 'TDS', message: `Medium dissolved solids (${tds.toFixed(0)} ppm, ${tdsPercent.toFixed(1)}%)`, icon: 'fa-exclamation-triangle' }); overallScore += 0.5; }
-            else { alerts.push({ type: 'danger', title: 'TDS', message: `High dissolved solids - treatment needed (${tds.toFixed(0)} ppm, ${tdsPercent.toFixed(1)}%)`, icon: 'fa-exclamation-circle' }); }
+            if (tdsPercent <= 30) { alerts.push({ type: 'success', title: 'TDS', message: `Good dissolved solids content (${tdsPercent.toFixed(1)}%, ${tds.toFixed(0)} ppm)`, icon: 'fa-check-circle' }); overallScore++; }
+            else if (tdsPercent <= 60) { alerts.push({ type: 'warning', title: 'TDS', message: `Medium dissolved solids (${tdsPercent.toFixed(1)}%, ${tds.toFixed(0)} ppm)`, icon: 'fa-exclamation-triangle' }); overallScore += 0.5; }
+            else { alerts.push({ type: 'danger', title: 'TDS', message: `High dissolved solids - treatment needed (${tdsPercent.toFixed(1)}%, ${tds.toFixed(0)} ppm)`, icon: 'fa-exclamation-circle' }); }
 
             if (ph >= 6 && ph <= 8) { alerts.push({ type: 'success', title: 'pH Level', message: 'Good pH range', icon: 'fa-check-circle' }); overallScore++; }
             else if ((ph >= 4 && ph < 6) || (ph > 8 && ph <= 10)) { alerts.push({ type: 'warning', title: 'pH Level', message: 'Medium pH - monitor and adjust as needed', icon: 'fa-exclamation-triangle' }); overallScore += 0.5; }
             else { alerts.push({ type: 'danger', title: 'pH Level', message: 'Critical pH - immediate adjustment needed', icon: 'fa-exclamation-circle' }); }
 
-            if (temperature >= 15 && temperature <= 25) { alerts.push({ type: 'success', title: 'Temperature', message: 'Good water temperature', icon: 'fa-check-circle' }); overallScore++; }
-            else if (temperature >= 10 && temperature <= 30) { alerts.push({ type: 'warning', title: 'Temperature', message: 'Medium temperature - monitor closely', icon: 'fa-exclamation-triangle' }); overallScore += 0.5; }
-            else { alerts.push({ type: 'danger', title: 'Temperature', message: 'Critical temperature - immediate attention needed', icon: 'fa-exclamation-circle' }); }
+            if (temperature >= 0 && temperature < 15) { alerts.push({ type: 'warning', title: 'Temperature', message: 'Cold water - temperature is cool', icon: 'fa-snowflake' }); overallScore += 0.5; }
+            else if (temperature >= 15 && temperature < 25) { alerts.push({ type: 'success', title: 'Temperature', message: 'Good water temperature', icon: 'fa-check-circle' }); overallScore++; }
+            else if (temperature >= 25 && temperature <= 50) { alerts.push({ type: 'warning', title: 'Temperature', message: 'Warm water - temperature is warm', icon: 'fa-fire' }); overallScore += 0.5; }
 
             // Determine overall status
             const overallPercentage = (overallScore / totalParameters) * 100;

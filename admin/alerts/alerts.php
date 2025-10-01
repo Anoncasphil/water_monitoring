@@ -1190,6 +1190,57 @@ try {
             return success;
         }
 
+        // Show "Clear All Alerts" confirmation modal
+        function showClearAllModal() {
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            modal.innerHTML = `
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md mx-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                            <i class="fas fa-trash text-red-500 mr-2"></i>
+                            Clear All Alerts
+                        </h3>
+                        <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <div class="mb-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <p class="text-sm text-gray-700 dark:text-gray-300">
+                            This will permanently clear all active alerts from the view. This action cannot be undone.
+                        </p>
+                    </div>
+
+                    <div class="flex space-x-3">
+                        <button id="confirmClearAll" class="flex-1 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                            <i class="fas fa-trash mr-2"></i>Clear All
+                        </button>
+                        <button type="button" onclick="this.closest('.fixed').remove()" class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+
+            modal.querySelector('#confirmClearAll').addEventListener('click', () => {
+                // Clear all alerts
+                alertHistory = [];
+                currentPage = 1;
+                updateActiveAlerts([]);
+                renderAlertHistory();
+                updateAlertStatistics([]);
+
+                // Close modal
+                modal.remove();
+
+                // Show bottom-right toast
+                showNotification('All alerts have been cleared', 'success');
+            });
+        }
+
         // Show notification
         function showNotification(message, type) {
             const notification = document.createElement('div');
@@ -1828,13 +1879,7 @@ try {
             }
         });
         document.getElementById('clearAllAlerts').addEventListener('click', () => {
-            if (confirm('Are you sure you want to clear all alerts?')) {
-                alertHistory = [];
-                currentPage = 1;
-                updateActiveAlerts([]);
-                renderAlertHistory();
-                updateAlertStatistics([]);
-            }
+            showClearAllModal();
         });
         document.getElementById('acknowledgeAll').addEventListener('click', () => {
             // Get currently visible alerts from the DOM instead of alertHistory

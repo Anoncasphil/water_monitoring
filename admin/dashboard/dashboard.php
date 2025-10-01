@@ -170,9 +170,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     <div class="text-right">
                         <div class="text-3xl font-bold text-gray-800 dark:text-white" id="turbidityValue">--</div>
-                        <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">NTU</div>
-                        <div class="text-xs text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-full inline-block" id="turbidityPercent">
-                            <i class="fas fa-percentage mr-1"></i>--%
+                        <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">%</div>
+                        <div class="text-xs text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-full inline-block" id="turbidityNTU">
+                            <i class="fas fa-filter mr-1"></i>-- NTU
                         </div>
                     </div>
                 </div>
@@ -195,8 +195,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     <div class="text-right">
                         <div class="text-3xl font-bold text-gray-800 dark:text-white" id="tdsValue">--</div>
-                        <div class="text-sm text-gray-500 dark:text-gray-400">%</div>
-                        <div class="text-xs text-gray-400 dark:text-gray-500 mt-1" id="tdsRaw">Raw: -- ppm</div>
+                        <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">%</div>
+                        <div class="text-xs text-emerald-500 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded-full inline-block" id="tdsPPM">
+                            <i class="fas fa-flask mr-1"></i>-- ppm
+                        </div>
                     </div>
                 </div>
                 <div class="text-xs text-gray-500 dark:text-gray-400" id="tdsTime">
@@ -392,7 +394,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="flex items-center justify-between mb-6">
                     <h5 class="text-lg font-semibold text-gray-800 dark:text-white">
                         <i class="fas fa-chart-line mr-2 text-blue-500"></i>
-                        Historical Data
+                        Recent Data (Last 5 Readings)
                     </h5>
                     <div class="flex space-x-2">
                         <button class="px-3 py-1 text-sm bg-blue-50 dark:bg-blue-900 text-blue-600 dark:text-blue-300 rounded-full hover:bg-blue-100 dark:hover:bg-blue-800">
@@ -427,7 +429,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <i class="fas fa-clock mr-1"></i>Time
                                 </th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                    <i class="fas fa-filter mr-1"></i>Turb NTU
+                                    <i class="fas fa-filter mr-1"></i>Turb %
                                 </th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                     <i class="fas fa-flask mr-1"></i>TDS %
@@ -674,14 +676,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         const turbidityPercent = convertTurbidityToPercentage(parseFloat(latest.turbidity_ntu));
                         const tdsPercent = convertTDSToPercentage(parseFloat(latest.tds_ppm));
                         
-                        document.getElementById('turbidityValue').textContent = parseFloat(latest.turbidity_ntu).toFixed(0);
+                        document.getElementById('turbidityValue').textContent = turbidityPercent.toFixed(1);
                         document.getElementById('tdsValue').textContent = tdsPercent.toFixed(1);
                         document.getElementById('phValue').textContent = parseFloat(latest.ph).toFixed(2);
                         document.getElementById('temperatureValue').textContent = parseFloat(latest.temperature).toFixed(2);
                         
-                        // Update percentage display for turbidity
-                        document.getElementById('turbidityPercent').innerHTML = `<i class="fas fa-percentage mr-1"></i>${turbidityPercent.toFixed(1)}%`;
-                        document.getElementById('tdsRaw').textContent = `Raw: ${parseFloat(latest.tds_ppm).toFixed(0)} ppm`;
+                        // Update raw value displays
+                        document.getElementById('turbidityNTU').innerHTML = `<i class="fas fa-filter mr-1"></i>${parseFloat(latest.turbidity_ntu).toFixed(0)} NTU`;
+                        document.getElementById('tdsPPM').innerHTML = `<i class="fas fa-flask mr-1"></i>${parseFloat(latest.tds_ppm).toFixed(0)} ppm`;
                         document.getElementById('turbidityTime').textContent = `Last updated: ${formatDate(latest.reading_time)}`;
                         document.getElementById('tdsTime').textContent = `Last updated: ${formatDate(latest.reading_time)}`;
                         document.getElementById('phTime').textContent = `Last updated: ${formatDate(latest.reading_time)}`;
@@ -698,14 +700,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
                                     <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${formatDate(reading.reading_time)}</td>
                                     <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">
-                                        <div class="font-medium text-gray-900 dark:text-gray-100">${parseFloat(reading.turbidity_ntu).toFixed(0)} NTU</div>
+                                        <div class="font-medium text-gray-900 dark:text-gray-100">${turbidityPercent.toFixed(1)}%</div>
                                         <div class="text-xs text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded-full inline-block mt-1">
-                                            <i class="fas fa-percentage mr-1"></i>${turbidityPercent.toFixed(1)}%
+                                            <i class="fas fa-filter mr-1"></i>${parseFloat(reading.turbidity_ntu).toFixed(0)} NTU
                                         </div>
                                     </td>
                                     <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">
-                                        <div class="font-medium">${tdsPercent.toFixed(1)}%</div>
-                                        <div class="text-xs text-gray-500 dark:text-gray-400">Raw: ${parseFloat(reading.tds_ppm).toFixed(0)} ppm</div>
+                                        <div class="font-medium text-gray-900 dark:text-gray-100">${tdsPercent.toFixed(1)}%</div>
+                                        <div class="text-xs text-emerald-500 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-full inline-block mt-1">
+                                            <i class="fas fa-flask mr-1"></i>${parseFloat(reading.tds_ppm).toFixed(0)} ppm
+                                        </div>
                                     </td>
                                     <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${parseFloat(reading.ph).toFixed(2)}</td>
                                     <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${parseFloat(reading.temperature).toFixed(2)}</td>
@@ -715,9 +719,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         document.getElementById('readingsTable').innerHTML = tableHtml;
                     }
 
-                    // Update chart
+                    // Update chart (only show 5 most recent readings)
                     if (data.historical && data.historical.length > 0) {
-                        updateChart(data.historical);
+                        const recentReadings = data.historical.slice(-5); // Get last 5 readings
+                        updateChart(recentReadings);
                     }
 
             // Update water quality alerts (pass raw values for proper threshold evaluation)
@@ -742,11 +747,137 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 });
         }
 
+        // Function to update only sensor values and table (without chart)
+        function updateSensorValues() {
+            fetch('../../api/get_readings.php', {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.error) {
+                        throw new Error(data.error);
+                    }
+
+                    // Update sensor cards
+                    const latest = data.latest;
+                    if (latest) {
+                        // Convert and display percentages
+                        const turbidityPercent = convertTurbidityToPercentage(parseFloat(latest.turbidity_ntu));
+                        const tdsPercent = convertTDSToPercentage(parseFloat(latest.tds_ppm));
+                        
+                        document.getElementById('turbidityValue').textContent = turbidityPercent.toFixed(1);
+                        document.getElementById('tdsValue').textContent = tdsPercent.toFixed(1);
+                        document.getElementById('phValue').textContent = parseFloat(latest.ph).toFixed(2);
+                        document.getElementById('temperatureValue').textContent = parseFloat(latest.temperature).toFixed(2);
+                        
+                        // Update raw value displays
+                        document.getElementById('turbidityNTU').innerHTML = `<i class="fas fa-filter mr-1"></i>${parseFloat(latest.turbidity_ntu).toFixed(0)} NTU`;
+                        document.getElementById('tdsPPM').innerHTML = `<i class="fas fa-flask mr-1"></i>${parseFloat(latest.tds_ppm).toFixed(0)} ppm`;
+                        document.getElementById('turbidityTime').textContent = `Last updated: ${formatDate(latest.reading_time)}`;
+                        document.getElementById('tdsTime').textContent = `Last updated: ${formatDate(latest.reading_time)}`;
+                        document.getElementById('phTime').textContent = `Last updated: ${formatDate(latest.reading_time)}`;
+                        document.getElementById('temperatureTime').textContent = `Last updated: ${formatDate(latest.reading_time)}`;
+                    }
+
+                    // Update table
+                    if (data.historical && data.historical.length > 0) {
+                        const tableHtml = data.historical.slice(-10).map(reading => {
+                            const turbidityPercent = convertTurbidityToPercentage(parseFloat(reading.turbidity_ntu));
+                            const tdsPercent = convertTDSToPercentage(parseFloat(reading.tds_ppm));
+                            
+                            return `
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${formatDate(reading.reading_time)}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">
+                                        <div class="font-medium text-gray-900 dark:text-gray-100">${turbidityPercent.toFixed(1)}%</div>
+                                        <div class="text-xs text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded-full inline-block mt-1">
+                                            <i class="fas fa-filter mr-1"></i>${parseFloat(reading.turbidity_ntu).toFixed(0)} NTU
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">
+                                        <div class="font-medium text-gray-900 dark:text-gray-100">${tdsPercent.toFixed(1)}%</div>
+                                        <div class="text-xs text-emerald-500 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-full inline-block mt-1">
+                                            <i class="fas fa-flask mr-1"></i>${parseFloat(reading.tds_ppm).toFixed(0)} ppm
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${parseFloat(reading.ph).toFixed(2)}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${parseFloat(reading.temperature).toFixed(2)}</td>
+                                </tr>
+                            `;
+                        }).join('');
+                        document.getElementById('readingsTable').innerHTML = tableHtml;
+                    }
+
+                    // Update water quality alerts (pass raw values for proper threshold evaluation)
+                    if (latest) {
+                        updateWaterQualityAlerts(
+                            parseFloat(latest.turbidity_ntu),
+                            parseFloat(latest.tds_ppm),
+                            parseFloat(latest.ph),
+                            parseFloat(latest.temperature)
+                        );
+                    }
+                })
+                .catch(error => {
+                    console.error('Error updating sensor values:', error);
+                    document.getElementById('turbidityTime').textContent = 'Failed to update';
+                    document.getElementById('tdsTime').textContent = 'Failed to update';
+                    document.getElementById('readingsTable').innerHTML = '<tr><td colspan="5" class="px-4 py-3 text-sm text-red-500 dark:text-red-400">Error loading data</td></tr>';
+                });
+        }
+
+        // Function to update only chart data
+        function updateChartData() {
+            fetch('../../api/get_readings.php', {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.error) {
+                        throw new Error(data.error);
+                    }
+
+                    // Update chart (only show 5 most recent readings)
+                    if (data.historical && data.historical.length > 0) {
+                        const recentReadings = data.historical.slice(-5); // Get last 5 readings
+                        updateChart(recentReadings);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error updating chart:', error);
+                });
+        }
+
         function updateChart(data) {
             const ctx = document.getElementById('readingsChart').getContext('2d');
             
+            // If chart exists, update its data instead of recreating
             if (readingsChart instanceof Chart) {
-                readingsChart.destroy();
+                readingsChart.data.labels = data.map(d => formatDate(d.reading_time));
+                readingsChart.data.datasets[0].data = data.map(d => convertTurbidityToPercentage(parseFloat(d.turbidity_ntu)));
+                readingsChart.data.datasets[1].data = data.map(d => convertTDSToPercentage(parseFloat(d.tds_ppm)));
+                readingsChart.data.datasets[2].data = data.map(d => parseFloat(d.ph));
+                readingsChart.data.datasets[3].data = data.map(d => parseFloat(d.temperature));
+                readingsChart.update('none'); // Update without animation for better performance
+                return;
             }
 
             // Create gradient for each dataset
@@ -771,8 +902,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 data: {
                     labels: data.map(d => formatDate(d.reading_time)),
                     datasets: [{
-                        label: 'Turbidity (NTU)',
-                        data: data.map(d => parseFloat(d.turbidity_ntu)),
+                        label: 'Turbidity (%)',
+                        data: data.map(d => convertTurbidityToPercentage(parseFloat(d.turbidity_ntu))),
                         borderColor: 'rgb(59, 130, 246)',
                         backgroundColor: turbidityGradient,
                         borderWidth: 2,
@@ -843,6 +974,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    animation: {
+                        duration: 0 // Disable animations for better performance
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                usePointStyle: true,
+                                padding: 20
+                            }
+                        }
+                    },
                     interaction: {
                         intersect: false,
                         mode: 'index'
@@ -951,7 +1094,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             });
             
             await loadAcknowledgmentStats();
-            updateData();
+            
+            // Initial data loading
+            updateSensorValues();
+            updateChartData();
             fetchRelayStates();
             refreshAcknowledgmentReports();
             
@@ -965,10 +1111,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }, 1000);
         }, 500); // Initial 500ms delay
         
+        // Update sensor values and table frequently
         setInterval(() => {
-            updateData();
+            updateSensorValues();
             fetchRelayStates();
-        }, 1000); // Update every 1 second instead of 5 seconds
+        }, 1000); // Update sensor values every 1 second
+        
+        // Update chart less frequently for better performance
+        setInterval(() => {
+            updateChartData();
+        }, 5000); // Update chart every 5 seconds
         
         setInterval(() => {
             clearExpiredAcknowledgments();
@@ -1015,8 +1167,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Refresh the chart with new colors
             if (readingsChart) {
                 readingsChart.destroy();
+                readingsChart = null; // Reset the chart instance
             }
-            updateData(); // This will recreate the chart with new colors
+            updateChartData(); // This will recreate the chart with new colors
             
             // Update table colors
             updateTableRowColors();
@@ -1052,9 +1205,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 danger: { min: 0, max: 14 }      // Critical range (below 4 and above 10)
             },
             temperature: {
-                good: { min: 15, max: 25 },    // °C (Optimal for most water systems)
-                warning: { min: 10, max: 30 }, // °C (Acceptable range)
-                danger: { min: 5, max: 35 }    // °C (Critical range)
+                cold: { min: 0, max: 15 },     // °C (Cold water)
+                good: { min: 15, max: 25 },    // °C (Good temperature)
+                warm: { min: 25, max: 50 }     // °C (Warm water)
             }
         };
 
@@ -1080,17 +1233,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (turbidity >= thresholds.turbidity.danger) {
                 alerts.push({
                     type: 'danger',
-                    message: `High turbidity (${turbidity.toFixed(0)} NTU, ${turbidityPercent.toFixed(1)}%) - Water is very cloudy and may contain harmful particles`
+                    message: `High turbidity (${turbidityPercent.toFixed(1)}%, ${turbidity.toFixed(0)} NTU) - Water is very cloudy and may contain harmful particles`
                 });
             } else if (turbidity >= thresholds.turbidity.warning) {
                 alerts.push({
                     type: 'warning',
-                    message: `Medium turbidity (${turbidity.toFixed(0)} NTU, ${turbidityPercent.toFixed(1)}%) - Water clarity is reduced`
+                    message: `Medium turbidity (${turbidityPercent.toFixed(1)}%, ${turbidity.toFixed(0)} NTU) - Water clarity is reduced`
                 });
             } else if (turbidity <= thresholds.turbidity.good) {
                 alerts.push({
                     type: 'success',
-                    message: `Good turbidity (${turbidity.toFixed(0)} NTU, ${turbidityPercent.toFixed(1)}%) - Water is clear`
+                    message: `Good turbidity (${turbidityPercent.toFixed(1)}%, ${turbidity.toFixed(0)} NTU) - Water is clear`
                 });
             }
 
@@ -1130,21 +1283,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 });
             }
 
-            // Evaluate Temperature (Realistic water quality standards)
-            if (temperature < thresholds.temperature.danger.min || temperature > thresholds.temperature.danger.max) {
-                alerts.push({
-                    type: 'danger',
-                    message: `Critical temperature (${temperature.toFixed(1)}°C) - Water temperature is outside safe range`
-                });
-            } else if (temperature < thresholds.temperature.warning.min || temperature > thresholds.temperature.warning.max) {
+            // Evaluate Temperature (Cold, Good, Warm categories)
+            if (temperature >= thresholds.temperature.cold.min && temperature < thresholds.temperature.cold.max) {
                 alerts.push({
                     type: 'warning',
-                    message: `Unusual temperature (${temperature.toFixed(1)}°C) - Monitor water temperature closely`
+                    message: `Cold water (${temperature.toFixed(1)}°C) - Water temperature is cool`
                 });
-            } else if (temperature >= thresholds.temperature.good.min && temperature <= thresholds.temperature.good.max) {
+            } else if (temperature >= thresholds.temperature.good.min && temperature < thresholds.temperature.good.max) {
                 alerts.push({
                     type: 'success',
                     message: `Good temperature (${temperature.toFixed(1)}°C) - Water is at optimal temperature`
+                });
+            } else if (temperature >= thresholds.temperature.warm.min && temperature <= thresholds.temperature.warm.max) {
+                alerts.push({
+                    type: 'warning',
+                    message: `Warm water (${temperature.toFixed(1)}°C) - Water temperature is warm`
                 });
             }
 
@@ -1448,7 +1601,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     showNotification('Alert acknowledged successfully', 'success');
                     
                     // Refresh alerts and reports to update UI
-                    updateData();
+                    updateSensorValues();
+                    updateChartData();
                     refreshAcknowledgmentReports();
                 } else {
                     showNotification('Failed to acknowledge alert: ' + (data.error || 'Unknown error'), 'error');
