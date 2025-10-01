@@ -351,8 +351,15 @@ try {
                             Acknowledgment Reports
                         </h2>
                         <p class="text-gray-600 dark:text-gray-400">Recent alert acknowledgments and actions taken</p>
+                        <div class="mt-2">
+                            <span class="text-sm text-gray-500 dark:text-gray-400">Total Acknowledgments: </span>
+                            <span id="totalAcknowledgmentCount" class="text-lg font-semibold text-amber-600 dark:text-amber-400">0</span>
+                        </div>
                     </div>
                     <div class="flex items-center space-x-4">
+                        <button id="exportAcknowledgmentReports" class="px-4 py-2 bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-300 rounded-lg hover:bg-green-200 dark:hover:bg-green-800 transition-colors">
+                            <i class="fas fa-download mr-2"></i>Export
+                        </button>
                         <button id="refreshAcknowledgmentReports" class="px-4 py-2 bg-amber-100 dark:bg-amber-900 text-amber-600 dark:text-amber-300 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-800 transition-colors">
                             <i class="fas fa-sync-alt mr-2"></i>Refresh
                         </button>
@@ -793,10 +800,17 @@ try {
                     const now = new Date();
                     data.data.forEach(report => {
                         const ackTime = new Date(report.acknowledged_at);
-                        if ((now - ackTime) < 5 * 60 * 60 * 1000) { // 5 hours
+                        const timeDiff = now - ackTime;
+                        const fiveHoursInMs = 5 * 60 * 60 * 1000; // 5 hours in milliseconds
+                        
+                        if (timeDiff < fiveHoursInMs) {
                             acknowledgedAlerts.add(report.alert_type);
+                            console.log(`Loaded acknowledged alert: ${report.alert_type} from ${report.acknowledged_at} (${Math.round(timeDiff / (60 * 1000))} minutes ago)`);
                         }
                     });
+                    
+                    console.log(`Total acknowledged alerts loaded: ${acknowledgedAlerts.size}`);
+                    console.log('Acknowledged alert types:', Array.from(acknowledgedAlerts));
                 }
             } catch (error) {
                 console.error('Error loading acknowledged alerts:', error);
@@ -1170,21 +1184,19 @@ try {
             } else if (!phStable) {
                 sensorStates.ph.lastStable = null;
             }
+            
+            // Note: We don't reset acknowledgment status here anymore
+            // Acknowledgments persist for 5 hours regardless of sensor stability
         }
 
         function shouldShowAcknowledgeButton(alertType, alertLevel) {
             const sensorState = sensorStates[alertType];
             if (!sensorState) return true;
             
-            // If sensor is stable, reset acknowledgment status
-            if (sensorState.lastStable) {
-                acknowledgedAlerts.delete(alertType);
-                return true;
-            }
-            
-            // If already acknowledged and sensor is still critical, don't show button
+            // Check if there's a recent acknowledgment for this sensor type
             if (acknowledgedAlerts.has(alertType)) {
-                return false;
+                // Check if acknowledgment is still valid (within 5 hours)
+                return false; // Don't show acknowledge button if recently acknowledged
             }
             
             return true;
@@ -1538,6 +1550,7 @@ try {
             document.getElementById('ackShowingStart').textContent = totalItems > 0 ? startIndex + 1 : 0;
             document.getElementById('ackShowingEnd').textContent = endIndex;
             document.getElementById('ackTotalItems').textContent = totalItems;
+            document.getElementById('totalAcknowledgmentCount').textContent = totalItems;
         }
 
         // Update acknowledgment pagination buttons
@@ -1610,6 +1623,47 @@ try {
             renderAcknowledgmentReports();
         }
 
+        // Export acknowledgment reports to CSV
+        function exportAcknowledgmentReports() {
+            if (acknowledgmentReports.length === 0) {
+                showNotification('No acknowledgment reports to export', 'info');
+                return;
+            }
+
+            // Prepare CSV content
+            const headers = ['Time', 'Alert Type', 'Action Taken', 'Responsible Person', 'Details', 'Acknowledged At'];
+            const csvContent = [
+                headers.join(','),
+                ...acknowledgmentReports.map(report => [
+                    `"${formatDate(report.acknowledged_at)}"`,
+                    `"${report.alert_type.toUpperCase()}"`,
+                    `"${report.action_taken}"`,
+                    `"${report.responsible_person}"`,
+                    `"${(report.details || 'No additional details').replace(/"/g, '""')}"`,
+                    `"${new Date(report.acknowledged_at).toLocaleDateString()}"`
+                ].join(','))
+            ].join('\n');
+
+            // Create and download file
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            
+            if (link.download !== undefined) {
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', `acknowledgment_reports_${new Date().toISOString().split('T')[0]}.csv`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                
+                showNotification(`Exported ${acknowledgmentReports.length} acknowledgment reports`, 'success');
+            } else {
+                showNotification('Export not supported in this browser', 'error');
+            }
+        }
+
         function acknowledgeAlert(time) {
             // Remove alert from active alerts
             alertHistory = alertHistory.filter(alert => alert.time !== time);
@@ -1650,6 +1704,7 @@ try {
         // Event listeners
         document.getElementById('refreshReadings').addEventListener('click', fetchData);
         document.getElementById('refreshAcknowledgmentReports').addEventListener('click', refreshAcknowledgmentReports);
+        document.getElementById('exportAcknowledgmentReports').addEventListener('click', exportAcknowledgmentReports);
         
         // Acknowledgment pagination event listeners
         document.getElementById('ackPrevPage').addEventListener('click', () => {

@@ -274,6 +274,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     Acknowledgment Reports
                 </h5>
                 <div class="flex items-center space-x-6">
+                    <!-- Export Button -->
+                    <button id="exportAcknowledgmentReports" class="px-4 py-2 bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-300 rounded-lg hover:bg-green-200 dark:hover:bg-green-800 transition-colors">
+                        <i class="fas fa-download mr-2"></i>Export
+                    </button>
                     <!-- Summary Statistics -->
                     <div class="flex items-center space-x-4">
                         <!-- Total Acknowledged -->
@@ -1295,15 +1299,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     const now = new Date();
                     data.data.forEach(report => {
                         const ackTime = new Date(report.acknowledged_at);
+                        const timeDiff = now - ackTime;
+                        const fiveHoursInMs = 5 * 60 * 60 * 1000; // 5 hours in milliseconds
                         
                         // Mark as acknowledged if acknowledged within last 5 hours
-                        // This provides better persistence while still allowing new alerts
-                        if ((now - ackTime) < 5 * 60 * 60 * 1000) {
-                            // Store both the alert type and the specific acknowledgment data
+                        if (timeDiff < fiveHoursInMs) {
                             acknowledgedAlerts.add(report.alert_type);
-                            console.log(`Loaded acknowledged alert: ${report.alert_type} from ${report.acknowledged_at}`);
+                            console.log(`Loaded acknowledged alert: ${report.alert_type} from ${report.acknowledged_at} (${Math.round(timeDiff / (60 * 1000))} minutes ago)`);
                         }
                     });
+                    
+                    console.log(`Total acknowledged alerts loaded: ${acknowledgedAlerts.size}`);
+                    console.log('Acknowledged alert types:', Array.from(acknowledgedAlerts));
                 }
             } catch (error) {
                 console.error('Error loading acknowledged alerts:', error);
@@ -1468,6 +1475,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             });
         }
 
+        // Export acknowledgment reports to CSV
+        function exportAcknowledgmentReports() {
+            // Get acknowledgment reports from the current data
+            fetch('../../api/get_acknowledgments.php?limit=1000')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.data && data.data.length > 0) {
+                        const reports = data.data;
+                        
+                        // Prepare CSV content
+                        const headers = ['Time', 'Alert Type', 'Action Taken', 'Responsible Person', 'Details', 'Acknowledged At'];
+                        const csvContent = [
+                            headers.join(','),
+                            ...reports.map(report => [
+                                `"${formatDate(report.acknowledged_at)}"`,
+                                `"${report.alert_type.toUpperCase()}"`,
+                                `"${report.action_taken}"`,
+                                `"${report.responsible_person}"`,
+                                `"${(report.details || 'No additional details').replace(/"/g, '""')}"`,
+                                `"${new Date(report.acknowledged_at).toLocaleDateString()}"`
+                            ].join(','))
+                        ].join('\n');
+
+                        // Create and download file
+                        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                        const link = document.createElement('a');
+                        
+                        if (link.download !== undefined) {
+                            const url = URL.createObjectURL(blob);
+                            link.setAttribute('href', url);
+                            link.setAttribute('download', `acknowledgment_reports_${new Date().toISOString().split('T')[0]}.csv`);
+                            link.style.visibility = 'hidden';
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            URL.revokeObjectURL(url);
+                            
+                            showNotification(`Exported ${reports.length} acknowledgment reports`, 'success');
+                        } else {
+                            showNotification('Export not supported in this browser', 'error');
+                        }
+                    } else {
+                        showNotification('No acknowledgment reports to export', 'info');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error exporting acknowledgment reports:', error);
+                    showNotification('Error exporting acknowledgment reports', 'error');
+                });
+        }
+
         function showNotification(message, type = 'info') {
             // Create notification element
             const notification = document.createElement('div');
@@ -1509,6 +1567,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }, 300);
             }, 5000);
         }
+        
+        // Add event listener for export button
+        document.addEventListener('DOMContentLoaded', function() {
+            const exportBtn = document.getElementById('exportAcknowledgmentReports');
+            if (exportBtn) {
+                exportBtn.addEventListener('click', exportAcknowledgmentReports);
+            }
+        });
     </script>
         </div>
     </div>
