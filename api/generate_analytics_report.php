@@ -165,14 +165,14 @@ try {
     $fileName = "water_quality_report_" . date('Y-m-d_H-i-s') . ".pdf";
     
     // Generate PDF report using TCPDF
-    generatePDFReport($user, $stats, $hourlyData, $dailyData, $latest, $timeRange, $exportTime, $fileName, $hourlyStatsData, $qualityStats, $alertsData);
+    generatePDFReport($user, $stats, $hourlyData, $dailyData, $latest, $timeRange, $exportTime, $fileName, $hourlyStatsData, $qualityStats, $alertsData, $days);
     
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode(['error' => $e->getMessage()]);
 }
 
-function generatePDFReport($user, $stats, $hourlyData, $dailyData, $latest, $timeRange, $exportTime, $fileName, $hourlyStatsData, $qualityStats, $alertsData) {
+function generatePDFReport($user, $stats, $hourlyData, $dailyData, $latest, $timeRange, $exportTime, $fileName, $hourlyStatsData, $qualityStats, $alertsData, $days) {
     $userName = $user['first_name'] . ' ' . $user['last_name'];
     $userEmail = $user['email'];
     
@@ -340,8 +340,8 @@ function generatePDFReport($user, $stats, $hourlyData, $dailyData, $latest, $tim
     $summary .= "Key Findings:\n";
     $summary .= "• Data Collection: " . number_format($stats['total_readings']) . " total measurements analyzed\n";
     $summary .= "• System Reliability: " . number_format(($stats['total_readings'] / max($days, 1)), 1) . " average readings per day\n";
-    $summary .= "• Quality Consistency: " . number_format(($qualityStats['good_turbidity'] / $stats['total_readings']) * 100, 1) . "% of turbidity readings in good range\n";
-    $summary .= "• Temperature Stability: " . number_format(($qualityStats['good_temp'] / $stats['total_readings']) * 100, 1) . "% of temperature readings in optimal range\n";
+    $summary .= "• Quality Consistency: " . number_format(($qualityStats['good_turbidity'] / max($stats['total_readings'], 1)) * 100, 1) . "% of turbidity readings in good range\n";
+    $summary .= "• Temperature Stability: " . number_format(($qualityStats['good_temp'] / max($stats['total_readings'], 1)) * 100, 1) . "% of temperature readings in optimal range\n";
     
     $pdf->MultiCell(0, 4, $summary, 0, 'L', false, 1);
     $pdf->Ln(8);
@@ -456,19 +456,19 @@ function generatePDFReport($user, $stats, $hourlyData, $dailyData, $latest, $tim
     
     $distribution = "Quality Distribution Summary:\n\n";
     $distribution .= "Turbidity Quality Distribution:\n";
-    $distribution .= "• Good (≤2 NTU): " . $qualityStats['good_turbidity'] . " readings (" . number_format(($qualityStats['good_turbidity'] / $stats['total_readings']) * 100, 1) . "%)\n";
-    $distribution .= "• Medium (2-5 NTU): " . $qualityStats['medium_turbidity'] . " readings (" . number_format(($qualityStats['medium_turbidity'] / $stats['total_readings']) * 100, 1) . "%)\n";
-    $distribution .= "• Critical (>5 NTU): " . $qualityStats['critical_turbidity'] . " readings (" . number_format(($qualityStats['critical_turbidity'] / $stats['total_readings']) * 100, 1) . "%)\n\n";
+    $distribution .= "• Good (≤2 NTU): " . $qualityStats['good_turbidity'] . " readings (" . number_format(($qualityStats['good_turbidity'] / max($stats['total_readings'], 1)) * 100, 1) . "%)\n";
+    $distribution .= "• Medium (2-5 NTU): " . $qualityStats['medium_turbidity'] . " readings (" . number_format(($qualityStats['medium_turbidity'] / max($stats['total_readings'], 1)) * 100, 1) . "%)\n";
+    $distribution .= "• Critical (>5 NTU): " . $qualityStats['critical_turbidity'] . " readings (" . number_format(($qualityStats['critical_turbidity'] / max($stats['total_readings'], 1)) * 100, 1) . "%)\n\n";
     
     $distribution .= "pH Quality Distribution:\n";
-    $distribution .= "• Good (6-8): " . $qualityStats['good_ph'] . " readings (" . number_format(($qualityStats['good_ph'] / $stats['total_readings']) * 100, 1) . "%)\n";
-    $distribution .= "• Medium (4-6, 8-10): " . $qualityStats['medium_ph'] . " readings (" . number_format(($qualityStats['medium_ph'] / $stats['total_readings']) * 100, 1) . "%)\n";
-    $distribution .= "• Critical (<4, >10): " . $qualityStats['critical_ph'] . " readings (" . number_format(($qualityStats['critical_ph'] / $stats['total_readings']) * 100, 1) . "%)\n\n";
+    $distribution .= "• Good (6-8): " . $qualityStats['good_ph'] . " readings (" . number_format(($qualityStats['good_ph'] / max($stats['total_readings'], 1)) * 100, 1) . "%)\n";
+    $distribution .= "• Medium (4-6, 8-10): " . $qualityStats['medium_ph'] . " readings (" . number_format(($qualityStats['medium_ph'] / max($stats['total_readings'], 1)) * 100, 1) . "%)\n";
+    $distribution .= "• Critical (<4, >10): " . $qualityStats['critical_ph'] . " readings (" . number_format(($qualityStats['critical_ph'] / max($stats['total_readings'], 1)) * 100, 1) . "%)\n\n";
     
     $distribution .= "Temperature Distribution:\n";
-    $distribution .= "• Good (20-30°C): " . $qualityStats['good_temp'] . " readings (" . number_format(($qualityStats['good_temp'] / $stats['total_readings']) * 100, 1) . "%)\n";
-    $distribution .= "• Cold (0-20°C): " . $qualityStats['cold_temp'] . " readings (" . number_format(($qualityStats['cold_temp'] / $stats['total_readings']) * 100, 1) . "%)\n";
-    $distribution .= "• Warm (30-40°C): " . $qualityStats['warm_temp'] . " readings (" . number_format(($qualityStats['warm_temp'] / $stats['total_readings']) * 100, 1) . "%)\n";
+    $distribution .= "• Good (20-30°C): " . $qualityStats['good_temp'] . " readings (" . number_format(($qualityStats['good_temp'] / max($stats['total_readings'], 1)) * 100, 1) . "%)\n";
+    $distribution .= "• Cold (0-20°C): " . $qualityStats['cold_temp'] . " readings (" . number_format(($qualityStats['cold_temp'] / max($stats['total_readings'], 1)) * 100, 1) . "%)\n";
+    $distribution .= "• Warm (30-40°C): " . $qualityStats['warm_temp'] . " readings (" . number_format(($qualityStats['warm_temp'] / max($stats['total_readings'], 1)) * 100, 1) . "%)\n";
     
     $pdf->MultiCell(0, 4, $distribution, 0, 'L', false, 1);
     $pdf->Ln(8);
@@ -590,21 +590,21 @@ function generatePDFReport($user, $stats, $hourlyData, $dailyData, $latest, $tim
     
     $compliance = "Regulatory Compliance Summary:\n\n";
     $compliance .= "Turbidity Compliance:\n";
-    $compliance .= "• Good Quality Readings: " . number_format(($qualityStats['good_turbidity'] / $stats['total_readings']) * 100, 1) . "% (Target: >80%)\n";
-    $compliance .= "• Critical Quality Readings: " . number_format(($qualityStats['critical_turbidity'] / $stats['total_readings']) * 100, 1) . "% (Target: <5%)\n\n";
+    $compliance .= "• Good Quality Readings: " . number_format(($qualityStats['good_turbidity'] / max($stats['total_readings'], 1)) * 100, 1) . "% (Target: >80%)\n";
+    $compliance .= "• Critical Quality Readings: " . number_format(($qualityStats['critical_turbidity'] / max($stats['total_readings'], 1)) * 100, 1) . "% (Target: <5%)\n\n";
     
     $compliance .= "pH Compliance:\n";
-    $compliance .= "• Optimal Range Readings: " . number_format(($qualityStats['good_ph'] / $stats['total_readings']) * 100, 1) . "% (Target: >90%)\n";
-    $compliance .= "• Critical Range Readings: " . number_format(($qualityStats['critical_ph'] / $stats['total_readings']) * 100, 1) . "% (Target: <2%)\n\n";
+    $compliance .= "• Optimal Range Readings: " . number_format(($qualityStats['good_ph'] / max($stats['total_readings'], 1)) * 100, 1) . "% (Target: >90%)\n";
+    $compliance .= "• Critical Range Readings: " . number_format(($qualityStats['critical_ph'] / max($stats['total_readings'], 1)) * 100, 1) . "% (Target: <2%)\n\n";
     
     $compliance .= "Temperature Compliance:\n";
-    $compliance .= "• Optimal Range Readings: " . number_format(($qualityStats['good_temp'] / $stats['total_readings']) * 100, 1) . "% (Target: >70%)\n";
+    $compliance .= "• Optimal Range Readings: " . number_format(($qualityStats['good_temp'] / max($stats['total_readings'], 1)) * 100, 1) . "% (Target: >70%)\n";
     $compliance .= "• System Stability: " . ($tempVariation < 20 ? "Excellent" : ($tempVariation < 40 ? "Good" : "Needs Improvement")) . "\n\n";
     
     $compliance .= "Overall Compliance Rating: " . (
-        ($qualityStats['good_turbidity'] / $stats['total_readings']) > 0.8 && 
-        ($qualityStats['good_ph'] / $stats['total_readings']) > 0.9 && 
-        ($qualityStats['critical_turbidity'] / $stats['total_readings']) < 0.05 ? 
+        ($qualityStats['good_turbidity'] / max($stats['total_readings'], 1)) > 0.8 && 
+        ($qualityStats['good_ph'] / max($stats['total_readings'], 1)) > 0.9 && 
+        ($qualityStats['critical_turbidity'] / max($stats['total_readings'], 1)) < 0.05 ? 
         "COMPLIANT" : "NON-COMPLIANT"
     ) . "\n";
     
@@ -618,14 +618,14 @@ function generatePDFReport($user, $stats, $hourlyData, $dailyData, $latest, $tim
     
     $recommendations = "Priority Actions Required:\n\n";
     
-    if (($qualityStats['critical_turbidity'] / $stats['total_readings']) > 0.05) {
+    if (($qualityStats['critical_turbidity'] / max($stats['total_readings'], 1)) > 0.05) {
         $recommendations .= "HIGH PRIORITY - Turbidity Management:\n";
         $recommendations .= "• Investigate sources of high turbidity readings\n";
         $recommendations .= "• Implement additional filtration or treatment\n";
         $recommendations .= "• Increase monitoring frequency during high-risk periods\n\n";
     }
     
-    if (($qualityStats['critical_ph'] / $stats['total_readings']) > 0.02) {
+    if (($qualityStats['critical_ph'] / max($stats['total_readings'], 1)) > 0.02) {
         $recommendations .= "HIGH PRIORITY - pH Correction:\n";
         $recommendations .= "• Implement pH adjustment system\n";
         $recommendations .= "• Monitor pH more frequently\n";
