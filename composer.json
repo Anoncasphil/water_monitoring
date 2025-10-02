@@ -1,0 +1,17 @@
+{
+    "name": "water-quality-monitoring/pdf-reports",
+    "description": "Water Quality Monitoring System - PDF Report Generation",
+    "type": "project",
+    "require": {
+        "php": ">=7.4",
+        "tecnickcom/tcpdf": "^6.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "WaterQuality\\": "src/"
+        }
+    },
+    "config": {
+        "optimize-autoloader": true
+    }
+}
