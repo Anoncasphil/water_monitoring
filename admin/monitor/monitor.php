@@ -359,6 +359,7 @@ try {
         // --- Acknowledgment system (mirrors dashboard) ---
         let unacknowledgedAlerts = new Map();
         let acknowledgedAlerts = new Set();
+        let currentAlertData = null;
         const ACK_DURATION_MINUTES = 300; // 5 hours
         const ACK_STORAGE_KEY = 'sensorAcknowledgments';
         const ACK_RESET_KEY = 'sensorAckResetOverrides';
@@ -588,9 +589,17 @@ try {
             document.getElementById('overallStatus').textContent = overallStatus;
             document.getElementById('overallStatus').className = `text-2xl font-bold ${overallColor}`;
 
-            // Determine sound severity and play if needed
-            const hasCritical = alerts.some(a => a.type === 'danger');
-            const hasWarning = alerts.some(a => a.type === 'warning');
+            // Determine sound severity excluding acknowledged sensors
+            const soundRelevant = alerts.filter(a => {
+                const title = a.title || '';
+                const sensor = title.toLowerCase().includes('turbidity') ? 'turbidity' :
+                               title.toLowerCase().includes('tds') ? 'tds' :
+                               title.toLowerCase().includes('ph') ? 'ph' : null;
+                if (!sensor) return false;
+                return !(acknowledgedAlerts.has(sensor) || isSensorAcknowledged(sensor));
+            });
+            const hasCritical = soundRelevant.some(a => a.type === 'danger');
+            const hasWarning = soundRelevant.some(a => a.type === 'warning');
             if (hasCritical) playAlertSound('critical'); else if (hasWarning) playAlertSound('warning');
 
             // Generate alert cards with acknowledgment actions (turbidity/tds/pH only)
@@ -626,12 +635,7 @@ try {
                                         <button class="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600" onclick="clearAcknowledgment('${sensorType}')">Reset</button>
                                     </span>
                                 ` : `
-                                    <button class="px-3 py-1 text-xs font-medium text-white bg-amber-600 hover:bg-amber-700 dark:bg-amber-700 dark:hover:bg-amber-600 rounded-lg" onclick="(function(){
-                                        const actionTaken = 'investigation';
-                                        const details = 'Acknowledged via Monitor';
-                                        const responsible = 'System User';
-                                        submitAcknowledgment('${sensorType}', '${alert.message.replace(/'/g, "\'")}', actionTaken, details, responsible, {}).then(s => { if (s) { acknowledgedAlerts.add('${sensorType}'); setSensorAcknowledged('${sensorType}'); updateData(); } });
-                                    })()">
+                                    <button class="px-3 py-1 text-xs font-medium text-white bg-amber-600 hover:bg-amber-700 dark:bg-amber-700 dark:hover:bg-amber-600 rounded-lg" onclick="openAcknowledgeModal('${sensorType}', '${alert.message.replace(/'/g, "\'")}', '${alert.title.replace(/'/g, "\'")}')">
                                         <i class="fas fa-shield-alt mr-1"></i>Acknowledge
                                     </button>
                                 `}
@@ -650,6 +654,77 @@ try {
             updateData();
         })();
         setInterval(() => { clearExpiredAcknowledgments(); loadAcknowledgedAlerts(); updateData(); }, 5000);
+
+        // Toast notification (bottom-right)
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `fixed bottom-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg transform transition-all duration-300 ease-in-out ${
+                type === 'success' ? 'bg-emerald-500 dark:bg-emerald-600 text-white' :
+                type === 'error' ? 'bg-red-500 dark:bg-red-600 text-white' :
+                'bg-blue-500 dark:bg-blue-600 text-white'
+            }`;
+            notification.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas ${
+                        type === 'success' ? 'fa-check-circle' :
+                        type === 'error' ? 'fa-exclamation-circle' :
+                        'fa-info-circle'
+                    } mr-2"></i>
+                    <span class="font-medium">${message}</span>
+                </div>
+                <button onclick="this.closest('.fixed').remove()" class="absolute top-1 right-1 text-white hover:text-gray-200">
+                    <i class="fas fa-times text-sm"></i>
+                </button>
+            `;
+            notification.style.transform = 'translateX(100%)';
+            document.body.appendChild(notification);
+            setTimeout(() => { notification.style.transform = 'translateX(0)'; }, 10);
+            setTimeout(() => {
+                notification.style.transform = 'translateX(100%)';
+                setTimeout(() => { if (notification.parentNode) notification.parentNode.removeChild(notification); }, 300);
+            }, 4000);
+        }
+
+        // Modal helpers
+        function openAcknowledgeModal(sensorType, message, title) {
+            currentAlertData = { sensorType, message, title, timestamp: new Date() };
+            const details = document.getElementById('modalAlertDetails');
+            details.innerHTML = `
+                <div class="text-sm">
+                    <div class="font-semibold text-amber-800 dark:text-amber-200 mb-3 flex items-center">
+                        <i class="fas fa-info-circle mr-2"></i>Alert Details
+                    </div>
+                    <div class="mb-3 p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg border border-amber-200 dark:border-amber-800">
+                        <div class="text-amber-900 dark:text-amber-100 font-medium leading-relaxed">${message}</div>
+                    </div>
+                    <div class="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded border border-amber-200 dark:border-amber-800">
+                        <i class="fas fa-clock mr-1"></i>Detected at: ${new Date().toLocaleString()}
+                    </div>
+                </div>`;
+            document.getElementById('acknowledgeForm').reset();
+            document.getElementById('acknowledgeModal').classList.remove('hidden');
+        }
+        function closeAcknowledgeModal() { document.getElementById('acknowledgeModal').classList.add('hidden'); currentAlertData = null; }
+        document.getElementById('closeModal').addEventListener('click', closeAcknowledgeModal);
+        document.getElementById('cancelAcknowledge').addEventListener('click', closeAcknowledgeModal);
+        document.getElementById('acknowledgeModal').addEventListener('click', function(e){ if (e.target === this) closeAcknowledgeModal(); });
+        document.getElementById('acknowledgeForm').addEventListener('submit', function(e){
+            e.preventDefault(); if (!currentAlertData) return;
+            const fd = new FormData(this);
+            submitAcknowledgment(currentAlertData.sensorType, currentAlertData.message, fd.get('action_taken'), fd.get('details'), fd.get('responsible_person'), {})
+                .then(ok => {
+                    if (ok) {
+                        acknowledgedAlerts.add(currentAlertData.sensorType);
+                        setSensorAcknowledged(currentAlertData.sensorType);
+                        showNotification('Alert acknowledged successfully', 'success');
+                        updateData();
+                        closeAcknowledgeModal();
+                    } else {
+                        showNotification('Failed to acknowledge alert', 'error');
+                    }
+                })
+                .catch(() => showNotification('Error acknowledging alert', 'error'));
+        });
 
         // Dark mode toggle
         const themeToggle = document.getElementById('themeToggle');
