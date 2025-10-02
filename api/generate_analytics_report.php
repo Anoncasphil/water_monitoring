@@ -16,8 +16,8 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 try {
-    require_once '../config/database.php';
-    require_once '../vendor/autoload.php';
+    require_once __DIR__ . '/../config/database.php';
+    require_once __DIR__ . '/../vendor/autoload.php';
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode(['error' => 'Configuration error: ' . $e->getMessage()]);
@@ -29,6 +29,10 @@ try {
 try {
     $db = Database::getInstance();
     $conn = $db->getConnection();
+    
+    if (!$conn) {
+        throw new Exception('Database connection failed');
+    }
     
     // Get user information
     $userQuery = "SELECT first_name, last_name, email FROM users WHERE id = ?";
