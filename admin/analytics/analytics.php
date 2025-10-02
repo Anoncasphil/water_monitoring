@@ -265,7 +265,7 @@ try {
                         <option value="90d">Last 90 Days</option>
                     </select>
                     <button id="exportData" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors">
-                        <i class="fas fa-download mr-2"></i>Export Data
+                        <i class="fas fa-file-pdf mr-2"></i>Export PDF Report
                     </button>
                     <button id="themeToggle" class="p-3 rounded-xl bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition-all duration-200">
                         <i class="fas fa-sun text-yellow-500 dark:hidden text-lg"></i>
@@ -1044,29 +1044,36 @@ try {
             // Show loading for export
             const exportBtn = document.getElementById('exportData');
             const originalText = exportBtn.innerHTML;
-            exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Exporting...';
+            exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Generating PDF...';
             exportBtn.disabled = true;
             
+            // Get current time range
+            const timeRange = document.getElementById('timeRange').value;
+            
+            // Create a new window/tab to download the PDF
+            const exportUrl = `../../api/generate_analytics_report.php?range=${timeRange}&timestamp=${Date.now()}`;
+            
+            // Open in new tab to trigger download
+            const newWindow = window.open(exportUrl, '_blank');
+            
+            // Check if popup was blocked
             setTimeout(() => {
-                // Create CSV data
-                const csvContent = "data:text/csv;charset=utf-8," 
-                    + "Date,Turbidity (NTU),TDS (ppm),pH,Temperature (°C)\n"
-                    + <?php echo json_encode(array_map(function($row) {
-                        return $row['reading_time'] . ',' . $row['turbidity'] . ',' . $row['tds'] . ',' . $row['ph'] . ',' . $row['temperature'];
-                    }, $hourlyData)); ?>.join('\n');
-
-                const encodedUri = encodeURI(csvContent);
-                const link = document.createElement("a");
-                link.setAttribute("href", encodedUri);
-                link.setAttribute("download", `water-quality-data-${new Date().toISOString().split('T')[0]}.csv`);
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
+                if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
+                    // Popup was blocked, try direct download
+                    const link = document.createElement('a');
+                    link.href = exportUrl;
+                    link.download = `water_quality_report_${new Date().toISOString().split('T')[0]}.pdf`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                }
                 
-                // Restore button
-                exportBtn.innerHTML = originalText;
-                exportBtn.disabled = false;
-            }, 500); // Small delay to show loading state
+                // Restore button after a delay
+                setTimeout(() => {
+                    exportBtn.innerHTML = originalText;
+                    exportBtn.disabled = false;
+                }, 2000);
+            }, 1000);
         }
 
         function exportChart(chartId, filename) {
