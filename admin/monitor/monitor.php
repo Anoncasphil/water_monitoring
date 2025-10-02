@@ -356,6 +356,133 @@ try {
             return { status: 'Unknown', color: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400' };
         }
 
+        // --- Acknowledgment system (mirrors dashboard) ---
+        let unacknowledgedAlerts = new Map();
+        let acknowledgedAlerts = new Set();
+        const ACK_DURATION_MINUTES = 300; // 5 hours
+        const ACK_STORAGE_KEY = 'sensorAcknowledgments';
+        const ACK_RESET_KEY = 'sensorAckResetOverrides';
+
+        function readAckStorage() {
+            try { const raw = localStorage.getItem(ACK_STORAGE_KEY); return raw ? JSON.parse(raw) : {}; } catch (_) { return {}; }
+        }
+        function writeAckStorage(map) {
+            try { localStorage.setItem(ACK_STORAGE_KEY, JSON.stringify(map)); } catch (_) {}
+        }
+        function clearExpiredAcknowledgments() {
+            const now = Date.now();
+            const map = readAckStorage();
+            let changed = false;
+            Object.keys(map).forEach(sensor => {
+                if (!map[sensor] || typeof map[sensor].expiresAt !== 'number' || map[sensor].expiresAt <= now) {
+                    delete map[sensor];
+                    changed = true;
+                }
+            });
+            if (changed) writeAckStorage(map);
+        }
+        function isSensorAcknowledged(sensorType) {
+            clearExpiredAcknowledgments();
+            const map = readAckStorage();
+            return Boolean(map[sensorType]);
+        }
+        function setSensorAcknowledged(sensorType) {
+            const now = Date.now();
+            const expiresAt = now + ACK_DURATION_MINUTES * 60 * 1000;
+            const map = readAckStorage();
+            map[sensorType] = { acknowledgedAt: now, expiresAt };
+            writeAckStorage(map);
+        }
+        function readAckReset() {
+            try { const raw = localStorage.getItem(ACK_RESET_KEY); return raw ? JSON.parse(raw) : {}; } catch (_) { return {}; }
+        }
+        function writeAckReset(map) {
+            try { localStorage.setItem(ACK_RESET_KEY, JSON.stringify(map)); } catch (_) {}
+        }
+        function isResetActive(sensorType) {
+            const map = readAckReset();
+            const now = Date.now();
+            if (map[sensorType] && typeof map[sensorType].expiresAt === 'number') {
+                if (map[sensorType].expiresAt > now) return true;
+                delete map[sensorType];
+                writeAckReset(map);
+            }
+            return false;
+        }
+        function setReset(sensorType, minutes = ACK_DURATION_MINUTES) {
+            const now = Date.now();
+            const expiresAt = now + Math.max(1, minutes) * 60 * 1000;
+            const map = readAckReset();
+            map[sensorType] = { setAt: now, expiresAt };
+            writeAckReset(map);
+        }
+        async function loadAcknowledgedAlerts() {
+            try {
+                const resp = await fetch('../../api/get_acknowledgments.php?limit=100', { headers: { 'Accept':'application/json' } });
+                const data = await resp.json();
+                if (data.success && data.data) {
+                    const now = new Date();
+                    data.data.forEach(report => {
+                        const ackTime = new Date(report.acknowledged_at);
+                        const fiveHoursInMs = 5 * 60 * 60 * 1000;
+                        if ((now - ackTime) < fiveHoursInMs) {
+                            if (isResetActive(report.alert_type)) return;
+                            acknowledgedAlerts.add(report.alert_type);
+                            try {
+                                const map = readAckStorage();
+                                const expiresAt = ackTime.getTime() + fiveHoursInMs;
+                                if (!map[report.alert_type] || (typeof map[report.alert_type].expiresAt === 'number' && map[report.alert_type].expiresAt < expiresAt)) {
+                                    map[report.alert_type] = { acknowledgedAt: ackTime.getTime(), expiresAt };
+                                    writeAckStorage(map);
+                                }
+                            } catch (_) {}
+                        }
+                    });
+                }
+            } catch (e) { console.error('Monitor loadAcknowledgedAlerts error:', e); }
+        }
+        async function submitAcknowledgment(alertType, alertMessage, actionTaken, details, responsiblePerson, values) {
+            try {
+                const resp = await fetch('../../api/acknowledge_alert.php', {
+                    method: 'POST', headers: { 'Content-Type':'application/json' },
+                    body: JSON.stringify({ alert_type: alertType, alert_message: alertMessage, action_taken: actionTaken, details, responsible_person: responsiblePerson, timestamp: new Date().toISOString(), values })
+                });
+                const data = await resp.json();
+                return data.success;
+            } catch (e) { console.error('Monitor submitAcknowledgment error:', e); return false; }
+        }
+        function clearAcknowledgment(sensorType) {
+            try {
+                const ackMap = readAckStorage();
+                if (ackMap[sensorType]) { delete ackMap[sensorType]; writeAckStorage(ackMap); }
+                acknowledgedAlerts.delete(sensorType);
+                setReset(sensorType);
+                updateData();
+            } catch (e) { console.error('Monitor clearAcknowledgment error:', e); }
+        }
+
+        // --- Sound notifications ---
+        let lastSoundLevel = null; // 'critical' | 'warning' | null
+        let lastSoundTime = 0;
+        function playAlertSound(level) {
+            const now = Date.now();
+            // Debounce: play at most every 10s per level change
+            if (lastSoundLevel === level && now - lastSoundTime < 10000) return;
+            lastSoundLevel = level; lastSoundTime = now;
+
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const o = ctx.createOscillator();
+                const g = ctx.createGain();
+                o.type = 'sine';
+                o.frequency.value = level === 'critical' ? 520 : 760; // different tone per level
+                g.gain.value = 0.05; // low volume
+                o.connect(g); g.connect(ctx.destination);
+                o.start();
+                setTimeout(() => { o.stop(); ctx.close(); }, level === 'critical' ? 600 : 350);
+            } catch (e) { /* ignore */ }
+        }
+
         function updateData() {
             fetch('../../api/get_readings.php')
                 .then(response => response.json())
@@ -461,8 +588,20 @@ try {
             document.getElementById('overallStatus').textContent = overallStatus;
             document.getElementById('overallStatus').className = `text-2xl font-bold ${overallColor}`;
 
-            // Generate alert cards
-            alertsContainer.innerHTML = alerts.map(alert => `
+            // Determine sound severity and play if needed
+            const hasCritical = alerts.some(a => a.type === 'danger');
+            const hasWarning = alerts.some(a => a.type === 'warning');
+            if (hasCritical) playAlertSound('critical'); else if (hasWarning) playAlertSound('warning');
+
+            // Generate alert cards with acknowledgment actions (turbidity/tds/pH only)
+            alertsContainer.innerHTML = alerts.map(alert => {
+                const title = alert.title || '';
+                const sensorType = title.toLowerCase().includes('turbidity') ? 'turbidity' :
+                                   title.toLowerCase().includes('tds') ? 'tds' :
+                                   title.toLowerCase().includes('ph') ? 'ph' : null;
+                const needsAck = sensorType && (alert.type === 'danger' || (sensorType !== 'turbidity' && alert.type === 'warning'));
+                const isAck = sensorType && (acknowledgedAlerts.has(sensorType) || isSensorAcknowledged(sensorType));
+                return `
                 <div class="flex items-start p-6 rounded-xl border-l-4 ${
                     alert.type === 'success' ? 'bg-green-50 dark:bg-green-900/20 border-green-500' :
                     alert.type === 'warning' ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-500' :
@@ -476,16 +615,41 @@ try {
                         }"></i>
                     </div>
                     <div class="flex-1">
-                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">${alert.title}</h3>
+                        <div class="flex items-center justify-between mb-1">
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">${alert.title}</h3>
+                            ${needsAck ? `
+                                ${isAck ? `
+                                    <span class="inline-flex items-center space-x-2">
+                                        <span class="px-3 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700 rounded-lg">
+                                            <i class="fas fa-check-circle mr-1"></i>Acknowledged (5h)
+                                        </span>
+                                        <button class="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600" onclick="clearAcknowledgment('${sensorType}')">Reset</button>
+                                    </span>
+                                ` : `
+                                    <button class="px-3 py-1 text-xs font-medium text-white bg-amber-600 hover:bg-amber-700 dark:bg-amber-700 dark:hover:bg-amber-600 rounded-lg" onclick="(function(){
+                                        const actionTaken = 'investigation';
+                                        const details = 'Acknowledged via Monitor';
+                                        const responsible = 'System User';
+                                        submitAcknowledgment('${sensorType}', '${alert.message.replace(/'/g, "\'")}', actionTaken, details, responsible, {}).then(s => { if (s) { acknowledgedAlerts.add('${sensorType}'); setSensorAcknowledged('${sensorType}'); updateData(); } });
+                                    })()">
+                                        <i class="fas fa-shield-alt mr-1"></i>Acknowledge
+                                    </button>
+                                `}
+                            ` : ''}
+                        </div>
                         <p class="text-gray-600 dark:text-gray-400">${alert.message}</p>
                     </div>
-                </div>
-            `).join('');
+                </div>`;
+            }).join('');
         }
 
         // Update data every 5 seconds
-        updateData();
-        setInterval(updateData, 5000);
+        (async () => {
+            clearExpiredAcknowledgments();
+            await loadAcknowledgedAlerts();
+            updateData();
+        })();
+        setInterval(() => { clearExpiredAcknowledgments(); loadAcknowledgedAlerts(); updateData(); }, 5000);
 
         // Dark mode toggle
         const themeToggle = document.getElementById('themeToggle');

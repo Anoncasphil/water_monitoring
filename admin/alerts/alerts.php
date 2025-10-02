@@ -1432,6 +1432,23 @@ try {
                 return;
             }
             
+            // Play sound for warning/critical with debounce
+            try {
+                const hasCritical = criticalAlerts.length > 0;
+                const hasWarning = warningAlerts.length > 0;
+                if (!window.__alertsSound) { window.__alertsSound = { lastLevel: null, lastAt: 0 }; }
+                const nowTs = Date.now();
+                const level = hasCritical ? 'critical' : hasWarning ? 'warning' : null;
+                if (level && (window.__alertsSound.lastLevel !== level || nowTs - window.__alertsSound.lastAt > 10000)) {
+                    window.__alertsSound.lastLevel = level; window.__alertsSound.lastAt = nowTs;
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    const o = ctx.createOscillator(); const g = ctx.createGain();
+                    o.type = 'sine'; o.frequency.value = level === 'critical' ? 520 : 760; g.gain.value = 0.05;
+                    o.connect(g); g.connect(ctx.destination); o.start();
+                    setTimeout(() => { o.stop(); ctx.close(); }, level === 'critical' ? 600 : 350);
+                }
+            } catch (_) {}
+
             container.innerHTML = activeAlerts.map(alert => {
                 const alertType = alert.message.includes('turbidity') ? 'turbidity' : 
                                  alert.message.includes('TDS') ? 'tds' :

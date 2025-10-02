@@ -1489,6 +1489,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Update unacknowledged count after processing all alerts
             updateUnacknowledgedCount();
             
+            // Add sound alerts (debounced) for warning/critical
+            try {
+                const hasCritical = alerts.some(a => a.type === 'danger');
+                const hasWarning = alerts.some(a => a.type === 'warning');
+                if (!window.__dashSound) {
+                    window.__dashSound = { lastLevel: null, lastAt: 0 };
+                }
+                const nowTs = Date.now();
+                const level = hasCritical ? 'critical' : hasWarning ? 'warning' : null;
+                if (level && (window.__dashSound.lastLevel !== level || nowTs - window.__dashSound.lastAt > 10000)) {
+                    window.__dashSound.lastLevel = level; window.__dashSound.lastAt = nowTs;
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    const o = ctx.createOscillator(); const g = ctx.createGain();
+                    o.type = 'sine'; o.frequency.value = level === 'critical' ? 520 : 760; g.gain.value = 0.05;
+                    o.connect(g); g.connect(ctx.destination); o.start();
+                    setTimeout(() => { o.stop(); ctx.close(); }, level === 'critical' ? 600 : 350);
+                }
+            } catch (_) {}
+
             alertsContainer.innerHTML = alerts.map(alert => {
                 const alertType = alert.message.includes('turbidity') ? 'turbidity' : 
                                  alert.message.includes('TDS') ? 'tds' :
