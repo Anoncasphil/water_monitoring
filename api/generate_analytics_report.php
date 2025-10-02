@@ -1,4 +1,8 @@
 <?php
+// Enable error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 session_start();
 
 // Check if user is logged in
@@ -8,11 +12,15 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-require_once '../config/database.php';
+try {
+    require_once '../config/database.php';
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Database configuration error: ' . $e->getMessage()]);
+    exit;
+}
 
-// Include TCPDF library (you'll need to install it)
-// For now, I'll create a simple HTML to PDF solution
-require_once '../vendor/autoload.php'; // If using Composer for TCPDF
+// Simple HTML to PDF solution - no external dependencies required
 
 try {
     $db = Database::getInstance();
@@ -45,17 +53,21 @@ try {
     $latestResult = $conn->query($latestQuery);
     $latest = $latestResult->fetch_assoc();
     
+    if (!$latest) {
+        throw new Exception('No water quality data found in the database');
+    }
+    
     // Get statistics
     $statsQuery = "SELECT 
         COUNT(*) as total_readings,
-        AVG(turbidity_ntu) as avg_turbidity,
-        AVG(tds_ppm) as avg_tds,
+        AVG(turbidity) as avg_turbidity,
+        AVG(tds) as avg_tds,
         AVG(ph) as avg_ph,
         AVG(temperature) as avg_temperature,
-        MIN(turbidity_ntu) as min_turbidity,
-        MAX(turbidity_ntu) as max_turbidity,
-        MIN(tds_ppm) as min_tds,
-        MAX(tds_ppm) as max_tds,
+        MIN(turbidity) as min_turbidity,
+        MAX(turbidity) as max_turbidity,
+        MIN(tds) as min_tds,
+        MAX(tds) as max_tds,
         MIN(ph) as min_ph,
         MAX(ph) as max_ph,
         MIN(temperature) as min_temp,
@@ -68,7 +80,7 @@ try {
     $stats = $statsResult->fetch_assoc();
     
     // Get hourly data for trends
-    $hourlyQuery = "SELECT reading_time, turbidity_ntu, tds_ppm, ph, temperature 
+    $hourlyQuery = "SELECT reading_time, turbidity, tds, ph, temperature 
                    FROM water_readings 
                    WHERE reading_time >= DATE_SUB(NOW(), INTERVAL ? DAY) 
                    ORDER BY reading_time";
@@ -80,8 +92,8 @@ try {
     
     // Get daily averages
     $dailyQuery = "SELECT DATE(reading_time) as date, 
-                   AVG(turbidity_ntu) as avg_turbidity, 
-                   AVG(tds_ppm) as avg_tds, 
+                   AVG(turbidity) as avg_turbidity, 
+                   AVG(tds) as avg_tds, 
                    AVG(ph) as avg_ph, 
                    AVG(temperature) as avg_temperature, 
                    COUNT(*) as readings 
@@ -149,7 +161,7 @@ function generateReportHTML($user, $stats, $hourlyData, $dailyData, $latest, $ti
         return ['status' => 'Unknown', 'color' => 'gray'];
     }
     
-    $latestTurbidityQuality = getTurbidityQuality($latest['turbidity_ntu']);
+    $latestTurbidityQuality = getTurbidityQuality($latest['turbidity']);
     $latestPHQuality = getPHQuality($latest['ph']);
     $latestTempQuality = getTemperatureQuality($latest['temperature']);
     
@@ -228,11 +240,11 @@ function generateReportHTML($user, $stats, $hourlyData, $dailyData, $latest, $ti
             <div class="summary-box">
                 <p><strong>Latest Water Quality Status:</strong></p>
                 <ul>
-                    <li><strong>Turbidity:</strong> ' . number_format($latest['turbidity_ntu'], 1) . ' NTU 
-                        (' . number_format(convertTurbidityToPercentage($latest['turbidity_ntu']), 1) . '%) 
-                        - <span class="quality-badge quality-' . $latestTurbidityQuality['color'] . '">' . $latestTurbidityQuality['status'] . '</span></li>
-                    <li><strong>TDS:</strong> ' . number_format($latest['tds_ppm'], 0) . ' ppm 
-                        (' . number_format(convertTDSToPercentage($latest['tds_ppm']), 1) . '%)</li>
+                <li><strong>Turbidity:</strong> ' . number_format($latest['turbidity'], 1) . ' NTU 
+                    (' . number_format(convertTurbidityToPercentage($latest['turbidity']), 1) . '%) 
+                    - <span class="quality-badge quality-' . $latestTurbidityQuality['color'] . '">' . $latestTurbidityQuality['status'] . '</span></li>
+                <li><strong>TDS:</strong> ' . number_format($latest['tds'], 0) . ' ppm 
+                    (' . number_format(convertTDSToPercentage($latest['tds']), 1) . '%)</li>
                     <li><strong>pH:</strong> ' . number_format($latest['ph'], 2) . ' 
                         - <span class="quality-badge quality-' . $latestPHQuality['color'] . '">' . $latestPHQuality['status'] . '</span></li>
                     <li><strong>Temperature:</strong> ' . number_format($latest['temperature'], 1) . '°C 
@@ -328,13 +340,13 @@ function generateReportHTML($user, $stats, $hourlyData, $dailyData, $latest, $ti
     
     $recentReadings = array_slice($hourlyData, -10);
     foreach ($recentReadings as $reading) {
-        $turbidityPercent = convertTurbidityToPercentage($reading['turbidity_ntu']);
-        $tdsPercent = convertTDSToPercentage($reading['tds_ppm']);
+        $turbidityPercent = convertTurbidityToPercentage($reading['turbidity']);
+        $tdsPercent = convertTDSToPercentage($reading['tds']);
         $html .= '
                     <tr>
                         <td>' . date('M j, H:i', strtotime($reading['reading_time'])) . '</td>
-                        <td>' . number_format($reading['turbidity_ntu'], 1) . ' NTU<br><small>(' . number_format($turbidityPercent, 1) . '%)</small></td>
-                        <td>' . number_format($reading['tds_ppm'], 0) . ' ppm<br><small>(' . number_format($tdsPercent, 1) . '%)</small></td>
+                        <td>' . number_format($reading['turbidity'], 1) . ' NTU<br><small>(' . number_format($turbidityPercent, 1) . '%)</small></td>
+                        <td>' . number_format($reading['tds'], 0) . ' ppm<br><small>(' . number_format($tdsPercent, 1) . '%)</small></td>
                         <td>' . number_format($reading['ph'], 2) . '</td>
                         <td>' . number_format($reading['temperature'], 1) . '°C</td>
                     </tr>';
