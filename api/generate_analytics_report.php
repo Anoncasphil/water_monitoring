@@ -1,7 +1,10 @@
 <?php
-// Enable error reporting for debugging
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
+// Start output buffering to prevent any output before headers
+ob_start();
+
+// Disable error reporting for PDF generation to prevent output
+error_reporting(0);
+ini_set('display_errors', 0);
 
 session_start();
 
@@ -168,8 +171,15 @@ try {
     generatePDFReport($user, $stats, $hourlyData, $dailyData, $latest, $timeRange, $exportTime, $fileName, $hourlyStatsData, $qualityStats, $alertsData, $days);
     
 } catch (Exception $e) {
+    // Clean output buffer before sending error response
+    ob_clean();
+    
     http_response_code(500);
+    header('Content-Type: application/json');
     echo json_encode(['error' => $e->getMessage()]);
+    
+    // End output buffering
+    ob_end_flush();
 }
 
 function generatePDFReport($user, $stats, $hourlyData, $dailyData, $latest, $timeRange, $exportTime, $fileName, $hourlyStatsData, $qualityStats, $alertsData, $days) {
@@ -728,13 +738,23 @@ function generatePDFReport($user, $stats, $hourlyData, $dailyData, $latest, $tim
     $pdf->SetXY(20, $pdf->GetY());
     $pdf->Cell(0, 4, 'For technical support or questions about this report, please contact the system administrator.', 0, 1, 'C');
     
-    // Set headers for PDF download
+    // Generate PDF content
+    $pdfContent = $pdf->Output($fileName, 'S');
+    
+    // Clean any output buffer content
+    ob_clean();
+    
+    // Set headers for PDF download (must be before any output)
     header('Content-Type: application/pdf');
     header('Content-Disposition: attachment; filename="' . $fileName . '"');
     header('Cache-Control: private, max-age=0, must-revalidate');
     header('Pragma: public');
+    header('Content-Length: ' . strlen($pdfContent));
     
-    // Output PDF
-    $pdf->Output($fileName, 'D');
+    // Output PDF directly to browser
+    echo $pdfContent;
+    
+    // End output buffering
+    ob_end_flush();
 }
 ?>
