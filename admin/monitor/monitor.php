@@ -578,7 +578,7 @@ try {
             lastSoundLevel = level; lastSoundTime = now;
 
             playEnhancedAlertSound(level);
-            showVisualAlert(level);
+            // Removed showVisualAlert(level) - no more toast notifications
         }
 
         // Enhanced sound alert function
@@ -587,19 +587,25 @@ try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
                 
                 if (level === 'critical') {
-                    // Critical alert: Multiple beeps with higher volume and longer duration
+                    // Critical alert: Multiple loud beeps with higher volume and longer duration
                     playAlertSequence(ctx, [
-                        { freq: 800, duration: 200, volume: 0.15 },
-                        { freq: 600, duration: 200, volume: 0.15 },
-                        { freq: 800, duration: 200, volume: 0.15 },
-                        { freq: 600, duration: 200, volume: 0.15 },
-                        { freq: 800, duration: 400, volume: 0.15 }
+                        { freq: 1000, duration: 500, volume: 0.8 },
+                        { freq: 800, duration: 500, volume: 0.8 },
+                        { freq: 1000, duration: 500, volume: 0.8 },
+                        { freq: 800, duration: 500, volume: 0.8 },
+                        { freq: 1200, duration: 300, volume: 0.8 },
+                        { freq: 1000, duration: 300, volume: 0.8 },
+                        { freq: 1200, duration: 300, volume: 0.8 },
+                        { freq: 1000, duration: 800, volume: 0.8 }
                     ]);
                 } else if (level === 'warning') {
-                    // Warning alert: Two beeps with medium volume
+                    // Warning alert: Multiple beeps with higher volume and longer duration
                     playAlertSequence(ctx, [
-                        { freq: 1000, duration: 300, volume: 0.12 },
-                        { freq: 800, duration: 300, volume: 0.12 }
+                        { freq: 1200, duration: 600, volume: 0.6 },
+                        { freq: 900, duration: 600, volume: 0.6 },
+                        { freq: 1200, duration: 600, volume: 0.6 },
+                        { freq: 900, duration: 600, volume: 0.6 },
+                        { freq: 1200, duration: 1000, volume: 0.6 }
                     ]);
                 }
             } catch (error) {
@@ -624,7 +630,7 @@ try {
                     oscillator.start();
                     oscillator.stop(ctx.currentTime + note.duration / 1000);
                 }, delay);
-                delay += note.duration + 50; // Small gap between notes
+                delay += note.duration + 100; // Longer gap between notes for better distinction
             });
         }
 

@@ -1200,19 +1200,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
                 
                 if (level === 'critical') {
-                    // Critical alert: Multiple beeps with higher volume and longer duration
+                    // Critical alert: Multiple loud beeps with higher volume and longer duration
                     playAlertSequence(ctx, [
-                        { freq: 800, duration: 200, volume: 0.15 },
-                        { freq: 600, duration: 200, volume: 0.15 },
-                        { freq: 800, duration: 200, volume: 0.15 },
-                        { freq: 600, duration: 200, volume: 0.15 },
-                        { freq: 800, duration: 400, volume: 0.15 }
+                        { freq: 1000, duration: 500, volume: 0.8 },
+                        { freq: 800, duration: 500, volume: 0.8 },
+                        { freq: 1000, duration: 500, volume: 0.8 },
+                        { freq: 800, duration: 500, volume: 0.8 },
+                        { freq: 1200, duration: 300, volume: 0.8 },
+                        { freq: 1000, duration: 300, volume: 0.8 },
+                        { freq: 1200, duration: 300, volume: 0.8 },
+                        { freq: 1000, duration: 800, volume: 0.8 }
                     ]);
                 } else if (level === 'warning') {
-                    // Warning alert: Two beeps with medium volume
+                    // Warning alert: Multiple beeps with higher volume and longer duration
                     playAlertSequence(ctx, [
-                        { freq: 1000, duration: 300, volume: 0.12 },
-                        { freq: 800, duration: 300, volume: 0.12 }
+                        { freq: 1200, duration: 600, volume: 0.6 },
+                        { freq: 900, duration: 600, volume: 0.6 },
+                        { freq: 1200, duration: 600, volume: 0.6 },
+                        { freq: 900, duration: 600, volume: 0.6 },
+                        { freq: 1200, duration: 1000, volume: 0.6 }
                     ]);
                 }
             } catch (error) {
@@ -1237,7 +1243,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     oscillator.start();
                     oscillator.stop(ctx.currentTime + note.duration / 1000);
                 }, delay);
-                delay += note.duration + 50; // Small gap between notes
+                delay += note.duration + 100; // Longer gap between notes for better distinction
             });
         }
 
@@ -1629,10 +1635,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Update unacknowledged count after processing all alerts
             updateUnacknowledgedCount();
             
-            // Add enhanced sound alerts (debounced) for warning/critical
+            // Add enhanced sound alerts (debounced) for warning/critical - only for unacknowledged alerts
             try {
-                const hasCritical = alerts.some(a => a.type === 'danger');
-                const hasWarning = alerts.some(a => a.type === 'warning');
+                // Filter alerts that are not acknowledged
+                const unacknowledgedAlerts = alerts.filter(alert => {
+                    const alertType = alert.message.includes('turbidity') ? 'turbidity' : 
+                                     alert.message.includes('TDS') ? 'tds' :
+                                     alert.message.includes('pH') ? 'ph' : null;
+                    
+                    if (!alertType) return false;
+                    
+                    // Check if this alert type is acknowledged
+                    const isAcknowledged = acknowledgedAlerts.has(alertType) || isSensorAcknowledged(alertType);
+                    return !isAcknowledged;
+                });
+                
+                const hasCritical = unacknowledgedAlerts.some(a => a.type === 'danger');
+                const hasWarning = unacknowledgedAlerts.some(a => a.type === 'warning');
+                
                 if (!window.__dashSound) {
                     window.__dashSound = { lastLevel: null, lastAt: 0 };
                 }
@@ -1641,7 +1661,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (level && (window.__dashSound.lastLevel !== level || nowTs - window.__dashSound.lastAt > 15000)) {
                     window.__dashSound.lastLevel = level; window.__dashSound.lastAt = nowTs;
                     playEnhancedAlertSound(level);
-                    showVisualAlert(level);
+                    // Removed showVisualAlert(level) - no more toast notifications
                 }
             } catch (_) {}
 
