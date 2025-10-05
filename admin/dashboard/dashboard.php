@@ -124,6 +124,71 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .dark .card-hover:hover {
             box-shadow: 0 10px 20px rgba(0,0,0,0.3);
         }
+        
+        /* Responsive improvements */
+        @media (max-width: 768px) {
+            .lg\:ml-64 {
+                margin-left: 0;
+            }
+            .container {
+                padding-left: 1rem;
+                padding-right: 1rem;
+            }
+            .grid-cols-1.md\:grid-cols-2.lg\:grid-cols-4 {
+                grid-template-columns: repeat(1, minmax(0, 1fr));
+                gap: 1rem;
+            }
+            .text-3xl {
+                font-size: 1.875rem;
+            }
+            .text-2xl {
+                font-size: 1.5rem;
+            }
+            .p-6 {
+                padding: 1rem;
+            }
+            .h-\[400px\] {
+                height: 300px;
+            }
+            .overflow-x-auto {
+                -webkit-overflow-scrolling: touch;
+            }
+        }
+        
+        @media (max-width: 640px) {
+            .text-3xl {
+                font-size: 1.5rem;
+            }
+            .text-2xl {
+                font-size: 1.25rem;
+            }
+            .p-6 {
+                padding: 0.75rem;
+            }
+            .h-\[400px\] {
+                height: 250px;
+            }
+            .grid.grid-cols-1.lg\:grid-cols-3 {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Performance optimizations */
+        .chart-container {
+            will-change: transform;
+        }
+        
+        /* Smooth scrolling */
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        /* Better touch targets for mobile */
+        @media (max-width: 768px) {
+            button, input, select, textarea {
+                min-height: 44px;
+            }
+        }
     </style>
 </head>
 <body class="gradient-bg min-h-screen transition-colors duration-200">
@@ -405,7 +470,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </button>
                     </div>
                 </div>
-                <div class="h-[400px]">
+                <div class="h-[400px] chart-container">
                     <canvas id="readingsChart"></canvas>
                 </div>
             </div>
@@ -1129,6 +1194,81 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             refreshAcknowledgmentReports();
         }, 30000); // Update acknowledgment data every 30 seconds
 
+        // Enhanced sound alert function
+        function playEnhancedAlertSound(level) {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                
+                if (level === 'critical') {
+                    // Critical alert: Multiple beeps with higher volume and longer duration
+                    playAlertSequence(ctx, [
+                        { freq: 800, duration: 200, volume: 0.15 },
+                        { freq: 600, duration: 200, volume: 0.15 },
+                        { freq: 800, duration: 200, volume: 0.15 },
+                        { freq: 600, duration: 200, volume: 0.15 },
+                        { freq: 800, duration: 400, volume: 0.15 }
+                    ]);
+                } else if (level === 'warning') {
+                    // Warning alert: Two beeps with medium volume
+                    playAlertSequence(ctx, [
+                        { freq: 1000, duration: 300, volume: 0.12 },
+                        { freq: 800, duration: 300, volume: 0.12 }
+                    ]);
+                }
+            } catch (error) {
+                console.error('Error playing alert sound:', error);
+            }
+        }
+
+        function playAlertSequence(ctx, sequence) {
+            let delay = 0;
+            sequence.forEach((note, index) => {
+                setTimeout(() => {
+                    const oscillator = ctx.createOscillator();
+                    const gainNode = ctx.createGain();
+                    
+                    oscillator.type = 'sine';
+                    oscillator.frequency.value = note.freq;
+                    gainNode.gain.value = note.volume;
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(ctx.destination);
+                    
+                    oscillator.start();
+                    oscillator.stop(ctx.currentTime + note.duration / 1000);
+                }, delay);
+                delay += note.duration + 50; // Small gap between notes
+            });
+        }
+
+        // Visual alert function
+        function showVisualAlert(level) {
+            const alertElement = document.createElement('div');
+            alertElement.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transform transition-all duration-300 ${
+                level === 'critical' ? 'bg-red-500 text-white animate-pulse' : 
+                'bg-yellow-500 text-white animate-bounce'
+            }`;
+            alertElement.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas ${level === 'critical' ? 'fa-exclamation-triangle' : 'fa-exclamation-circle'} mr-2 text-xl"></i>
+                    <span class="font-bold text-lg">${level === 'critical' ? 'CRITICAL ALERT' : 'WARNING ALERT'}</span>
+                </div>
+                <div class="mt-2 text-sm">Water quality issue detected!</div>
+            `;
+            
+            document.body.appendChild(alertElement);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                alertElement.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    if (alertElement.parentNode) {
+                        alertElement.parentNode.removeChild(alertElement);
+                    }
+                }, 300);
+            }, 5000);
+        }
+
         // Add current time update
         function updateCurrentTime() {
             const now = new Date();
@@ -1489,7 +1629,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Update unacknowledged count after processing all alerts
             updateUnacknowledgedCount();
             
-            // Add sound alerts (debounced) for warning/critical
+            // Add enhanced sound alerts (debounced) for warning/critical
             try {
                 const hasCritical = alerts.some(a => a.type === 'danger');
                 const hasWarning = alerts.some(a => a.type === 'warning');
@@ -1498,13 +1638,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 const nowTs = Date.now();
                 const level = hasCritical ? 'critical' : hasWarning ? 'warning' : null;
-                if (level && (window.__dashSound.lastLevel !== level || nowTs - window.__dashSound.lastAt > 10000)) {
+                if (level && (window.__dashSound.lastLevel !== level || nowTs - window.__dashSound.lastAt > 15000)) {
                     window.__dashSound.lastLevel = level; window.__dashSound.lastAt = nowTs;
-                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                    const o = ctx.createOscillator(); const g = ctx.createGain();
-                    o.type = 'sine'; o.frequency.value = level === 'critical' ? 520 : 760; g.gain.value = 0.05;
-                    o.connect(g); g.connect(ctx.destination); o.start();
-                    setTimeout(() => { o.stop(); ctx.close(); }, level === 'critical' ? 600 : 350);
+                    playEnhancedAlertSound(level);
+                    showVisualAlert(level);
                 }
             } catch (_) {}
 
