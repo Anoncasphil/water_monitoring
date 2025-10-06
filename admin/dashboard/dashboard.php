@@ -176,12 +176,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
             /* Header responsive */
-            .flex.items-center.justify-between {
+            .dashboard-header {
                 flex-direction: column;
                 align-items: flex-start;
                 gap: 1rem;
             }
-            .flex.items-center.space-x-4 {
+            .dashboard-header .flex.items-center.space-x-4 {
                 width: 100%;
                 justify-content: space-between;
             }
@@ -196,16 +196,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             .card-hover {
                 padding: 1rem;
             }
-            .flex.items-center.justify-between {
+            .card-header {
                 flex-direction: column;
                 align-items: flex-start;
                 gap: 0.75rem;
             }
-            .flex.items-center {
-                width: 100%;
-                justify-content: space-between;
-            }
-            .text-right {
+            .card-header .text-right {
                 text-align: left;
                 width: 100%;
                 margin-top: 0.5rem;
@@ -433,7 +429,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="lg:ml-64">
         <div class="container mx-auto px-4 py-8">
         <!-- Header -->
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
+        <div class="dashboard-header flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
             <div class="flex-1">
                 <h1 class="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white">
                     <i class="fas fa-water text-blue-500 mr-2"></i>
@@ -457,7 +453,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
             <!-- Turbidity Card -->
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 sm:p-6 card-hover">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
+                <div class="card-header flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
                     <div class="flex items-center">
                         <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0">
                             <i class="fas fa-filter text-blue-500 dark:text-blue-400 text-lg sm:text-xl"></i>
@@ -482,7 +478,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <!-- TDS Card -->
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 sm:p-6 card-hover">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
+                <div class="card-header flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
                     <div class="flex items-center">
                         <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-emerald-100 dark:bg-emerald-900 flex items-center justify-center flex-shrink-0">
                             <i class="fas fa-flask text-emerald-500 dark:text-emerald-400 text-lg sm:text-xl"></i>
@@ -507,7 +503,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <!-- pH Card -->
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 sm:p-6 card-hover">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
+                <div class="card-header flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
                     <div class="flex items-center">
                         <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center flex-shrink-0">
                             <i class="fas fa-vial text-purple-500 dark:text-purple-400 text-lg sm:text-xl"></i>
@@ -529,7 +525,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <!-- Temperature Card -->
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 sm:p-6 card-hover">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
+                <div class="card-header flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
                     <div class="flex items-center">
                         <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center flex-shrink-0">
                             <i class="fas fa-thermometer-half text-red-500 dark:text-red-400 text-lg sm:text-xl"></i>
