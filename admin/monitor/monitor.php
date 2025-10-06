@@ -525,7 +525,7 @@ try {
         }
         async function loadAcknowledgedAlerts() {
             try {
-                const resp = await fetch('../../api/get_acknowledgments.php?limit=100', { headers: { 'Accept':'application/json' } });
+                const resp = await fetch('../../api/get_acknowledgments.php?limit=100', { headers: { 'Accept':'application/json' }, cache: 'no-store' });
                 const data = await resp.json();
                 if (data.success && data.data) {
                     const now = new Date();

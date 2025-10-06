@@ -2132,7 +2132,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     headers: {
                         'Accept': 'application/json',
                         'Content-Type': 'application/json'
-                    }
+                    },
+                    cache: 'no-store'
                 });
                 
                 const data = await response.json();
@@ -2198,7 +2199,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     headers: {
                         'Accept': 'application/json',
                         'Content-Type': 'application/json'
-                    }
+                    },
+                    cache: 'no-store'
                 });
                 
                 if (!response.ok) {
@@ -2237,7 +2239,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 headers: {
                     'Accept': 'application/json',
                     'Content-Type': 'application/json'
-                }
+                },
+                cache: 'no-store'
             })
             .then(response => {
                 if (!response.ok) {
