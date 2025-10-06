@@ -781,19 +781,19 @@ try {
                             'text-red-500'
                         }"></i>
                     </div>
-                    <div class="flex-1">
-                        <div class="flex items-center justify-between mb-1">
-                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">${alert.title}</h3>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-1">
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white truncate">${alert.title}</h3>
                             ${needsAck ? `
                                 ${isAck ? `
-                                    <span class="inline-flex items-center space-x-2">
-                                        <span class="px-3 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700 rounded-lg">
+                                    <span class="inline-flex items-center gap-2 sm:ml-3 whitespace-nowrap">
+                                        <span class="px-3 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700 rounded-lg shrink-0 whitespace-nowrap">
                                             <i class="fas fa-check-circle mr-1"></i>Acknowledged (5h)
                                         </span>
-                                        <button class="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600" onclick="clearAcknowledgment('${sensorType}')">Reset</button>
+                                        <button class="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 shrink-0 whitespace-nowrap" onclick="clearAcknowledgment('${sensorType}')">Reset</button>
                                     </span>
                                 ` : `
-                                    <button class="px-3 py-1 text-xs font-medium text-white bg-amber-600 hover:bg-amber-700 dark:bg-amber-700 dark:hover:bg-amber-600 rounded-lg" onclick="openAcknowledgeModal('${sensorType}', '${alert.message.replace(/'/g, "\'")}', '${alert.title.replace(/'/g, "\'")}')">
+                                    <button class="px-3 py-1 text-xs font-medium text-white bg-amber-600 hover:bg-amber-700 dark:bg-amber-700 dark:hover:bg-amber-600 rounded-lg self-start sm:self-auto shrink-0 whitespace-nowrap" onclick="openAcknowledgeModal('${sensorType}', '${alert.message.replace(/'/g, "\'")}', '${alert.title.replace(/'/g, "\'")}')">
                                         <i class="fas fa-shield-alt mr-1"></i>Acknowledge
                                     </button>
                                 `}
