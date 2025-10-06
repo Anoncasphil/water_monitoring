@@ -984,14 +984,7 @@ try {
                 const data = await response.json();
                 if (data.success && data.data) {
                     acknowledgedAlerts.clear();
-                    const now = Date.now();
-                    const parseTs = (s) => { try { return new Date(String(s).replace(' ', 'T')).getTime(); } catch(_) { return NaN; } };
-                    Object.keys(data.data).forEach(sensor => {
-                        const until = parseTs(data.data[sensor].acknowledged_until);
-                        if (!Number.isNaN(until) && until > now) {
-                            acknowledgedAlerts.add(sensor);
-                        }
-                    });
+                    Object.keys(data.data).forEach(sensor => acknowledgedAlerts.add(sensor));
                 }
             } catch (error) {
                 console.error('Error loading acknowledged alerts:', error);
