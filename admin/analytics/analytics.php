@@ -415,32 +415,32 @@ try {
                         </h2>
                     </div>
                     <div class="space-y-4">
-                        <div class="flex items-start space-x-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg break-words">
-                            <i class="fas fa-check-circle text-green-500 mt-1"></i>
+                        <div class="flex flex-col sm:flex-row sm:items-start sm:space-x-3 space-y-1 sm:space-y-0 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg break-words">
+                            <i class="fas fa-check-circle text-green-500 sm:mt-1"></i>
                             <div class="min-w-0">
                                 <h4 class="font-semibold text-gray-900 dark:text-white whitespace-normal">Excellent Water Clarity</h4>
                                 <p class="text-sm text-gray-600 dark:text-gray-400 whitespace-normal">Average turbidity is within optimal range</p>
                             </div>
                         </div>
 
-                        <div class="flex items-start space-x-3 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg break-words">
-                            <i class="fas fa-exclamation-triangle text-yellow-500 mt-1"></i>
+                        <div class="flex flex-col sm:flex-row sm:items-start sm:space-x-3 space-y-1 sm:space-y-0 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg break-words">
+                            <i class="fas fa-exclamation-triangle text-yellow-500 sm:mt-1"></i>
                             <div class="min-w-0">
                                 <h4 class="font-semibold text-gray-900 dark:text-white whitespace-normal">Monitor TDS Levels</h4>
                                 <p class="text-sm text-gray-600 dark:text-gray-400 whitespace-normal">TDS approaching upper limit</p>
                             </div>
                         </div>
 
-                        <div class="flex items-start space-x-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg break-words">
-                            <i class="fas fa-info-circle text-blue-500 mt-1"></i>
+                        <div class="flex flex-col sm:flex-row sm:items-start sm:space-x-3 space-y-1 sm:space-y-0 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg break-words">
+                            <i class="fas fa-info-circle text-blue-500 sm:mt-1"></i>
                             <div class="min-w-0">
                                 <h4 class="font-semibold text-gray-900 dark:text-white whitespace-normal">Stable pH Levels</h4>
                                 <p class="text-sm text-gray-600 dark:text-gray-400 whitespace-normal">pH consistently in optimal range</p>
                             </div>
                         </div>
 
-                        <div class="flex items-start space-x-3 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg break-words">
-                            <i class="fas fa-thermometer-half text-purple-500 mt-1"></i>
+                        <div class="flex flex-col sm:flex-row sm:items-start sm:space-x-3 space-y-1 sm:space-y-0 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg break-words">
+                            <i class="fas fa-thermometer-half text-purple-500 sm:mt-1"></i>
                             <div class="min-w-0">
                                 <h4 class="font-semibold text-gray-900 dark:text-white whitespace-normal">Temperature Stable</h4>
                                 <p class="text-sm text-gray-600 dark:text-gray-400 whitespace-normal">Water temperature within normal range</p>
