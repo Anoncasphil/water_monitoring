@@ -2161,6 +2161,19 @@ try {
             try {
                 if (ackEvtSrc) { try { ackEvtSrc.close(); } catch(_){} }
                 ackEvtSrc = new EventSource('../../api/ack_events.php');
+                let sseReady = false;
+                const sseFallbackTimer = setTimeout(() => {
+                    if (!sseReady) {
+                        if (!window.__ackPoll) {
+                            window.__ackPoll = setInterval(() => {
+                                loadAcknowledgedAlerts();
+                                loadAcknowledgmentStats();
+                                refreshAcknowledgmentReports();
+                            }, 3000);
+                        }
+                    }
+                }, 6000);
+                ackEvtSrc.onopen = () => { sseReady = true; if (window.__ackPoll) { clearInterval(window.__ackPoll); window.__ackPoll = null; } };
                 ackEvtSrc.addEventListener('ack', () => {
                     loadAcknowledgedAlerts();
                     loadAcknowledgmentStats();

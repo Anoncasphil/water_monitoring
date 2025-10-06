@@ -831,6 +831,15 @@ try {
             try {
                 if (ackEvtSrc) { try { ackEvtSrc.close(); } catch(_){} }
                 ackEvtSrc = new EventSource('../../api/ack_events.php');
+                let sseReady = false;
+                const sseFallbackTimer = setTimeout(() => {
+                    if (!sseReady) {
+                        if (!window.__ackPoll) {
+                            window.__ackPoll = setInterval(() => { updateData(); }, 3000);
+                        }
+                    }
+                }, 6000);
+                ackEvtSrc.onopen = () => { sseReady = true; if (window.__ackPoll) { clearInterval(window.__ackPoll); window.__ackPoll = null; } };
                 ackEvtSrc.addEventListener('ack', () => { updateData(); });
                 ackEvtSrc.onerror = () => { try { ackEvtSrc.close(); } catch(_){}; setTimeout(connectAckSSE, 3000); };
             } catch (_) { setTimeout(connectAckSSE, 5000); }
