@@ -46,12 +46,12 @@ $is_staff = ($normalized_role === 'staff');
 ?>
 <div class="fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 shadow-lg transform transition-transform duration-300 ease-in-out" id="sidebar">
     <!-- Sidebar Header -->
-    <div class="flex items-center justify-between h-16 px-6 border-b border-gray-200 dark:border-gray-700">
+    <div class="relative flex items-center justify-between h-16 px-6 border-b border-gray-200 dark:border-gray-700">
         <div class="flex items-center">
             <i class="fas fa-water text-blue-500 text-xl mr-3"></i>
             <h2 class="text-lg font-semibold text-gray-800 dark:text-white">Water Quality</h2>
         </div>
-        <button id="sidebarClose" class="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+        <button id="sidebarClose" class="lg:hidden absolute right-3 top-3 p-2 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
             <i class="fas fa-times"></i>
         </button>
     </div>
@@ -142,10 +142,23 @@ $is_staff = ($normalized_role === 'staff');
 <!-- Mobile Overlay -->
 <div id="sidebarOverlay" class="fixed inset-0 z-40 bg-black bg-opacity-50 lg:hidden hidden"></div>
 
-<!-- Sidebar Toggle Button (for mobile) -->
-<button id="sidebarToggle" class="fixed top-4 right-4 z-50 lg:hidden p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
-    <i class="fas fa-bars"></i>
-</button>
+<!-- Top-right Controls (mobile) -->
+<div class="fixed top-4 right-4 z-50 lg:hidden flex items-center gap-2">
+    <!-- Time Badge -->
+    <span id="topRightTime" class="px-2 py-1 rounded-md text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 shadow">
+        --:--:--
+    </span>
+    <!-- Theme Toggle -->
+    <button id="themeToggleTop" class="p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
+        <i class="fas fa-sun text-yellow-500 dark:hidden"></i>
+        <i class="fas fa-moon text-blue-300 hidden dark:block"></i>
+    </button>
+    <!-- Sidebar Toggle Button (mobile) -->
+    <button id="sidebarToggle" class="p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+        <i class="fas fa-bars"></i>
+    </button>
+    
+</div>
 
 <script>
 // Sidebar functionality
@@ -154,6 +167,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const sidebarToggle = document.getElementById('sidebarToggle');
     const sidebarClose = document.getElementById('sidebarClose');
     const sidebarOverlay = document.getElementById('sidebarOverlay');
+    const themeToggleTop = document.getElementById('themeToggleTop');
+    const topRightTime = document.getElementById('topRightTime');
 
     // Toggle sidebar on mobile
     sidebarToggle.addEventListener('click', function() {
@@ -191,5 +206,31 @@ document.addEventListener('DOMContentLoaded', function() {
     if (window.innerWidth < 1024) {
         sidebar.classList.add('-translate-x-full');
     }
+
+    // Theme handling (sync with existing preference)
+    try {
+        const html = document.documentElement;
+        const saved = localStorage.getItem('theme');
+        if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            html.classList.add('dark');
+        } else {
+            html.classList.remove('dark');
+        }
+        if (themeToggleTop) {
+            themeToggleTop.addEventListener('click', () => {
+                html.classList.toggle('dark');
+                localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
+            });
+        }
+    } catch (_) {}
+
+    // Clock in top-right controls
+    function updateTopRightTime() {
+        if (!topRightTime) return;
+        const now = new Date();
+        topRightTime.textContent = now.toLocaleTimeString();
+    }
+    updateTopRightTime();
+    setInterval(updateTopRightTime, 1000);
 });
 </script> 
