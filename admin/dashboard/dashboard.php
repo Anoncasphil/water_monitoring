@@ -1846,6 +1846,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         function updateWaterQualityAlerts(turbidity, tds, ph, temperature) {
+            // Ensure server ack state is loaded before rendering
+            try {
+                if ((!acknowledgedAlerts || acknowledgedAlerts.size === 0) && !window.__ackLoadInFlight) {
+                    window.__ackLoadInFlight = true;
+                    loadAcknowledgedAlerts().finally(() => {
+                        window.__ackLoadInFlight = false;
+                        try { updateWaterQualityAlerts(turbidity, tds, ph, temperature); } catch(_) {}
+                    });
+                    return;
+                }
+            } catch(_) {}
             const alertsContainer = document.getElementById('waterQualityAlerts');
             const alerts = evaluateWaterQuality(turbidity, tds, ph, temperature);
             
