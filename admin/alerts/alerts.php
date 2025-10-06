@@ -207,7 +207,7 @@ try {
     <div class="lg:ml-64">
         <div class="container mx-auto px-6 py-8">
             <!-- Header -->
-            <div class="flex items-center justify-between mb-10">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-10">
                 <div>
                     <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
                         <i class="fas fa-exclamation-triangle text-red-500 mr-3"></i>
@@ -215,7 +215,7 @@ try {
                     </h1>
                     <p class="text-gray-600 dark:text-gray-400 text-lg">Monitor and manage water quality alerts and notifications</p>
                 </div>
-                <div class="flex items-center space-x-6">
+                <div class="flex items-center flex-wrap gap-4 md:gap-6">
                     <div class="text-center">
                         <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">System Status</div>
                         <div class="flex items-center space-x-2">
@@ -223,7 +223,7 @@ try {
                             <span class="text-lg font-semibold text-green-600 dark:text-green-400">Monitoring</span>
                         </div>
                     </div>
-                    <button id="themeToggle" class="p-3 rounded-xl bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition-all duration-200">
+                    <button id="themeToggle" class="p-3 rounded-xl bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition-all duration-200 shrink-0">
                         <i class="fas fa-sun text-yellow-500 dark:hidden text-lg"></i>
                         <i class="fas fa-moon text-blue-300 hidden dark:block text-lg"></i>
                     </button>
@@ -2114,12 +2114,6 @@ try {
         // Dark mode toggle
         const themeToggle = document.getElementById('themeToggle');
         const html = document.documentElement;
-
-        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            html.classList.add('dark');
-        } else {
-            html.classList.remove('dark');
-        }
 
         themeToggle.addEventListener('click', () => {
             html.classList.toggle('dark');

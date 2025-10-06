@@ -248,7 +248,7 @@ function formatActionDescription($action_type, $details) {
     <div class="lg:ml-64">
         <div class="container mx-auto px-4 py-8">
             <!-- Header -->
-            <div class="flex items-center justify-between mb-8">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
                 <div>
                     <h1 class="text-2xl font-bold text-gray-800 dark:text-white">
                         <i class="fas fa-history text-blue-500 mr-2"></i>
@@ -256,12 +256,12 @@ function formatActionDescription($action_type, $details) {
                     </h1>
                     <p class="text-gray-600 dark:text-gray-400 text-sm mt-1">Track all system activities and user actions</p>
                 </div>
-                <div class="flex items-center space-x-4">
+                <div class="flex items-center flex-wrap gap-3 md:gap-4">
                     <span class="text-sm text-gray-600 dark:text-gray-400">
                         <i class="fas fa-clock mr-1"></i>
                         <span id="currentTime">--:--:--</span>
                     </span>
-                    <button id="themeToggle" class="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                    <button id="themeToggle" class="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors shrink-0">
                         <i class="fas fa-sun text-yellow-500 dark:hidden"></i>
                         <i class="fas fa-moon text-blue-300 hidden dark:block"></i>
                     </button>
@@ -435,13 +435,6 @@ function formatActionDescription($action_type, $details) {
         // Dark mode toggle functionality
         const themeToggle = document.getElementById('themeToggle');
         const html = document.documentElement;
-
-        // Check for saved theme preference
-        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            html.classList.add('dark');
-        } else {
-            html.classList.remove('dark');
-        }
 
         // Toggle theme
         themeToggle.addEventListener('click', () => {

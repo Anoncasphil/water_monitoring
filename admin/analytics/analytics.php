@@ -249,7 +249,7 @@ try {
     <div id="mainContent" class="lg:ml-64 content-hidden">
         <div class="container mx-auto px-6 py-8">
             <!-- Header -->
-            <div class="flex items-center justify-between mb-8">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
                 <div>
                     <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
                         <i class="fas fa-chart-line text-blue-500 mr-3"></i>
@@ -257,7 +257,7 @@ try {
                     </h1>
                     <p class="text-gray-600 dark:text-gray-400 text-lg">Water quality data summary and insights</p>
                 </div>
-                <div class="flex items-center space-x-4">
+                <div class="flex items-center flex-wrap gap-3 md:gap-4">
                     <select id="timeRange" class="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
                         <option value="24h">Last 24 Hours</option>
                         <option value="7d">Last 7 Days</option>
@@ -267,7 +267,7 @@ try {
                     <button id="exportData" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors">
                         <i class="fas fa-file-pdf mr-2"></i>Export PDF Report
                     </button>
-                    <button id="themeToggle" class="p-3 rounded-xl bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition-all duration-200">
+                    <button id="themeToggle" class="p-3 rounded-xl bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition-all duration-200 shrink-0">
                         <i class="fas fa-sun text-yellow-500 dark:hidden text-lg"></i>
                         <i class="fas fa-moon text-blue-300 hidden dark:block text-lg"></i>
                     </button>
@@ -1190,12 +1190,6 @@ try {
         // Dark mode toggle
         const themeToggle = document.getElementById('themeToggle');
         const html = document.documentElement;
-
-        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            html.classList.add('dark');
-        } else {
-            html.classList.remove('dark');
-        }
 
         themeToggle.addEventListener('click', () => {
             html.classList.toggle('dark');
