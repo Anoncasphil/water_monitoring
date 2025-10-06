@@ -203,9 +203,9 @@ try {
             </div>
             
             <!-- Sensor Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-10">
+            <div class="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8 mb-10 min-w-0">
                 <!-- Turbidity Sensor -->
-                <div class="sensor-card bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8">
+                <div class="sensor-card bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 md:p-8 w-full min-w-0">
                     <div class="flex items-center justify-between mb-6">
                         <div class="flex items-center">
                             <div class="w-16 h-16 rounded-2xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mr-4">
@@ -242,7 +242,7 @@ try {
                 </div>
 
                 <!-- TDS Sensor -->
-                <div class="sensor-card bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8">
+                <div class="sensor-card bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 md:p-8 w-full min-w-0">
                     <div class="flex items-center justify-between mb-6">
                         <div class="flex items-center">
                             <div class="w-16 h-16 rounded-2xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mr-4">
@@ -279,7 +279,7 @@ try {
                 </div>
 
                 <!-- pH Sensor -->
-                <div class="sensor-card bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8">
+                <div class="sensor-card bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 md:p-8 w-full min-w-0">
                     <div class="flex items-center justify-between mb-6">
                         <div class="flex items-center">
                             <div class="w-16 h-16 rounded-2xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center mr-4">
@@ -313,7 +313,7 @@ try {
                 </div>
 
                 <!-- Temperature Sensor -->
-                <div class="sensor-card bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8">
+                <div class="sensor-card bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 md:p-8 w-full min-w-0">
                     <div class="flex items-center justify-between mb-6">
                         <div class="flex items-center">
                             <div class="w-16 h-16 rounded-2xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center mr-4">
