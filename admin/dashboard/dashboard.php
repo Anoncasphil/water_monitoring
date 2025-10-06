@@ -2175,16 +2175,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     Object.keys(data.data).forEach(sensor => {
                         const until = new Date(data.data[sensor].acknowledged_until).getTime();
                         if (until > now) {
-                            if (!isResetActive(sensor)) {
-                                acknowledgedAlerts.add(sensor);
-                                try {
-                                    const map = readAckStorage();
-                                    if (!map[sensor] || (typeof map[sensor].expiresAt === 'number' && map[sensor].expiresAt < until)) {
-                                        map[sensor] = { acknowledgedAt: now, expiresAt: until };
-                                        writeAckStorage(map);
-                                    }
-                                } catch (_) {}
-                            }
+                            acknowledgedAlerts.add(sensor);
                         }
                     });
                 }
