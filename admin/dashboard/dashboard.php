@@ -1421,12 +1421,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             updateChartData();
         }, 5000); // Update chart every 5 seconds
         
-        setInterval(() => {
-            clearExpiredAcknowledgments();
-            loadAcknowledgedAlerts(); // Reload acknowledgments periodically
-            loadAcknowledgmentStats();
-            refreshAcknowledgmentReports();
-        }, 30000); // Update acknowledgment data every 30 seconds
+            const ACK_POLL_INTERVAL_MS = 10000; // faster cross-device reflection
+            setInterval(() => {
+                clearExpiredAcknowledgments();
+                loadAcknowledgedAlerts(); // Reload acknowledgments periodically
+                loadAcknowledgmentStats();
+                refreshAcknowledgmentReports();
+            }, ACK_POLL_INTERVAL_MS);
+
+            // Cross-tab sync: reflect acks instantly across browser tabs on same device
+            window.addEventListener('storage', (e) => {
+                if (e.key === ACK_STORAGE_KEY || e.key === ACK_RESET_KEY) {
+                    try {
+                        // Rebuild acknowledged set from localStorage
+                        const localAcks = readAckStorage();
+                        Object.keys(localAcks).forEach(sensorType => acknowledgedAlerts.add(sensorType));
+                    } catch (_) {}
+                    updateSensorValues();
+                    updateChartData();
+                    refreshAcknowledgmentReports();
+                }
+            });
 
         // Enhanced sound alert function
         function playEnhancedAlertSound(level) {

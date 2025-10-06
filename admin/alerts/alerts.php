@@ -2151,7 +2151,7 @@ try {
             localStorage.theme = html.classList.contains('dark') ? 'dark' : 'light';
         });
 
-        // Initialize and update data every 5 seconds
+        // Initialize and update data periodically
         async function initialize() {
             // Clean expired local per-sensor acknowledgments first
             clearExpiredAcknowledgments();
@@ -2182,12 +2182,26 @@ try {
         initialize();
         
         setInterval(fetchData, 5000);
+        const ACK_POLL_INTERVAL_MS = 10000; // faster cross-device reflection
         setInterval(() => {
             clearExpiredAcknowledgments();
             loadAcknowledgedAlerts(); // Reload acknowledgments periodically
             loadAcknowledgmentStats();
             refreshAcknowledgmentReports();
-        }, 30000); // Update acknowledgment data every 30 seconds
+        }, ACK_POLL_INTERVAL_MS);
+
+        // Cross-tab sync: reflect acks instantly across browser tabs on same device
+        window.addEventListener('storage', (e) => {
+            if (e.key === ACK_STORAGE_KEY || e.key === ACK_RESET_KEY) {
+                try {
+                    const localAcks = readAckStorage();
+                    Object.keys(localAcks).forEach(sensorType => acknowledgedAlerts.add(sensorType));
+                } catch (_) {}
+                updateActiveAlerts(alertHistory.filter(a => a.type === 'critical' || a.type === 'warning'));
+                refreshAcknowledgmentReports();
+                loadAcknowledgmentStats();
+            }
+        });
 
         // Enhanced sound alert function
         function playEnhancedAlertSound(level) {

@@ -831,7 +831,19 @@ try {
             await loadAcknowledgedAlerts();
             updateData();
         })();
-        setInterval(() => { clearExpiredAcknowledgments(); loadAcknowledgedAlerts(); updateData(); }, 5000);
+        const ACK_POLL_INTERVAL_MS = 10000; // faster cross-device reflection
+        setInterval(() => { clearExpiredAcknowledgments(); loadAcknowledgedAlerts(); updateData(); }, ACK_POLL_INTERVAL_MS);
+
+        // Cross-tab sync: reflect acks instantly across browser tabs on same device
+        window.addEventListener('storage', (e) => {
+            if (e.key === ACK_STORAGE_KEY || e.key === ACK_RESET_KEY) {
+                try {
+                    const localAcks = readAckStorage();
+                    Object.keys(localAcks).forEach(sensorType => acknowledgedAlerts.add(sensorType));
+                } catch (_) {}
+                updateData();
+            }
+        });
 
         // Toast notification (bottom-right)
         function showNotification(message, type = 'info') {
