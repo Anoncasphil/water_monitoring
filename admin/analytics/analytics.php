@@ -267,9 +267,9 @@ try {
                     <button id="exportData" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors">
                         <i class="fas fa-file-pdf mr-2"></i>Export PDF Report
                     </button>
-                    <button id="themeToggle" class="p-3 rounded-xl bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition-all duration-200 shrink-0">
-                        <i class="fas fa-sun text-yellow-500 dark:hidden text-lg"></i>
-                        <i class="fas fa-moon text-blue-300 hidden dark:block text-lg"></i>
+                    <button id="themeToggle" class="p-3 rounded-xl bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition-all duration-200 shrink-0 inline-flex items-center justify-center">
+                        <i class="fas fa-sun text-yellow-500 text-lg inline dark:hidden w-5 h-5"></i>
+                        <i class="fas fa-moon text-blue-300 text-lg hidden dark:inline w-5 h-5"></i>
                     </button>
                 </div>
             </div>
@@ -407,7 +407,7 @@ try {
             <!-- Insights & Summary -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <!-- Quality Insights -->
-                <div class="analytics-card bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8">
+                <div class="analytics-card bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 min-w-0">
                     <div class="flex items-center justify-between mb-6">
                         <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
                             <i class="fas fa-lightbulb text-yellow-500 mr-3"></i>
@@ -415,42 +415,42 @@ try {
                         </h2>
                     </div>
                     <div class="space-y-4">
-                        <div class="flex items-start space-x-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                        <div class="flex items-start space-x-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg break-words">
                             <i class="fas fa-check-circle text-green-500 mt-1"></i>
-                            <div>
-                                <h4 class="font-semibold text-gray-900 dark:text-white">Excellent Water Clarity</h4>
-                                <p class="text-sm text-gray-600 dark:text-gray-400">Average turbidity is within optimal range</p>
+                            <div class="min-w-0">
+                                <h4 class="font-semibold text-gray-900 dark:text-white whitespace-normal">Excellent Water Clarity</h4>
+                                <p class="text-sm text-gray-600 dark:text-gray-400 whitespace-normal">Average turbidity is within optimal range</p>
                             </div>
                         </div>
 
-                        <div class="flex items-start space-x-3 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                        <div class="flex items-start space-x-3 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg break-words">
                             <i class="fas fa-exclamation-triangle text-yellow-500 mt-1"></i>
-                            <div>
-                                <h4 class="font-semibold text-gray-900 dark:text-white">Monitor TDS Levels</h4>
-                                <p class="text-sm text-gray-600 dark:text-gray-400">TDS approaching upper limit</p>
+                            <div class="min-w-0">
+                                <h4 class="font-semibold text-gray-900 dark:text-white whitespace-normal">Monitor TDS Levels</h4>
+                                <p class="text-sm text-gray-600 dark:text-gray-400 whitespace-normal">TDS approaching upper limit</p>
                             </div>
                         </div>
 
-                        <div class="flex items-start space-x-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                        <div class="flex items-start space-x-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg break-words">
                             <i class="fas fa-info-circle text-blue-500 mt-1"></i>
-                            <div>
-                                <h4 class="font-semibold text-gray-900 dark:text-white">Stable pH Levels</h4>
-                                <p class="text-sm text-gray-600 dark:text-gray-400">pH consistently in optimal range</p>
+                            <div class="min-w-0">
+                                <h4 class="font-semibold text-gray-900 dark:text-white whitespace-normal">Stable pH Levels</h4>
+                                <p class="text-sm text-gray-600 dark:text-gray-400 whitespace-normal">pH consistently in optimal range</p>
                             </div>
                         </div>
 
-                        <div class="flex items-start space-x-3 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                        <div class="flex items-start space-x-3 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg break-words">
                             <i class="fas fa-thermometer-half text-purple-500 mt-1"></i>
-                            <div>
-                                <h4 class="font-semibold text-gray-900 dark:text-white">Temperature Stable</h4>
-                                <p class="text-sm text-gray-600 dark:text-gray-400">Water temperature within normal range</p>
+                            <div class="min-w-0">
+                                <h4 class="font-semibold text-gray-900 dark:text-white whitespace-normal">Temperature Stable</h4>
+                                <p class="text-sm text-gray-600 dark:text-gray-400 whitespace-normal">Water temperature within normal range</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Data Summary -->
-                <div class="analytics-card bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8">
+                <div class="analytics-card bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 min-w-0">
                     <div class="flex items-center justify-between mb-6">
                         <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
                             <i class="fas fa-table text-indigo-500 mr-3"></i>
@@ -458,25 +458,25 @@ try {
                         </h2>
                     </div>
                     <div class="space-y-4">
-                        <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                             <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Data Points</span>
                             <span class="text-sm font-semibold text-gray-900 dark:text-white"><?php echo $stats['total_readings'] ?? '0'; ?></span>
                         </div>
-                        <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                             <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Collection Period</span>
                             <span class="text-sm font-semibold text-gray-900 dark:text-white">30 days</span>
                         </div>
-                        <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                             <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Avg Readings/Day</span>
                             <span class="text-sm font-semibold text-gray-900 dark:text-white"><?php echo number_format(($stats['total_readings'] ?? 0) / 30, 1); ?></span>
                         </div>
-                        <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                             <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Data Quality</span>
                             <span class="text-sm font-semibold text-green-600 dark:text-green-400">98.5%</span>
                         </div>
-                        <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                             <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Parameter Ranges</span>
-                            <span class="text-sm font-semibold text-gray-900 dark:text-white">
+                            <span class="text-sm font-semibold text-gray-900 dark:text-white break-words whitespace-normal">
                                 T: <?php echo number_format($stats['min_turbidity'] ?? 0, 1); ?>-<?php echo number_format($stats['max_turbidity'] ?? 0, 1); ?> NTU
                             </span>
                         </div>
