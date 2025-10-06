@@ -651,26 +651,21 @@ try {
             map[sensorType] = { setAt: now, expiresAt };
             writeAckReset(map);
         }
-        function clearAcknowledgment(sensorType) {
+        async function clearAcknowledgment(sensorType) {
             try {
-                // Remove local acknowledgment persistence
-                const ackMap = readAckStorage();
-                if (ackMap[sensorType]) {
-                    delete ackMap[sensorType];
-                    writeAckStorage(ackMap);
-                }
-                // Remove from in-memory acknowledged set (both type and composite keys)
-                acknowledgedAlerts.delete(sensorType);
-                ['critical','warning','danger'].forEach(level => {
-                    acknowledgedAlerts.delete(`${sensorType}_${level}`);
+                const resp = await fetch('../../api/clear_acknowledgment.php', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sensor_type: sensorType })
                 });
-                // Set override to ignore server-side acks for the same window (5h)
-                setReset(sensorType);
-                // Refresh UI
+                const data = await resp.json();
+                if (!data.success) throw new Error(data.error || 'Failed to clear');
+                await loadAcknowledgedAlerts();
                 updateActiveAlerts(alertHistory.filter(a => a.type === 'critical' || a.type === 'warning'));
+                refreshAcknowledgmentReports();
                 showNotification(`Acknowledgment reset for ${sensorType.toUpperCase()}`, 'info');
             } catch (e) {
                 console.error('Failed to clear acknowledgment:', e);
+                showNotification('Failed to reset acknowledgment', 'error');
             }
         }
 
