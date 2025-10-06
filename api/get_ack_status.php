@@ -27,7 +27,7 @@ try {
             'last_person' => $row['last_person']
         ];
     }
-    echo json_encode(['success' => true, 'data' => $data]);
+    echo json_encode(['success' => true, 'server_now' => date('c'), 'data' => $data]);
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);

@@ -182,7 +182,7 @@ try {
     <div class="lg:ml-64">
         <div class="container mx-auto px-6 py-8">
             <!-- Header -->
-            <div class="flex items-center justify-between mb-10">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-10">
                 <div>
                     <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
                         <i class="fas fa-tachometer-alt text-blue-500 mr-3"></i>
@@ -190,16 +190,12 @@ try {
                     </h1>
                     <p class="text-gray-600 dark:text-gray-400 text-lg">Real-time sensor monitoring and quality assessment</p>
                 </div>
-                <div class="flex items-center space-x-6">
-                    <div class="text-center">
-                        <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">Last Updated</div>
-                        <div class="text-lg font-semibold text-gray-900 dark:text-white" id="lastUpdate">--:--:--</div>
-                    </div>
+                <div class="flex items-center flex-wrap gap-4 md:gap-6">
                     <div class="flex items-center space-x-2">
                         <div class="status-indicator bg-green-500"></div>
                         <span class="text-sm font-medium text-green-600 dark:text-green-400">System Online</span>
                     </div>
-                    <button id="themeToggle" class="p-3 rounded-xl bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition-all duration-200">
+                    <button id="themeToggle" class="p-3 rounded-xl bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition-all duration-200 shrink-0">
                         <i class="fas fa-sun text-yellow-500 dark:hidden text-lg"></i>
                         <i class="fas fa-moon text-blue-300 hidden dark:block text-lg"></i>
                     </button>
@@ -376,7 +372,7 @@ try {
 
     <!-- Acknowledgment Modal (matches dashboard UX) -->
     <div id="acknowledgeModal" class="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
-        <div class="relative top-20 mx-auto p-6 border border-gray-200 dark:border-gray-700 w-full max-w-md shadow-2xl rounded-xl bg-white dark:bg-gray-800">
+        <div class="relative top-20 mx-auto p-4 sm:p-6 border border-gray-200 dark:border-gray-700 w-11/12 sm:w-full max-w-md sm:max-w-lg shadow-2xl rounded-xl bg-white dark:bg-gray-800">
             <div class="mt-3">
                 <div class="flex items-center justify-between mb-6">
                     <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
@@ -687,8 +683,7 @@ try {
                         document.getElementById('temperatureQuality').textContent = tempStatus.status;
                         document.getElementById('temperatureQuality').className = `quality-badge ${tempStatus.color}`;
 
-                        // Update last update time
-                        document.getElementById('lastUpdate').textContent = formatDate(latest.reading_time);
+                        // Last updated UI removed
 
                         // Update water quality alerts with raw values for proper threshold evaluation
                         updateWaterQualityAlerts(
@@ -924,12 +919,6 @@ try {
         // Dark mode toggle
         const themeToggle = document.getElementById('themeToggle');
         const html = document.documentElement;
-
-        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            html.classList.add('dark');
-        } else {
-            html.classList.remove('dark');
-        }
 
         themeToggle.addEventListener('click', () => {
             html.classList.toggle('dark');
