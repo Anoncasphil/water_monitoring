@@ -394,6 +394,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     </style>
+    <style>
+        /* Mobile reflow for tables */
+        @media (max-width: 640px) {
+            table.responsive-table thead {
+                display: none;
+            }
+            table.responsive-table tbody tr {
+                display: block;
+                padding: 0.75rem;
+                border-bottom: 1px solid rgba(229,231,235,1); /* gray-200 */
+            }
+            .dark table.responsive-table tbody tr {
+                border-bottom-color: rgba(55,65,81,1); /* gray-700 */
+            }
+            table.responsive-table tbody tr td {
+                display: grid;
+                grid-template-columns: 9rem 1fr;
+                gap: 0.5rem;
+                padding: 0.5rem 0 !important;
+            }
+            table.responsive-table tbody tr td::before {
+                content: attr(data-label);
+                font-weight: 600;
+                color: #6B7280; /* gray-500 */
+            }
+            .dark table.responsive-table tbody tr td::before {
+                color: #9CA3AF; /* gray-400 */
+            }
+        }
+    </style>
 </head>
 <body class="gradient-bg min-h-screen transition-colors duration-200">
     <!-- Include Sidebar -->
@@ -694,7 +724,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </button>
                 </div>
                 <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <table class="min-w-full responsive-table divide-y divide-gray-200 dark:divide-gray-700">
+                    <table class="min-w-full responsive-table divide-y divide-gray-200 dark:divide-gray-700">
                         <thead>
                             <tr>
                                 <th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -970,21 +1001,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             
                             return `
                                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
-                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${formatDate(reading.reading_time)}</td>
-                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">
+                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300" data-label="Time">${formatDate(reading.reading_time)}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300" data-label="Turb %">
                                         <div class="font-medium text-gray-900 dark:text-gray-100">${turbidityPercent.toFixed(1)}%</div>
                                         <div class="text-xs text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded-full inline-block mt-1">
                                             <i class="fas fa-filter mr-1"></i>${parseFloat(reading.turbidity_ntu).toFixed(0)} NTU
                                         </div>
                                     </td>
-                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">
+                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300" data-label="TDS %">
                                         <div class="font-medium text-gray-900 dark:text-gray-100">${tdsPercent.toFixed(1)}%</div>
                                         <div class="text-xs text-emerald-500 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-full inline-block mt-1">
                                             <i class="fas fa-flask mr-1"></i>${parseFloat(reading.tds_ppm).toFixed(0)} ppm
                                         </div>
                                     </td>
-                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${parseFloat(reading.ph).toFixed(2)}</td>
-                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${parseFloat(reading.temperature).toFixed(2)}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300" data-label="pH">${parseFloat(reading.ph).toFixed(2)}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300" data-label="Temp">${parseFloat(reading.temperature).toFixed(2)}</td>
                                 </tr>
                             `;
                         }).join('');
@@ -1068,21 +1099,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             
                             return `
                                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
-                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${formatDate(reading.reading_time)}</td>
-                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">
+                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300" data-label="Time">${formatDate(reading.reading_time)}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300" data-label="Turb %">
                                         <div class="font-medium text-gray-900 dark:text-gray-100">${turbidityPercent.toFixed(1)}%</div>
                                         <div class="text-xs text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded-full inline-block mt-1">
                                             <i class="fas fa-filter mr-1"></i>${parseFloat(reading.turbidity_ntu).toFixed(0)} NTU
                                         </div>
                                     </td>
-                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">
+                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300" data-label="TDS %">
                                         <div class="font-medium text-gray-900 dark:text-gray-100">${tdsPercent.toFixed(1)}%</div>
                                         <div class="text-xs text-emerald-500 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-full inline-block mt-1">
                                             <i class="fas fa-flask mr-1"></i>${parseFloat(reading.tds_ppm).toFixed(0)} ppm
                                         </div>
                                     </td>
-                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${parseFloat(reading.ph).toFixed(2)}</td>
-                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">${parseFloat(reading.temperature).toFixed(2)}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300" data-label="pH">${parseFloat(reading.ph).toFixed(2)}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300" data-label="Temp">${parseFloat(reading.temperature).toFixed(2)}</td>
                                 </tr>
                             `;
                         }).join('');
@@ -2274,7 +2305,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 return `
                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
-                        <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">
+                        <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300" data-label="Alert Type">
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                                 report.alert_type === 'turbidity' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' :
                                 report.alert_type === 'tds' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300' :
@@ -2287,25 +2318,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 ${alertTypeLabel}
                             </span>
                         </td>
-                        <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">
+                        <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300" data-label="Action Taken">
                             <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300">
                                 <i class="fas fa-tools mr-1"></i>
                                 ${actionLabel}
                             </span>
                         </td>
-                        <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">
+                        <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300" data-label="Responsible Person">
                             <div class="flex items-center">
                                 <i class="fas fa-user-circle mr-2 text-gray-400"></i>
                                 ${report.responsible_person || 'Unknown'}
                             </div>
                         </td>
-                        <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">
+                        <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300" data-label="Acknowledged At">
                             <div class="flex items-center">
                                 <i class="fas fa-clock mr-2 text-gray-400"></i>
                                 ${formatDate(report.acknowledged_at)}
                             </div>
                         </td>
-                        <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300 max-w-xs">
+                        <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300 max-w-xs" data-label="Details">
                             <div class="truncate" title="${report.details}">
                                 ${report.details}
                             </div>
