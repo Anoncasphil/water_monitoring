@@ -574,6 +574,7 @@ try {
     </div>
 
     <script>
+        let ackWs = null;
         // Water quality thresholds (same as dashboard)
         const thresholds = {
             turbidity: {
@@ -1157,6 +1158,7 @@ try {
                     modal.remove();
                     updateActiveAlerts(alertHistory.filter(a => a.type === 'critical' || a.type === 'warning'));
                     showNotification('Alert acknowledged successfully!', 'success');
+                    try { if (ackWs && ackWs.readyState === 1) { ackWs.send(JSON.stringify({ type: 'ack', payload: { alert_type: alertType } })); } } catch (_) {}
                 } else {
                     showNotification('Failed to acknowledge alert. Please try again.', 'error');
                 }
@@ -1279,6 +1281,7 @@ try {
                     updateActiveAlerts(alertHistory.filter(a => a.type === 'critical' || a.type === 'warning'));
                     loadAcknowledgmentStats();
                     refreshAcknowledgmentReports();
+                    try { if (ackWs && ackWs.readyState === 1) { ackWs.send(JSON.stringify({ type: 'ack', payload: { bulk: true, count: successCount } })); } } catch (_) {}
                 }
                 
                 if (failCount > 0) {
@@ -2154,6 +2157,28 @@ try {
         });
 
         // Initialize and update data periodically
+        function connectAckWebSocket() {
+            try {
+                const wsProto = location.protocol === 'https:' ? 'wss' : 'ws';
+                const host = location.hostname;
+                const port = (window.WS_PORT || 8081);
+                const url = `${wsProto}://${host}:${port}/ack`;
+                ackWs = new WebSocket(url);
+                ackWs.onmessage = (evt) => {
+                    try {
+                        const data = JSON.parse(evt.data);
+                        if (data && data.type === 'ack') {
+                            loadAcknowledgedAlerts();
+                            loadAcknowledgmentStats();
+                            refreshAcknowledgmentReports();
+                        }
+                    } catch (_) {}
+                };
+                ackWs.onclose = () => { setTimeout(connectAckWebSocket, 3000); };
+                ackWs.onerror = () => { try { ackWs.close(); } catch(_){} };
+            } catch (_) { setTimeout(connectAckWebSocket, 5000); }
+        }
+
         async function initialize() {
             // Clean expired local per-sensor acknowledgments first
             clearExpiredAcknowledgments();
@@ -2179,6 +2204,7 @@ try {
             fetchData();
             loadAcknowledgmentStats();
             refreshAcknowledgmentReports();
+            connectAckWebSocket();
         }
         
         initialize();

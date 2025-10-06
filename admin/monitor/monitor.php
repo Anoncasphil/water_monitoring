@@ -826,10 +826,32 @@ try {
         }
 
         // Update data every 5 seconds
+        let ackWs = null;
+        function connectAckWebSocket() {
+            try {
+                const wsProto = location.protocol === 'https:' ? 'wss' : 'ws';
+                const host = location.hostname;
+                const port = (window.WS_PORT || 8081);
+                const url = `${wsProto}://${host}:${port}/ack`;
+                ackWs = new WebSocket(url);
+                ackWs.onmessage = (evt) => {
+                    try {
+                        const data = JSON.parse(evt.data);
+                        if (data && data.type === 'ack') {
+                            updateData();
+                        }
+                    } catch (_) {}
+                };
+                ackWs.onclose = () => { setTimeout(connectAckWebSocket, 3000); };
+                ackWs.onerror = () => { try { ackWs.close(); } catch(_){} };
+            } catch (_) { setTimeout(connectAckWebSocket, 5000); }
+        }
+
         (async () => {
             clearExpiredAcknowledgments();
             await loadAcknowledgedAlerts();
             updateData();
+            connectAckWebSocket();
         })();
         const ACK_POLL_INTERVAL_MS = 10000; // faster cross-device reflection
         setInterval(() => { clearExpiredAcknowledgments(); loadAcknowledgedAlerts(); updateData(); }, ACK_POLL_INTERVAL_MS);

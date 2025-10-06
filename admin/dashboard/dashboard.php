@@ -872,6 +872,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <script>
         let readingsChart = null;
+        let ackWs = null;
 
         function formatDate(dateStr) {
             const date = new Date(dateStr);
@@ -1370,6 +1371,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             });
         }
 
+        // WebSocket connect for real-time acks
+        function connectAckWebSocket() {
+            try {
+                const wsProto = location.protocol === 'https:' ? 'wss' : 'ws';
+                const host = location.hostname;
+                const port = (window.WS_PORT || 8081);
+                const url = `${wsProto}://${host}:${port}/ack`;
+                ackWs = new WebSocket(url);
+                ackWs.onopen = () => { /* connected */ };
+                ackWs.onmessage = (evt) => {
+                    try {
+                        const data = JSON.parse(evt.data);
+                        if (data && data.type === 'ack') {
+                            // Refresh local UI immediately
+                            loadAcknowledgedAlerts();
+                            loadAcknowledgmentStats();
+                            refreshAcknowledgmentReports();
+                        }
+                    } catch (_) {}
+                };
+                ackWs.onclose = () => { setTimeout(connectAckWebSocket, 3000); };
+                ackWs.onerror = () => { try { ackWs.close(); } catch(_){} };
+            } catch (_) { setTimeout(connectAckWebSocket, 5000); }
+        }
+
         // Update data and relay states every second with 500ms initial delay
         setTimeout(async () => {
             // Clean expired local per-sensor acknowledgments first
@@ -1399,6 +1425,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             updateChartData();
             fetchRelayStates();
             refreshAcknowledgmentReports();
+            connectAckWebSocket();
             
             // Force refresh water quality alerts to show acknowledgment status
             setTimeout(() => {
@@ -2090,6 +2117,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     updateSensorValues();
                     updateChartData();
                     refreshAcknowledgmentReports();
+                    try { if (ackWs && ackWs.readyState === 1) { ackWs.send(JSON.stringify({ type: 'ack', payload: acknowledgeData })); } } catch (_) {}
                 } else {
                     showNotification('Failed to acknowledge alert: ' + (data.error || 'Unknown error'), 'error');
                 }
