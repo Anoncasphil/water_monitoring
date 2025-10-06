@@ -950,7 +950,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 .catch(error => console.error('Error fetching relay states:', error));
         }
 
-        function updateData() {
+        async function updateData() {
             fetch('../../api/get_readings.php', {
                 method: 'GET',
                 headers: {
@@ -964,7 +964,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     return response.json();
                 })
-                .then(data => {
+                .then(async data => {
                     if (data.error) {
                         throw new Error(data.error);
                     }
@@ -1026,6 +1026,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
 
             // Update water quality alerts (pass raw values for proper threshold evaluation)
+            await loadAcknowledgedAlerts();
             updateWaterQualityAlerts(
                 parseFloat(latest.turbidity_ntu),
                 parseFloat(latest.tds_ppm),
@@ -1048,7 +1049,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // Function to update only sensor values and table (without chart)
-        function updateSensorValues() {
+        async function updateSensorValues() {
             fetch('../../api/get_readings.php', {
                 method: 'GET',
                 headers: {
@@ -1062,7 +1063,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     return response.json();
                 })
-                .then(data => {
+                .then(async data => {
                     if (data.error) {
                         throw new Error(data.error);
                     }
@@ -1119,6 +1120,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     // Update water quality alerts (pass raw values for proper threshold evaluation)
                     if (latest) {
+                        await loadAcknowledgedAlerts();
                         updateWaterQualityAlerts(
                             parseFloat(latest.turbidity_ntu),
                             parseFloat(latest.tds_ppm),
@@ -1898,7 +1900,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 
                 // If it's already acknowledged, make sure it stays acknowledged
-                if (acknowledgedAlerts.has(alertType) || isSensorAcknowledged(alertType)) {
+                if (acknowledgedAlerts.has(alertType)) {
                     acknowledgedAlerts.add(alertKey);
                 }
             });
@@ -1906,7 +1908,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Clean up unacknowledged alerts that are now acknowledged
             unacknowledgedAlerts.forEach((alertData, alertKey) => {
                 const alertType = alertData.alertType;
-                if (acknowledgedAlerts.has(alertType) || isSensorAcknowledged(alertType)) {
+                if (acknowledgedAlerts.has(alertType)) {
                     unacknowledgedAlerts.delete(alertKey);
                     console.log(`Removed acknowledged alert from unacknowledged: ${alertKey}`);
                 }
@@ -1959,7 +1961,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 );
                 
                 // Check if this specific alert type is acknowledged (same logic as alerts page)
-                const isAcknowledged = alertType && (acknowledgedAlerts.has(alertType) || isSensorAcknowledged(alertType));
+                const isAcknowledged = alertType && acknowledgedAlerts.has(alertType);
                 const isUnacknowledged = alertKey && unacknowledgedAlerts.has(alertKey) && !isAcknowledged;
                 
                 // Debug logging
@@ -2006,8 +2008,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             let count = 0;
             unacknowledgedAlerts.forEach((alertData, alertKey) => {
                 const alertType = alertData.alertType;
-                // Only count if the alert type is not acknowledged (either in server or local storage)
-                if (!acknowledgedAlerts.has(alertType) && !isSensorAcknowledged(alertType)) {
+                // Only count if the alert type is not acknowledged server-side
+                if (!acknowledgedAlerts.has(alertType)) {
                     count++;
                 }
             });
