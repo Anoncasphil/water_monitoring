@@ -574,7 +574,7 @@ try {
     </div>
 
     <script>
-        let ackWs = null;
+        let ackEvtSrc = null;
         // Water quality thresholds (same as dashboard)
         const thresholds = {
             turbidity: {
@@ -1158,7 +1158,7 @@ try {
                     modal.remove();
                     updateActiveAlerts(alertHistory.filter(a => a.type === 'critical' || a.type === 'warning'));
                     showNotification('Alert acknowledged successfully!', 'success');
-                    try { if (ackWs && ackWs.readyState === 1) { ackWs.send(JSON.stringify({ type: 'ack', payload: { alert_type: alertType } })); } } catch (_) {}
+                    // SSE consumers get push via server marker update
                 } else {
                     showNotification('Failed to acknowledge alert. Please try again.', 'error');
                 }
@@ -1281,7 +1281,7 @@ try {
                     updateActiveAlerts(alertHistory.filter(a => a.type === 'critical' || a.type === 'warning'));
                     loadAcknowledgmentStats();
                     refreshAcknowledgmentReports();
-                    try { if (ackWs && ackWs.readyState === 1) { ackWs.send(JSON.stringify({ type: 'ack', payload: { bulk: true, count: successCount } })); } } catch (_) {}
+                    // SSE consumers get push via server marker update
                 }
                 
                 if (failCount > 0) {
@@ -2156,27 +2156,18 @@ try {
             localStorage.theme = html.classList.contains('dark') ? 'dark' : 'light';
         });
 
-        // Initialize and update data periodically
-        function connectAckWebSocket() {
+        // SSE connection (shared hosting friendly)
+        function connectAckSSE() {
             try {
-                const wsProto = location.protocol === 'https:' ? 'wss' : 'ws';
-                const host = location.hostname;
-                const port = (window.WS_PORT || 8081);
-                const url = `${wsProto}://${host}:${port}/ack`;
-                ackWs = new WebSocket(url);
-                ackWs.onmessage = (evt) => {
-                    try {
-                        const data = JSON.parse(evt.data);
-                        if (data && data.type === 'ack') {
-                            loadAcknowledgedAlerts();
-                            loadAcknowledgmentStats();
-                            refreshAcknowledgmentReports();
-                        }
-                    } catch (_) {}
-                };
-                ackWs.onclose = () => { setTimeout(connectAckWebSocket, 3000); };
-                ackWs.onerror = () => { try { ackWs.close(); } catch(_){} };
-            } catch (_) { setTimeout(connectAckWebSocket, 5000); }
+                if (ackEvtSrc) { try { ackEvtSrc.close(); } catch(_){} }
+                ackEvtSrc = new EventSource('../../api/ack_events.php');
+                ackEvtSrc.addEventListener('ack', () => {
+                    loadAcknowledgedAlerts();
+                    loadAcknowledgmentStats();
+                    refreshAcknowledgmentReports();
+                });
+                ackEvtSrc.onerror = () => { try { ackEvtSrc.close(); } catch(_){}; setTimeout(connectAckSSE, 3000); };
+            } catch (_) { setTimeout(connectAckSSE, 5000); }
         }
 
         async function initialize() {
@@ -2204,7 +2195,7 @@ try {
             fetchData();
             loadAcknowledgmentStats();
             refreshAcknowledgmentReports();
-            connectAckWebSocket();
+            connectAckSSE();
         }
         
         initialize();

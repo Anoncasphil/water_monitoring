@@ -121,6 +121,18 @@ try {
     // Log the acknowledgment for audit purposes
     error_log("Alert acknowledged - ID: $acknowledgmentId, Type: $alertType, Action: $actionTaken, Person: $responsiblePerson");
     
+    // Update SSE marker so all clients receive a push
+    try {
+        $markerDir = __DIR__ . '/logs';
+        if (!is_dir($markerDir)) { @mkdir($markerDir, 0775, true); }
+        $marker = [
+            't' => time(),
+            'alert_type' => $alertType,
+            'acknowledged_at' => date('c')
+        ];
+        @file_put_contents($markerDir . '/last_ack.json', json_encode($marker));
+    } catch (\Throwable $e) { /* best-effort */ }
+    
     // Return success response
     echo json_encode([
         'success' => true,

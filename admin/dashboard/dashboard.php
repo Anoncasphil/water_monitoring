@@ -872,7 +872,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <script>
         let readingsChart = null;
-        let ackWs = null;
+        let ackEvtSrc = null;
 
         function formatDate(dateStr) {
             const date = new Date(dateStr);
@@ -1371,29 +1371,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             });
         }
 
-        // WebSocket connect for real-time acks
-        function connectAckWebSocket() {
+        // SSE connect for real-time acks (shared hosting friendly)
+        function connectAckSSE() {
             try {
-                const wsProto = location.protocol === 'https:' ? 'wss' : 'ws';
-                const host = location.hostname;
-                const port = (window.WS_PORT || 8081);
-                const url = `${wsProto}://${host}:${port}/ack`;
-                ackWs = new WebSocket(url);
-                ackWs.onopen = () => { /* connected */ };
-                ackWs.onmessage = (evt) => {
-                    try {
-                        const data = JSON.parse(evt.data);
-                        if (data && data.type === 'ack') {
-                            // Refresh local UI immediately
-                            loadAcknowledgedAlerts();
-                            loadAcknowledgmentStats();
-                            refreshAcknowledgmentReports();
-                        }
-                    } catch (_) {}
-                };
-                ackWs.onclose = () => { setTimeout(connectAckWebSocket, 3000); };
-                ackWs.onerror = () => { try { ackWs.close(); } catch(_){} };
-            } catch (_) { setTimeout(connectAckWebSocket, 5000); }
+                if (ackEvtSrc) { try { ackEvtSrc.close(); } catch(_){} }
+                ackEvtSrc = new EventSource('../../api/ack_events.php');
+                ackEvtSrc.addEventListener('ack', (evt) => {
+                    // Refresh local UI immediately
+                    loadAcknowledgedAlerts();
+                    loadAcknowledgmentStats();
+                    refreshAcknowledgmentReports();
+                });
+                ackEvtSrc.onerror = () => { try { ackEvtSrc.close(); } catch(_){}; setTimeout(connectAckSSE, 3000); };
+            } catch (_) { setTimeout(connectAckSSE, 5000); }
         }
 
         // Update data and relay states every second with 500ms initial delay
@@ -1425,7 +1415,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             updateChartData();
             fetchRelayStates();
             refreshAcknowledgmentReports();
-            connectAckWebSocket();
+            connectAckSSE();
             
             // Force refresh water quality alerts to show acknowledgment status
             setTimeout(() => {
@@ -2117,7 +2107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     updateSensorValues();
                     updateChartData();
                     refreshAcknowledgmentReports();
-                    try { if (ackWs && ackWs.readyState === 1) { ackWs.send(JSON.stringify({ type: 'ack', payload: acknowledgeData })); } } catch (_) {}
+                    // SSE consumers will get push via marker update on server
                 } else {
                     showNotification('Failed to acknowledge alert: ' + (data.error || 'Unknown error'), 'error');
                 }
