@@ -131,6 +131,7 @@ try {
             'acknowledged_at' => date('c')
         ];
         @file_put_contents($markerDir . '/last_ack.json', json_encode($marker));
+        @chmod($markerDir . '/last_ack.json', 0664);
     } catch (\Throwable $e) { /* best-effort */ }
     
     // Return success response
