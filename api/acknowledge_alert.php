@@ -118,6 +118,36 @@ try {
     
     $acknowledgmentId = $conn->insert_id;
     
+    // Ensure per-sensor acknowledgment status table exists and upsert 5h window
+    $checkTable2 = $conn->query("SHOW TABLES LIKE 'sensor_acknowledgments'");
+    if ($checkTable2->num_rows == 0) {
+        $create2 = "
+            CREATE TABLE sensor_acknowledgments (
+                sensor_type ENUM('turbidity','tds','ph') PRIMARY KEY,
+                acknowledged_until DATETIME NOT NULL,
+                acknowledged_at DATETIME NOT NULL,
+                last_action VARCHAR(50) NULL,
+                last_person VARCHAR(100) NULL,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_until (acknowledged_until)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        ";
+        if (!$conn->query($create2)) {
+            throw new Exception('Failed to create sensor_acknowledgments table: ' . $conn->error);
+        }
+    }
+
+    $ackAt = date('Y-m-d H:i:s');
+    $ackUntil = date('Y-m-d H:i:s', time() + 5 * 60 * 60); // 5 hours
+    $upsert = $conn->prepare("INSERT INTO sensor_acknowledgments (sensor_type, acknowledged_until, acknowledged_at, last_action, last_person)
+                              VALUES (?, ?, ?, ?, ?)
+                              ON DUPLICATE KEY UPDATE acknowledged_until = VALUES(acknowledged_until), acknowledged_at = VALUES(acknowledged_at), last_action = VALUES(last_action), last_person = VALUES(last_person)");
+    if ($upsert) {
+        $upsert->bind_param('sssss', $alertType, $ackUntil, $ackAt, $actionTaken, $responsiblePerson);
+        $upsert->execute();
+        $upsert->close();
+    }
+
     // Log the acknowledgment for audit purposes
     error_log("Alert acknowledged - ID: $acknowledgmentId, Type: $alertType, Action: $actionTaken, Person: $responsiblePerson");
     

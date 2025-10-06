@@ -2159,7 +2159,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Load already acknowledged alerts on page load
         async function loadAcknowledgedAlerts() {
             try {
-                const response = await fetch('../../api/get_acknowledgments.php?limit=100', {
+                const response = await fetch('../../api/get_ack_status.php', {
                     method: 'GET',
                     headers: {
                         'Accept': 'application/json',
@@ -2170,34 +2170,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 const data = await response.json();
                 if (data.success && data.data) {
-                    // Mark recent acknowledgments as acknowledged
-                    const now = new Date();
-                    data.data.forEach(report => {
-                        const ackTime = new Date(report.acknowledged_at);
-                        const timeDiff = now - ackTime;
-                        const fiveHoursInMs = 5 * 60 * 60 * 1000; // 5 hours in milliseconds
-                        
-                        // Mark as acknowledged if acknowledged within last 5 hours (unless locally reset)
-                        if (timeDiff < fiveHoursInMs) {
-                            if (isResetActive(report.alert_type)) {
-                                return;
+                    acknowledgedAlerts.clear();
+                    const now = Date.now();
+                    Object.keys(data.data).forEach(sensor => {
+                        const until = new Date(data.data[sensor].acknowledged_until).getTime();
+                        if (until > now) {
+                            if (!isResetActive(sensor)) {
+                                acknowledgedAlerts.add(sensor);
+                                try {
+                                    const map = readAckStorage();
+                                    if (!map[sensor] || (typeof map[sensor].expiresAt === 'number' && map[sensor].expiresAt < until)) {
+                                        map[sensor] = { acknowledgedAt: now, expiresAt: until };
+                                        writeAckStorage(map);
+                                    }
+                                } catch (_) {}
                             }
-                            acknowledgedAlerts.add(report.alert_type);
-                            console.log(`Loaded acknowledged alert: ${report.alert_type} from ${report.acknowledged_at} (${Math.round(timeDiff / (60 * 1000))} minutes ago)`);
-                            // Mirror into local storage with expiry at ackTime + 5h
-                            try {
-                                const map = readAckStorage();
-                                const expiresAt = ackTime.getTime() + fiveHoursInMs;
-                                if (!map[report.alert_type] || (typeof map[report.alert_type].expiresAt === 'number' && map[report.alert_type].expiresAt < expiresAt)) {
-                                    map[report.alert_type] = { acknowledgedAt: ackTime.getTime(), expiresAt };
-                                    writeAckStorage(map);
-                                }
-                            } catch (_) { /* ignore */ }
                         }
                     });
-                    
-                    console.log(`Total acknowledged alerts loaded: ${acknowledgedAlerts.size}`);
-                    console.log('Acknowledged alert types:', Array.from(acknowledgedAlerts));
                 }
             } catch (error) {
                 console.error('Error loading acknowledged alerts:', error);

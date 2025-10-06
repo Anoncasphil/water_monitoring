@@ -525,21 +525,20 @@ try {
         }
         async function loadAcknowledgedAlerts() {
             try {
-                const resp = await fetch('../../api/get_acknowledgments.php?limit=100', { headers: { 'Accept':'application/json' }, cache: 'no-store' });
+                const resp = await fetch('../../api/get_ack_status.php', { headers: { 'Accept':'application/json' }, cache: 'no-store' });
                 const data = await resp.json();
                 if (data.success && data.data) {
-                    const now = new Date();
-                    data.data.forEach(report => {
-                        const ackTime = new Date(report.acknowledged_at);
-                        const fiveHoursInMs = 5 * 60 * 60 * 1000;
-                        if ((now - ackTime) < fiveHoursInMs) {
-                            if (isResetActive(report.alert_type)) return;
-                            acknowledgedAlerts.add(report.alert_type);
+                    acknowledgedAlerts.clear();
+                    const now = Date.now();
+                    Object.keys(data.data).forEach(sensor => {
+                        const until = new Date(data.data[sensor].acknowledged_until).getTime();
+                        if (until > now) {
+                            if (isResetActive(sensor)) return;
+                            acknowledgedAlerts.add(sensor);
                             try {
                                 const map = readAckStorage();
-                                const expiresAt = ackTime.getTime() + fiveHoursInMs;
-                                if (!map[report.alert_type] || (typeof map[report.alert_type].expiresAt === 'number' && map[report.alert_type].expiresAt < expiresAt)) {
-                                    map[report.alert_type] = { acknowledgedAt: ackTime.getTime(), expiresAt };
+                                if (!map[sensor] || (typeof map[sensor].expiresAt === 'number' && map[sensor].expiresAt < until)) {
+                                    map[sensor] = { acknowledgedAt: now, expiresAt: until };
                                     writeAckStorage(map);
                                 }
                             } catch (_) {}
